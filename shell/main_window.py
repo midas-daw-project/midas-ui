@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self._mixer_controller = MixerController(bridge, self._mixer_vm)
         self._session_controller = SessionController(bridge, self._session_vm)
         self._transport_controller = TransportController(bridge, self._transport_vm)
-        self._debug_panel = DebugPanel()
+        self._debug_panel = DebugPanel(on_manual_refresh=self._manual_refresh_all)
         self._mixer_panel = MixerPanel(
             on_apply_mute=self._apply_mixer_mute,
             on_apply_gain=self._apply_mixer_gain,
@@ -53,7 +53,13 @@ class MainWindow(QMainWindow):
             on_refresh=self._refresh_transport,
         )
         self._workspace_panel = WorkspacePanel()
-        self._debug_panel.set_bridge_version(self._bridge.bridge_version())
+        bridge_mode = "native" if self._bridge.__class__.__name__ == "NativeBridgeClient" else "fallback"
+        self._debug_panel.set_bridge_info(
+            mode=bridge_mode,
+            version=self._bridge.bridge_version(),
+            subscription_active=False,
+            fallback_polling=False,
+        )
 
         self._audio_panel = AudioPanel(
             on_start_runtime=self._start_runtime,
@@ -83,6 +89,13 @@ class MainWindow(QMainWindow):
         if self._using_polling_fallback:
             self._event_timer.timeout.connect(self._poll_events)
             self._event_timer.start(150)
+        self._debug_panel.set_bridge_info(
+            mode=bridge_mode,
+            version=self._bridge.bridge_version(),
+            subscription_active=(self._event_subscription_handle != -1),
+            fallback_polling=self._using_polling_fallback,
+        )
+        self._refresh_debug_summary()
 
     def _mount_docks(self) -> None:
         self.setCentralWidget(self._workspace_panel)
@@ -146,20 +159,24 @@ class MainWindow(QMainWindow):
     def _refresh_audio(self) -> None:
         self._audio_controller.refresh_status()
         self._audio_panel.render(self._audio_vm)
+        self._refresh_debug_summary()
 
     def _refresh_mixer(self) -> None:
         self._mixer_vm.selected_channel_id = self._mixer_panel.selected_channel()
         self._mixer_controller.refresh_channels()
         self._mixer_panel.render(self._mixer_vm)
+        self._refresh_debug_summary()
 
     def _refresh_session(self) -> None:
         self._session_controller.refresh_status()
         self._session_panel.render(self._session_vm)
+        self._refresh_debug_summary()
 
     def _refresh_transport(self) -> None:
         self._transport_vm.track_channel = self._transport_panel.selected_track_channel()
         self._transport_controller.refresh_status()
         self._transport_panel.render(self._transport_vm)
+        self._refresh_debug_summary()
 
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()
@@ -212,9 +229,11 @@ class MainWindow(QMainWindow):
         try:
             self._event_subscription_handle = self._bridge.subscribe_events(self._on_bridge_event)
             self._using_polling_fallback = False
+            self._debug_panel.set_subscription_state(True)
             return
         except Exception:
             self._using_polling_fallback = True
+            self._debug_panel.set_subscription_state(False)
 
     def _on_bridge_event(self, event) -> None:
         # Bridge callbacks can arrive off the Qt UI thread; signal marshals safely.
@@ -235,9 +254,25 @@ class MainWindow(QMainWindow):
         if self._event_subscription_handle != -1:
             try:
                 self._bridge.unsubscribe_events(self._event_subscription_handle)
+                self._debug_panel.set_subscription_state(False)
             except Exception:
                 pass
         super().closeEvent(event)
+
+    def _manual_refresh_all(self) -> None:
+        self._refresh_audio()
+        self._refresh_mixer()
+        self._refresh_session()
+        self._refresh_transport()
+
+    def _refresh_debug_summary(self) -> None:
+        mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
+        self._debug_panel.set_domain_statuses(
+            audio=f"state={self._audio_vm.state}, render={self._audio_vm.render_status}",
+            mixer=f"ch={mixer_channel.channel_id}, muted={mixer_channel.muted}, gain={mixer_channel.gain:.3f}",
+            session=f"status={self._session_vm.status}, ref={self._session_vm.session_ref}",
+            transport=f"state={self._transport_vm.play_state}",
+        )
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.

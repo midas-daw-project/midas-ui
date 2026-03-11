@@ -75,6 +75,7 @@ def main() -> None:
 
     native.unsubscribe_events(handle)
     native.shutdown_event_dispatcher()
+    assert native.get_mixer_channels()
     assert int(native.shutdown_runtime_profile()["code"]) == 0
 
 
