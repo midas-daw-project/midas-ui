@@ -83,6 +83,16 @@ class DebugPanel(QWidget):
             label += " (polling fallback)"
         self.subscription_label.setText(f"Subscription: {label}")
 
+    def set_event_filter(self, value: str) -> None:
+        index = self.event_filter.findText(value)
+        if index >= 0:
+            self.event_filter.setCurrentIndex(index)
+        else:
+            self.event_filter.setCurrentIndex(0)
+
+    def event_filter_value(self) -> str:
+        return self.event_filter.currentText()
+
     def set_domain_statuses(self, *, audio: str, mixer: str, session: str, transport: str) -> None:
         self.audio_label.setText(f"Audio: {audio}")
         self.mixer_label.setText(f"Mixer: {mixer}")

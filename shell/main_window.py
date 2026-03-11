@@ -14,6 +14,7 @@ from panels.mixer.mixer_panel import MixerPanel
 from panels.session.session_panel import SessionPanel
 from panels.transport.transport_panel import TransportPanel
 from panels.workspace.workspace_panel import WorkspacePanel
+from shell.settings_store import ShellSettingsStore
 from viewmodels.audio_viewmodel import AudioViewModel
 from viewmodels.mixer_viewmodel import MixerViewModel
 from viewmodels.session_viewmodel import SessionViewModel
@@ -24,6 +25,7 @@ class MainWindow(QMainWindow):
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
         self._bridge = bridge
+        self._settings = ShellSettingsStore()
         self.setWindowTitle("MIDAS - Phase 1 Shell")
         self.resize(1280, 780)
 
@@ -73,6 +75,7 @@ class MainWindow(QMainWindow):
         )
 
         self._mount_docks()
+        self._restore_shell_state()
         self._refresh_audio()
         self._refresh_mixer()
         self._refresh_session()
@@ -101,22 +104,27 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._workspace_panel)
 
         audio_dock = QDockWidget("Audio", self)
+        audio_dock.setObjectName("dock.audio")
         audio_dock.setWidget(self._audio_panel)
         self.addDockWidget(Qt.LeftDockWidgetArea, audio_dock)
 
         debug_dock = QDockWidget("Debug / Events", self)
+        debug_dock.setObjectName("dock.debug")
         debug_dock.setWidget(self._debug_panel)
         self.addDockWidget(Qt.BottomDockWidgetArea, debug_dock)
 
         mixer_dock = QDockWidget("Mixer", self)
+        mixer_dock.setObjectName("dock.mixer")
         mixer_dock.setWidget(self._mixer_panel)
         self.addDockWidget(Qt.RightDockWidgetArea, mixer_dock)
 
         session_dock = QDockWidget("Session", self)
+        session_dock.setObjectName("dock.session")
         session_dock.setWidget(self._session_panel)
         self.addDockWidget(Qt.RightDockWidgetArea, session_dock)
 
         transport_dock = QDockWidget("Transport", self)
+        transport_dock.setObjectName("dock.transport")
         transport_dock.setWidget(self._transport_panel)
         self.addDockWidget(Qt.TopDockWidgetArea, transport_dock)
 
@@ -251,6 +259,7 @@ class MainWindow(QMainWindow):
             self._refresh_transport()
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        self._save_shell_state()
         if self._event_subscription_handle != -1:
             try:
                 self._bridge.unsubscribe_events(self._event_subscription_handle)
@@ -273,6 +282,20 @@ class MainWindow(QMainWindow):
             session=f"status={self._session_vm.status}, ref={self._session_vm.session_ref}",
             transport=f"state={self._transport_vm.play_state}",
         )
+
+    def _restore_shell_state(self) -> None:
+        geometry = self._settings.load_geometry()
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        state = self._settings.load_window_state()
+        if state is not None:
+            self.restoreState(state)
+        self._debug_panel.set_event_filter(self._settings.load_debug_filter())
+
+    def _save_shell_state(self) -> None:
+        self._settings.save_geometry(self.saveGeometry())
+        self._settings.save_window_state(self.saveState())
+        self._settings.save_debug_filter(self._debug_panel.event_filter_value())
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.
