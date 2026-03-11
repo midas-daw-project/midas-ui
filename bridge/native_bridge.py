@@ -12,7 +12,8 @@ class NativeBridgeClient(BridgeClient):
         except ImportError as exc:
             raise RuntimeError(
                 "Native bridge module 'midas_bridge_native' is unavailable. "
-                "Build/install the binding module or unset MIDAS_UI_USE_NATIVE_BRIDGE."
+                "Build/install the binding module (MIDAS_BUILD_PYTHON_NATIVE_MODULE=ON) "
+                "with matching PYTHON_EXECUTABLE, or unset MIDAS_UI_USE_NATIVE_BRIDGE."
             ) from exc
         self._native = native_module
 
