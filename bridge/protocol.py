@@ -24,6 +24,13 @@ class AudioStatus:
 
 
 @dataclass(slots=True)
+class MixerChannelStatus:
+    channel_id: int = 1
+    muted: bool = False
+    gain: float = 1.0
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -65,4 +72,13 @@ class BridgeClient(Protocol):
         ...
 
     def unsubscribe_events(self, handle: int) -> None:
+        ...
+
+    def get_mixer_channels(self) -> List[MixerChannelStatus]:
+        ...
+
+    def set_channel_mute(self, channel_id: int, muted: bool) -> BridgeResult:
+        ...
+
+    def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
         ...

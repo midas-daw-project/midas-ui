@@ -14,6 +14,9 @@
 - `drain_recent_events(max_events)`
 - `subscribe_events(callback)`
 - `unsubscribe_events(handle)`
+- `get_mixer_channels()`
+- `set_channel_mute(channel_id, muted)`
+- `set_channel_gain(channel_id, gain)`
 
 ## Controller Contract
 

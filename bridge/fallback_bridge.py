@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable, Dict
 from typing import List
 
-from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult
+from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult, MixerChannelStatus
 
 
 class FallbackBridgeClient(BridgeClient):
@@ -15,6 +15,9 @@ class FallbackBridgeClient(BridgeClient):
         self._runtime_started = False
         self._callbacks: Dict[int, Callable[[BridgeEvent], None]] = {}
         self._next_handle = 1
+        self._mixer_channels: Dict[int, MixerChannelStatus] = {
+            1: MixerChannelStatus(channel_id=1, muted=False, gain=1.0)
+        }
 
     def bridge_version(self) -> int:
         return 1
@@ -108,6 +111,34 @@ class FallbackBridgeClient(BridgeClient):
 
     def unsubscribe_events(self, handle: int) -> None:
         self._callbacks.pop(handle, None)
+
+    def get_mixer_channels(self) -> List[MixerChannelStatus]:
+        return [MixerChannelStatus(channel_id=c.channel_id, muted=c.muted, gain=c.gain)
+                for c in self._mixer_channels.values()]
+
+    def set_channel_mute(self, channel_id: int, muted: bool) -> BridgeResult:
+        channel = self._mixer_channels.setdefault(channel_id, MixerChannelStatus(channel_id=channel_id))
+        channel.muted = muted
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"channel": str(channel_id), "muted": "true" if muted else "false"},
+            )
+        )
+        return BridgeResult()
+
+    def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
+        channel = self._mixer_channels.setdefault(channel_id, MixerChannelStatus(channel_id=channel_id))
+        channel.gain = float(gain)
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"channel": str(channel_id), "gain": f"{channel.gain:.6f}"},
+            )
+        )
+        return BridgeResult()
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)

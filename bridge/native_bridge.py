@@ -3,7 +3,7 @@ from __future__ import annotations
 import atexit
 from typing import Callable, Dict
 
-from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult
+from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult, MixerChannelStatus
 
 
 class NativeBridgeClient(BridgeClient):
@@ -90,6 +90,26 @@ class NativeBridgeClient(BridgeClient):
         if native_handle is None:
             return
         self._native.unsubscribe_events(native_handle)
+
+    def get_mixer_channels(self) -> list[MixerChannelStatus]:
+        raw_channels = self._native.get_mixer_channels()
+        channels: list[MixerChannelStatus] = []
+        for item in raw_channels:
+            values = dict(item.get("values", {}))
+            channels.append(
+                MixerChannelStatus(
+                    channel_id=int(values.get("channel", "1")),
+                    muted=str(values.get("muted", "false")).lower() == "true",
+                    gain=float(values.get("gain", "1.0")),
+                )
+            )
+        return channels
+
+    def set_channel_mute(self, channel_id: int, muted: bool) -> BridgeResult:
+        return _to_result(self._native.set_channel_mute(channel_id, bool(muted)))
+
+    def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
+        return _to_result(self._native.set_channel_gain(channel_id, float(gain)))
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):

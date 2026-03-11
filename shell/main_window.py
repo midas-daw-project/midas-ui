@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QDockWidget, QMainWindow
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
+from controllers.mixer_controller import MixerController
 from panels.audio.audio_panel import AudioPanel
 from panels.debug.debug_panel import DebugPanel
 from panels.mixer.mixer_panel import MixerPanel
@@ -12,6 +13,7 @@ from panels.session.session_panel import SessionPanel
 from panels.transport.transport_panel import TransportPanel
 from panels.workspace.workspace_panel import WorkspacePanel
 from viewmodels.audio_viewmodel import AudioViewModel
+from viewmodels.mixer_viewmodel import MixerViewModel
 
 
 class MainWindow(QMainWindow):
@@ -22,9 +24,15 @@ class MainWindow(QMainWindow):
         self.resize(1280, 780)
 
         self._audio_vm = AudioViewModel()
+        self._mixer_vm = MixerViewModel()
         self._audio_controller = AudioController(bridge, self._audio_vm)
+        self._mixer_controller = MixerController(bridge, self._mixer_vm)
         self._debug_panel = DebugPanel()
-        self._mixer_panel = MixerPanel()
+        self._mixer_panel = MixerPanel(
+            on_apply_mute=self._apply_mixer_mute,
+            on_apply_gain=self._apply_mixer_gain,
+            on_refresh=self._refresh_mixer,
+        )
         self._session_panel = SessionPanel()
         self._transport_panel = TransportPanel()
         self._workspace_panel = WorkspacePanel()
@@ -43,6 +51,7 @@ class MainWindow(QMainWindow):
 
         self._mount_docks()
         self._refresh_audio()
+        self._refresh_mixer()
 
         self._event_relay = _UiEventRelay()
         self._event_relay.event_received.connect(self._handle_bridge_event)
@@ -119,6 +128,25 @@ class MainWindow(QMainWindow):
         self._audio_controller.refresh_status()
         self._audio_panel.render(self._audio_vm)
 
+    def _refresh_mixer(self) -> None:
+        self._mixer_vm.selected_channel_id = self._mixer_panel.selected_channel()
+        self._mixer_controller.refresh_channels()
+        self._mixer_panel.render(self._mixer_vm)
+
+    def _apply_mixer_mute(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        self._mixer_vm.selected_channel_id = channel
+        result = self._mixer_controller.set_mute(channel, self._mixer_panel.selected_mute())
+        self._debug_panel.append_result("set_channel_mute", result.code, result.message)
+        self._refresh_mixer()
+
+    def _apply_mixer_gain(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        self._mixer_vm.selected_channel_id = channel
+        result = self._mixer_controller.set_gain(channel, self._mixer_panel.selected_gain())
+        self._debug_panel.append_result("set_channel_gain", result.code, result.message)
+        self._refresh_mixer()
+
     def _poll_events(self) -> None:
         events = self._bridge.drain_recent_events(32)
         if not events:
@@ -142,6 +170,8 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_event(event)
         # Event model for phase 1: notify first, then re-query authoritative state.
         self._refresh_audio()
+        if getattr(event, "category", "") == "mixer":
+            self._refresh_mixer()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self._event_subscription_handle != -1:
