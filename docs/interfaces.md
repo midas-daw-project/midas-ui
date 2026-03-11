@@ -12,6 +12,8 @@
 - `close_audio()`
 - `get_audio_status()`
 - `drain_recent_events(max_events)`
+- `subscribe_events(callback)`
+- `unsubscribe_events(handle)`
 
 ## Controller Contract
 

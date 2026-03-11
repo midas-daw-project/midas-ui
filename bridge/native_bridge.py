@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import atexit
+from typing import Callable, Dict
+
 from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult
 
 
@@ -16,6 +19,9 @@ class NativeBridgeClient(BridgeClient):
                 "with matching PYTHON_EXECUTABLE, or unset MIDAS_UI_USE_NATIVE_BRIDGE."
             ) from exc
         self._native = native_module
+        self._handles: Dict[int, int] = {}
+        self._next_local_handle = 1
+        atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
         return int(self._native.bridge_version())
@@ -63,6 +69,31 @@ class NativeBridgeClient(BridgeClient):
                 )
             )
         return events
+
+    def subscribe_events(self, callback: Callable[[BridgeEvent], None]) -> int:
+        def _wrapped(raw: dict) -> None:
+            event = BridgeEvent(
+                category=str(raw.get("category", "unknown")),
+                emitter=int(raw.get("emitter", 0)),
+                metadata=dict(raw.get("metadata", {})),
+            )
+            callback(event)
+
+        native_handle = int(self._native.subscribe_events(_wrapped))
+        local_handle = self._next_local_handle
+        self._next_local_handle += 1
+        self._handles[local_handle] = native_handle
+        return local_handle
+
+    def unsubscribe_events(self, handle: int) -> None:
+        native_handle = self._handles.pop(handle, None)
+        if native_handle is None:
+            return
+        self._native.unsubscribe_events(native_handle)
+
+    def _shutdown_dispatcher(self) -> None:
+        if hasattr(self._native, "shutdown_event_dispatcher"):
+            self._native.shutdown_event_dispatcher()
 
 
 def _to_result(raw: dict) -> BridgeResult:

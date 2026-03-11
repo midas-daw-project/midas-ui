@@ -2,6 +2,7 @@ from pathlib import Path
 import importlib.util
 import os
 import sys
+import time
 
 
 def _resolve_native_module() -> str:
@@ -38,6 +39,8 @@ def main() -> None:
 
     assert int(native.bridge_version()) == 1
     assert int(native.start_default_runtime_profile()["code"]) == 0
+    seen = []
+    handle = int(native.subscribe_events(lambda event: seen.append(event)))
     assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
     assert int(native.open_audio()["code"]) == 0
     assert int(native.start_audio(1, 2001)["code"]) == 0
@@ -46,8 +49,15 @@ def main() -> None:
     assert status["state"] == "started"
     assert status["render_status"] in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state"}
 
+    deadline = time.time() + 1.0
+    while not seen and time.time() < deadline:
+        time.sleep(0.03)
+    assert seen
+
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
+    native.unsubscribe_events(handle)
+    native.shutdown_event_dispatcher()
     assert int(native.shutdown_runtime_profile()["code"]) == 0
 
 

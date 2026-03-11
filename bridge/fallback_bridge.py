@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Callable, Dict
 from typing import List
 
 from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult
@@ -12,19 +13,21 @@ class FallbackBridgeClient(BridgeClient):
         self._status = AudioStatus()
         self._events: List[BridgeEvent] = []
         self._runtime_started = False
+        self._callbacks: Dict[int, Callable[[BridgeEvent], None]] = {}
+        self._next_handle = 1
 
     def bridge_version(self) -> int:
         return 1
 
     def start_default_runtime_profile(self) -> BridgeResult:
         self._runtime_started = True
-        self._events.append(BridgeEvent(category="session", emitter=0, metadata={"status": "runtime_started"}))
+        self._publish(BridgeEvent(category="session", emitter=0, metadata={"status": "runtime_started"}))
         return BridgeResult()
 
     def shutdown_runtime_profile(self) -> BridgeResult:
         self._runtime_started = False
         self._status = AudioStatus()
-        self._events.append(BridgeEvent(category="session", emitter=0, metadata={"status": "runtime_stopped"}))
+        self._publish(BridgeEvent(category="session", emitter=0, metadata={"status": "runtime_stopped"}))
         return BridgeResult()
 
     def init_audio(self, device_id: str, sample_rate: int, buffer_size: int) -> BridgeResult:
@@ -34,14 +37,14 @@ class FallbackBridgeClient(BridgeClient):
         self._status.device_id = device_id
         self._status.sample_rate = sample_rate
         self._status.buffer_size = buffer_size
-        self._events.append(BridgeEvent(category="device", emitter=2002, metadata={"action": "init"}))
+        self._publish(BridgeEvent(category="device", emitter=2002, metadata={"action": "init"}))
         return BridgeResult()
 
     def open_audio(self) -> BridgeResult:
         if self._status.state not in {"initialized", "closed"}:
             return BridgeResult(code=3, message="audio not initialized")
         self._status.state = "opened"
-        self._events.append(BridgeEvent(category="device", emitter=2002, metadata={"action": "open"}))
+        self._publish(BridgeEvent(category="device", emitter=2002, metadata={"action": "open"}))
         return BridgeResult()
 
     def start_audio(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
@@ -49,7 +52,7 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not opened")
         self._status.state = "started"
         self._status.render_status = "no_callback"
-        self._events.append(
+        self._publish(
             BridgeEvent(
                 category="device",
                 emitter=2002,
@@ -67,7 +70,7 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not started")
         self._status.state = "opened"
         self._status.render_status = "stopped"
-        self._events.append(BridgeEvent(category="transport", emitter=2002, metadata={"action": "stop"}))
+        self._publish(BridgeEvent(category="transport", emitter=2002, metadata={"action": "stop"}))
         return BridgeResult()
 
     def close_audio(self) -> BridgeResult:
@@ -78,7 +81,7 @@ class FallbackBridgeClient(BridgeClient):
         self._status.sample_rate = 0
         self._status.buffer_size = 0
         self._status.render_status = "stopped"
-        self._events.append(BridgeEvent(category="device", emitter=2002, metadata={"action": "close"}))
+        self._publish(BridgeEvent(category="device", emitter=2002, metadata={"action": "close"}))
         return BridgeResult()
 
     def get_audio_status(self) -> AudioStatus:
@@ -96,3 +99,17 @@ class FallbackBridgeClient(BridgeClient):
         chunk = self._events[:max_events]
         self._events = self._events[max_events:]
         return chunk
+
+    def subscribe_events(self, callback: Callable[[BridgeEvent], None]) -> int:
+        handle = self._next_handle
+        self._next_handle += 1
+        self._callbacks[handle] = callback
+        return handle
+
+    def unsubscribe_events(self, handle: int) -> None:
+        self._callbacks.pop(handle, None)
+
+    def _publish(self, event: BridgeEvent) -> None:
+        self._events.append(event)
+        for callback in list(self._callbacks.values()):
+            callback(event)

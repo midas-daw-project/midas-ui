@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QDockWidget, QMainWindow
 
 from bridge.protocol import BridgeClient
@@ -44,9 +44,17 @@ class MainWindow(QMainWindow):
         self._mount_docks()
         self._refresh_audio()
 
+        self._event_relay = _UiEventRelay()
+        self._event_relay.event_received.connect(self._handle_bridge_event)
+        self._event_subscription_handle = -1
+        self._using_polling_fallback = False
+
+        self._attach_event_flow()
+
         self._event_timer = QTimer(self)
-        self._event_timer.timeout.connect(self._poll_events)
-        self._event_timer.start(150)
+        if self._using_polling_fallback:
+            self._event_timer.timeout.connect(self._poll_events)
+            self._event_timer.start(150)
 
     def _mount_docks(self) -> None:
         self.setCentralWidget(self._workspace_panel)
@@ -116,10 +124,37 @@ class MainWindow(QMainWindow):
         if not events:
             return
         for event in events:
-            self._debug_panel.append_event(event)
+            self._handle_bridge_event(event)
+
+    def _attach_event_flow(self) -> None:
+        try:
+            self._event_subscription_handle = self._bridge.subscribe_events(self._on_bridge_event)
+            self._using_polling_fallback = False
+            return
+        except Exception:
+            self._using_polling_fallback = True
+
+    def _on_bridge_event(self, event) -> None:
+        # Bridge callbacks can arrive off the Qt UI thread; signal marshals safely.
+        self._event_relay.event_received.emit(event)
+
+    def _handle_bridge_event(self, event) -> None:
+        self._debug_panel.append_event(event)
         # Event model for phase 1: notify first, then re-query authoritative state.
         self._refresh_audio()
+
+    def closeEvent(self, event) -> None:  # noqa: N802
+        if self._event_subscription_handle != -1:
+            try:
+                self._bridge.unsubscribe_events(self._event_subscription_handle)
+            except Exception:
+                pass
+        super().closeEvent(event)
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.
 from PySide6.QtCore import Qt  # noqa: E402
+
+
+class _UiEventRelay(QObject):
+    event_received = Signal(object)

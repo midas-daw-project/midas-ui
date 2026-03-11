@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Protocol
+from typing import Callable, Dict, List, Protocol
 
 
 @dataclass(slots=True)
@@ -59,4 +59,10 @@ class BridgeClient(Protocol):
         ...
 
     def drain_recent_events(self, max_events: int) -> List[BridgeEvent]:
+        ...
+
+    def subscribe_events(self, callback: Callable[[BridgeEvent], None]) -> int:
+        ...
+
+    def unsubscribe_events(self, handle: int) -> None:
         ...

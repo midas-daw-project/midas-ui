@@ -14,5 +14,7 @@
 
 ## Phase 1 Delivery Model
 
-- Push notifications come from `drain_recent_events`.
+- Native path uses `subscribe_events` callbacks.
+- Qt marshaling uses a `Signal(object)` relay into the UI thread before widget updates.
+- Polling via `drain_recent_events` remains as fallback when subscribe callbacks are unavailable.
 - Controllers may re-query backend state after events to refresh authoritative state.
