@@ -10,6 +10,7 @@ from bridge.protocol import (
     BridgeResult,
     MixerChannelStatus,
     SessionStatus,
+    TransportStatus,
 )
 
 
@@ -128,12 +129,22 @@ class NativeBridgeClient(BridgeClient):
         return _to_result(self._native.apply_session())
 
     def get_session_status(self) -> SessionStatus:
-        raw = self._native.get_runtime_status()
+        raw = self._native.get_session_status()
         values = dict(raw.get("values", {}))
         return SessionStatus(
             status=str(values.get("status", "idle")),
             session_ref=str(values.get("session_ref", "default-session")),
         )
+
+    def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
+        return self.start_audio(track_channel, mixer_subsystem)
+
+    def stop_transport(self) -> BridgeResult:
+        return self.stop_audio()
+
+    def get_transport_status(self) -> TransportStatus:
+        status = self.get_audio_status()
+        return TransportStatus(play_state="playing" if status.state == "started" else "stopped")
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):

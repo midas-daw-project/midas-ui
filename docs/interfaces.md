@@ -21,6 +21,9 @@
 - `load_session()`
 - `apply_session()`
 - `get_session_status()`
+- `play_transport(track_channel, mixer_subsystem)`
+- `stop_transport()`
+- `get_transport_status()`
 
 ## Controller Contract
 

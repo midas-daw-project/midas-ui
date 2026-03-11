@@ -10,6 +10,7 @@ from bridge.protocol import (
     BridgeResult,
     MixerChannelStatus,
     SessionStatus,
+    TransportStatus,
 )
 
 
@@ -26,6 +27,7 @@ class FallbackBridgeClient(BridgeClient):
             1: MixerChannelStatus(channel_id=1, muted=False, gain=1.0)
         }
         self._session = SessionStatus(status="idle", session_ref="local-session")
+        self._transport = TransportStatus(play_state="stopped")
 
     def bridge_version(self) -> int:
         return 1
@@ -63,6 +65,7 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not opened")
         self._status.state = "started"
         self._status.render_status = "no_callback"
+        self._transport.play_state = "playing"
         self._publish(
             BridgeEvent(
                 category="device",
@@ -81,6 +84,7 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not started")
         self._status.state = "opened"
         self._status.render_status = "stopped"
+        self._transport.play_state = "stopped"
         self._publish(BridgeEvent(category="transport", emitter=2002, metadata={"action": "stop"}))
         return BridgeResult()
 
@@ -183,6 +187,15 @@ class FallbackBridgeClient(BridgeClient):
 
     def get_session_status(self) -> SessionStatus:
         return SessionStatus(status=self._session.status, session_ref=self._session.session_ref)
+
+    def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
+        return self.start_audio(track_channel, mixer_subsystem)
+
+    def stop_transport(self) -> BridgeResult:
+        return self.stop_audio()
+
+    def get_transport_status(self) -> TransportStatus:
+        return TransportStatus(play_state=self._transport.play_state)
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)

@@ -64,6 +64,15 @@ def main() -> None:
     assert int(session_status.get("code", 4)) == 0
     assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded"}
 
+    assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
+    assert int(native.open_audio()["code"]) == 0
+    assert int(native.start_audio(1, 2001)["code"]) == 0
+    transport_status = native.get_runtime_status()
+    assert int(transport_status.get("code", 4)) == 0
+    assert str(transport_status.get("values", {}).get("state", "")) in {"started", "opened", "initialized", "idle"}
+    assert int(native.stop_audio()["code"]) == 0
+    assert int(native.close_audio()["code"]) == 0
+
     native.unsubscribe_events(handle)
     native.shutdown_event_dispatcher()
     assert int(native.shutdown_runtime_profile()["code"]) == 0

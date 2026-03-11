@@ -37,6 +37,11 @@ class SessionStatus:
 
 
 @dataclass(slots=True)
+class TransportStatus:
+    play_state: str = "stopped"
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -99,4 +104,13 @@ class BridgeClient(Protocol):
         ...
 
     def get_session_status(self) -> SessionStatus:
+        ...
+
+    def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
+        ...
+
+    def stop_transport(self) -> BridgeResult:
+        ...
+
+    def get_transport_status(self) -> TransportStatus:
         ...

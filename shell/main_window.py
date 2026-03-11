@@ -7,6 +7,7 @@ from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
 from controllers.mixer_controller import MixerController
 from controllers.session_controller import SessionController
+from controllers.transport_controller import TransportController
 from panels.audio.audio_panel import AudioPanel
 from panels.debug.debug_panel import DebugPanel
 from panels.mixer.mixer_panel import MixerPanel
@@ -16,6 +17,7 @@ from panels.workspace.workspace_panel import WorkspacePanel
 from viewmodels.audio_viewmodel import AudioViewModel
 from viewmodels.mixer_viewmodel import MixerViewModel
 from viewmodels.session_viewmodel import SessionViewModel
+from viewmodels.transport_viewmodel import TransportViewModel
 
 
 class MainWindow(QMainWindow):
@@ -28,9 +30,11 @@ class MainWindow(QMainWindow):
         self._audio_vm = AudioViewModel()
         self._mixer_vm = MixerViewModel()
         self._session_vm = SessionViewModel()
+        self._transport_vm = TransportViewModel()
         self._audio_controller = AudioController(bridge, self._audio_vm)
         self._mixer_controller = MixerController(bridge, self._mixer_vm)
         self._session_controller = SessionController(bridge, self._session_vm)
+        self._transport_controller = TransportController(bridge, self._transport_vm)
         self._debug_panel = DebugPanel()
         self._mixer_panel = MixerPanel(
             on_apply_mute=self._apply_mixer_mute,
@@ -43,7 +47,11 @@ class MainWindow(QMainWindow):
             on_apply=self._apply_session,
             on_refresh=self._refresh_session,
         )
-        self._transport_panel = TransportPanel()
+        self._transport_panel = TransportPanel(
+            on_play=self._play_transport,
+            on_stop=self._stop_transport,
+            on_refresh=self._refresh_transport,
+        )
         self._workspace_panel = WorkspacePanel()
         self._debug_panel.set_bridge_version(self._bridge.bridge_version())
 
@@ -62,6 +70,7 @@ class MainWindow(QMainWindow):
         self._refresh_audio()
         self._refresh_mixer()
         self._refresh_session()
+        self._refresh_transport()
 
         self._event_relay = _UiEventRelay()
         self._event_relay.event_received.connect(self._handle_bridge_event)
@@ -147,6 +156,11 @@ class MainWindow(QMainWindow):
         self._session_controller.refresh_status()
         self._session_panel.render(self._session_vm)
 
+    def _refresh_transport(self) -> None:
+        self._transport_vm.track_channel = self._transport_panel.selected_track_channel()
+        self._transport_controller.refresh_status()
+        self._transport_panel.render(self._transport_vm)
+
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()
         self._mixer_vm.selected_channel_id = channel
@@ -176,6 +190,17 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("apply_session", result.code, result.message)
         self._refresh_session()
 
+    def _play_transport(self) -> None:
+        self._transport_vm.track_channel = self._transport_panel.selected_track_channel()
+        result = self._transport_controller.play()
+        self._debug_panel.append_result("play_transport", result.code, result.message)
+        self._refresh_transport()
+
+    def _stop_transport(self) -> None:
+        result = self._transport_controller.stop()
+        self._debug_panel.append_result("stop_transport", result.code, result.message)
+        self._refresh_transport()
+
     def _poll_events(self) -> None:
         events = self._bridge.drain_recent_events(32)
         if not events:
@@ -203,6 +228,8 @@ class MainWindow(QMainWindow):
             self._refresh_mixer()
         if getattr(event, "category", "") == "session":
             self._refresh_session()
+        if getattr(event, "category", "") == "transport":
+            self._refresh_transport()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self._event_subscription_handle != -1:
