@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import Callable, Dict
 from typing import List
 
-from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult, MixerChannelStatus
+from bridge.protocol import (
+    AudioStatus,
+    BridgeClient,
+    BridgeEvent,
+    BridgeResult,
+    MixerChannelStatus,
+    SessionStatus,
+)
 
 
 class FallbackBridgeClient(BridgeClient):
@@ -18,6 +25,7 @@ class FallbackBridgeClient(BridgeClient):
         self._mixer_channels: Dict[int, MixerChannelStatus] = {
             1: MixerChannelStatus(channel_id=1, muted=False, gain=1.0)
         }
+        self._session = SessionStatus(status="idle", session_ref="local-session")
 
     def bridge_version(self) -> int:
         return 1
@@ -139,6 +147,42 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         return BridgeResult()
+
+    def save_session(self) -> BridgeResult:
+        self._session.status = "saved"
+        self._publish(
+            BridgeEvent(
+                category="session",
+                emitter=2003,
+                metadata={"action": "save", "status": self._session.status, "session_ref": self._session.session_ref},
+            )
+        )
+        return BridgeResult()
+
+    def load_session(self) -> BridgeResult:
+        self._session.status = "loaded"
+        self._publish(
+            BridgeEvent(
+                category="session",
+                emitter=2003,
+                metadata={"action": "load", "status": self._session.status, "session_ref": self._session.session_ref},
+            )
+        )
+        return BridgeResult()
+
+    def apply_session(self) -> BridgeResult:
+        self._session.status = "applied"
+        self._publish(
+            BridgeEvent(
+                category="session",
+                emitter=2003,
+                metadata={"action": "apply", "status": self._session.status, "session_ref": self._session.session_ref},
+            )
+        )
+        return BridgeResult()
+
+    def get_session_status(self) -> SessionStatus:
+        return SessionStatus(status=self._session.status, session_ref=self._session.session_ref)
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)

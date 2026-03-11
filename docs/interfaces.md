@@ -17,6 +17,10 @@
 - `get_mixer_channels()`
 - `set_channel_mute(channel_id, muted)`
 - `set_channel_gain(channel_id, gain)`
+- `save_session()`
+- `load_session()`
+- `apply_session()`
+- `get_session_status()`
 
 ## Controller Contract
 

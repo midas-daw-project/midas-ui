@@ -31,6 +31,12 @@ class MixerChannelStatus:
 
 
 @dataclass(slots=True)
+class SessionStatus:
+    status: str = "idle"
+    session_ref: str = ""
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -81,4 +87,16 @@ class BridgeClient(Protocol):
         ...
 
     def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
+        ...
+
+    def save_session(self) -> BridgeResult:
+        ...
+
+    def load_session(self) -> BridgeResult:
+        ...
+
+    def apply_session(self) -> BridgeResult:
+        ...
+
+    def get_session_status(self) -> SessionStatus:
         ...

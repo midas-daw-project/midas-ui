@@ -56,6 +56,14 @@ def main() -> None:
 
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
+
+    assert int(native.save_session()["code"]) == 0
+    assert int(native.load_session()["code"]) == 0
+    assert int(native.apply_session()["code"]) == 0
+    session_status = native.get_session_status()
+    assert int(session_status.get("code", 4)) == 0
+    assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded"}
+
     native.unsubscribe_events(handle)
     native.shutdown_event_dispatcher()
     assert int(native.shutdown_runtime_profile()["code"]) == 0

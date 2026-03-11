@@ -3,7 +3,14 @@ from __future__ import annotations
 import atexit
 from typing import Callable, Dict
 
-from bridge.protocol import AudioStatus, BridgeClient, BridgeEvent, BridgeResult, MixerChannelStatus
+from bridge.protocol import (
+    AudioStatus,
+    BridgeClient,
+    BridgeEvent,
+    BridgeResult,
+    MixerChannelStatus,
+    SessionStatus,
+)
 
 
 class NativeBridgeClient(BridgeClient):
@@ -110,6 +117,23 @@ class NativeBridgeClient(BridgeClient):
 
     def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
         return _to_result(self._native.set_channel_gain(channel_id, float(gain)))
+
+    def save_session(self) -> BridgeResult:
+        return _to_result(self._native.save_session())
+
+    def load_session(self) -> BridgeResult:
+        return _to_result(self._native.load_session())
+
+    def apply_session(self) -> BridgeResult:
+        return _to_result(self._native.apply_session())
+
+    def get_session_status(self) -> SessionStatus:
+        raw = self._native.get_runtime_status()
+        values = dict(raw.get("values", {}))
+        return SessionStatus(
+            status=str(values.get("status", "idle")),
+            session_ref=str(values.get("session_ref", "default-session")),
+        )
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):
