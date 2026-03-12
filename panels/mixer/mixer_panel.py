@@ -32,6 +32,7 @@ class MixerPanel(QWidget):
         on_toggle_bypass: Callable[[], None],
         on_toggle_channel_bypass: Callable[[], None],
         on_clear_chain: Callable[[], None],
+        on_refresh_runtime_state: Callable[[], None],
         on_refresh: Callable[[], None],
     ) -> None:
         super().__init__()
@@ -46,6 +47,7 @@ class MixerPanel(QWidget):
         self._on_toggle_bypass = on_toggle_bypass
         self._on_toggle_channel_bypass = on_toggle_channel_bypass
         self._on_clear_chain = on_clear_chain
+        self._on_refresh_runtime_state = on_refresh_runtime_state
         self._on_refresh = on_refresh
 
         layout = QVBoxLayout(self)
@@ -78,6 +80,7 @@ class MixerPanel(QWidget):
         self.channel_bypass_input = QCheckBox("Bypass All Inserts")
         self.apply_channel_bypass_button = QPushButton("Apply Channel Bypass")
         self.clear_chain_button = QPushButton("Clear Channel Chain")
+        self.refresh_runtime_button = QPushButton("Refresh Runtime State")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
@@ -97,6 +100,7 @@ class MixerPanel(QWidget):
         form.addRow("Channel Bypass", self.channel_bypass_input)
         form.addRow(self.apply_channel_bypass_button)
         form.addRow(self.clear_chain_button)
+        form.addRow(self.refresh_runtime_button)
         form.addRow(self.refresh_button)
         layout.addWidget(control_box)
 
@@ -123,6 +127,7 @@ class MixerPanel(QWidget):
         self.apply_bypass_button.clicked.connect(self._on_toggle_bypass)
         self.apply_channel_bypass_button.clicked.connect(self._on_toggle_channel_bypass)
         self.clear_chain_button.clicked.connect(self._on_clear_chain)
+        self.refresh_runtime_button.clicked.connect(self._on_refresh_runtime_state)
         self.refresh_button.clicked.connect(self._on_refresh)
 
     def selected_channel(self) -> int:
@@ -165,7 +170,8 @@ class MixerPanel(QWidget):
         for slot in vm.insert_chain:
             self.chain_list.addItem(
                 f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
-                f"bypassed={'true' if slot.bypassed else 'false'} state={slot.load_state}"
+                f"intent_bypassed={'true' if slot.bypassed else 'false'} runtime={slot.load_state} "
+                f"note={slot.runtime_message or '-'}"
             )
             if slot.slot_index == self.selected_slot_index():
                 self.bypass_input.setChecked(slot.bypassed)

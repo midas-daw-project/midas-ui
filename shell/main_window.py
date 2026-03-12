@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
             on_toggle_bypass=self._toggle_selected_slot_bypass,
             on_toggle_channel_bypass=self._toggle_channel_insert_bypass,
             on_clear_chain=self._clear_channel_insert_chain,
+            on_refresh_runtime_state=self._refresh_channel_insert_runtime_state,
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
@@ -364,6 +365,14 @@ class MainWindow(QMainWindow):
         if result.ok:
             self._workspace_controller.mark_action(f"Cleared insert chain on ch{channel}")
             self._mark_session_modified()
+        self._refresh_mixer()
+
+    def _refresh_channel_insert_runtime_state(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        result = self._mixer_controller.refresh_insert_runtime_state(channel)
+        self._debug_panel.append_result("refresh_insert_runtime_state", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Refreshed insert runtime state on ch{channel}")
         self._refresh_mixer()
 
     def _refresh_workspace(self) -> None:

@@ -279,7 +279,8 @@ class NativeBridgeClient(BridgeClient):
                         plugin_name=str(values.get("plugin_name", values.get("plugin_id", ""))),
                         available=str(values.get("available", "false")).lower() == "true",
                         bypassed=bypassed,
-                        load_state=str(values.get("load_state", "bypassed" if bypassed else "inserted")),
+                        load_state=str(values.get("load_state", "bypassed" if bypassed else "unloaded")),
+                        runtime_message=str(values.get("runtime_status_message", "")),
                     )
                 )
             self._insert_chain_cache[int(channel_id)] = slots
@@ -301,7 +302,8 @@ class NativeBridgeClient(BridgeClient):
             plugin_name=plugin.name,
             available=True,
             bypassed=False,
-            load_state="inserted",
+            load_state="loaded",
+            runtime_message="plugin ready",
         )
         for i, slot in enumerate(chain):
             if slot.slot_index == int(slot_index):
@@ -345,7 +347,8 @@ class NativeBridgeClient(BridgeClient):
         if slot is None:
             return BridgeResult(code=2, message="plugin slot not found")
         slot.bypassed = bool(bypassed)
-        slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        slot.load_state = "loaded" if slot.available else "unavailable"
+        slot.runtime_message = "plugin ready" if slot.available else "plugin unavailable"
         return BridgeResult()
 
     def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
@@ -378,7 +381,27 @@ class NativeBridgeClient(BridgeClient):
         chain = self._insert_chain_cache.get(int(channel_id), [])
         for slot in chain:
             slot.bypassed = bool(bypassed)
-            slot.load_state = "bypassed" if slot.bypassed else "inserted"
+            slot.load_state = "loaded" if slot.available else "unavailable"
+            slot.runtime_message = "plugin ready" if slot.available else "plugin unavailable"
+        return BridgeResult()
+
+    def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
+        if hasattr(self._native, "refresh_insert_runtime_state"):
+            return _to_result(self._native.refresh_insert_runtime_state(int(channel_id)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        for slot in chain:
+            if not slot.plugin_id:
+                slot.load_state = "unloaded"
+                slot.runtime_message = "slot is empty"
+            elif not slot.available:
+                slot.load_state = "unavailable"
+                slot.runtime_message = "plugin unavailable"
+            elif "fail" in slot.plugin_id:
+                slot.load_state = "failed"
+                slot.runtime_message = "plugin runtime evaluation failed"
+            else:
+                slot.load_state = "loaded"
+                slot.runtime_message = "plugin ready"
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

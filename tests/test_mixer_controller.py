@@ -35,6 +35,7 @@ def test_mixer_plugin_insert_chain_flow():
     assert len(vm.insert_chain) == 1
     assert vm.insert_chain[0].plugin_id == "midas.eq.basic"
     assert vm.insert_chain[0].bypassed is False
+    assert vm.insert_chain[0].load_state == "loaded"
     assert controller.insert_plugin(1, "midas.comp.basic", 1).ok
     assert controller.move_plugin(1, 1, 0).ok
     assert vm.insert_chain[0].plugin_id == "midas.comp.basic"
@@ -47,6 +48,8 @@ def test_mixer_plugin_insert_chain_flow():
     assert vm.insert_chain[0].plugin_id == "midas.comp.basic"
     assert controller.set_channel_insert_bypass(1, True).ok
     assert all(slot.bypassed for slot in vm.insert_chain)
+    assert controller.refresh_insert_runtime_state(1).ok
+    assert all(slot.load_state in {"loaded", "unavailable", "failed"} for slot in vm.insert_chain)
     assert controller.remove_plugin(1, 0).ok
     assert len(vm.insert_chain) == 1
     assert controller.clear_insert_chain(1).ok

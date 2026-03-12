@@ -247,6 +247,8 @@ class FallbackBridgeClient(BridgeClient):
         self._session.last_load_epoch = int(time.time())
         self._session.storage_path = "fallback://local-session"
         self._insert_chains = deepcopy(self._saved_insert_chains)
+        for chain in self._insert_chains.values():
+            self._evaluate_runtime_state(chain)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -264,6 +266,8 @@ class FallbackBridgeClient(BridgeClient):
         self._session.last_apply_epoch = int(time.time())
         self._session.storage_path = "fallback://local-session"
         self._insert_chains = deepcopy(self._saved_insert_chains)
+        for chain in self._insert_chains.values():
+            self._evaluate_runtime_state(chain)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -342,6 +346,7 @@ class FallbackBridgeClient(BridgeClient):
                 available=slot.available,
                 bypassed=slot.bypassed,
                 load_state=slot.load_state,
+                runtime_message=slot.runtime_message,
             )
             for slot in self._insert_chains.get(int(channel_id), [])
         ]
@@ -366,7 +371,8 @@ class FallbackBridgeClient(BridgeClient):
                     plugin_name=plugin.name,
                     available=True,
                     bypassed=False,
-                    load_state="inserted",
+                    load_state="loaded",
+                    runtime_message="plugin ready",
                 )
                 break
         else:
@@ -378,7 +384,8 @@ class FallbackBridgeClient(BridgeClient):
                     plugin_name=plugin.name,
                     available=True,
                     bypassed=False,
-                    load_state="inserted",
+                    load_state="loaded",
+                    runtime_message="plugin ready",
                 )
             )
             chain.sort(key=lambda s: s.slot_index)
@@ -454,7 +461,7 @@ class FallbackBridgeClient(BridgeClient):
         if slot is None:
             return BridgeResult(code=2, message="plugin slot not found")
         slot.bypassed = bool(bypassed)
-        slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        self._evaluate_runtime_state([slot])
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -505,7 +512,7 @@ class FallbackBridgeClient(BridgeClient):
         chain = self._insert_chains.get(channel_id, [])
         for slot in chain:
             slot.bypassed = bool(bypassed)
-            slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        self._evaluate_runtime_state(chain)
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -520,6 +527,35 @@ class FallbackBridgeClient(BridgeClient):
         if chain:
             self._mark_session_modified()
         return BridgeResult()
+
+    def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        chain = self._insert_chains.get(channel_id, [])
+        self._evaluate_runtime_state(chain)
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"action": "refresh_insert_runtime_state", "channel": str(channel_id)},
+            )
+        )
+        return BridgeResult()
+
+    @staticmethod
+    def _evaluate_runtime_state(chain: List[InsertedPluginSlot]) -> None:
+        for slot in chain:
+            if not slot.plugin_id:
+                slot.load_state = "unloaded"
+                slot.runtime_message = "slot is empty"
+            elif not slot.available:
+                slot.load_state = "unavailable"
+                slot.runtime_message = "plugin unavailable"
+            elif "fail" in slot.plugin_id:
+                slot.load_state = "failed"
+                slot.runtime_message = "plugin runtime evaluation failed"
+            else:
+                slot.load_state = "loaded"
+                slot.runtime_message = "plugin ready"
 
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"

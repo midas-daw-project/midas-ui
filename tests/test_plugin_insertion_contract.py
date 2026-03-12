@@ -30,6 +30,7 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert bridge.move_plugin_to_bottom(1, 1).ok
 
     assert bridge.load_session().ok
+    assert bridge.refresh_insert_runtime_state(1).ok
     loaded = bridge.get_insert_chain(1)
     assert len(loaded) == 2
     assert loaded[0].plugin_id == "midas.comp.basic"
@@ -39,7 +40,9 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
 
     assert bridge.remove_plugin(1, 1).ok
     assert bridge.apply_session().ok
+    assert bridge.refresh_insert_runtime_state(1).ok
     applied = bridge.get_insert_chain(1)
     assert len(applied) == 2
+    assert all(slot.load_state in {"loaded", "unavailable", "failed"} for slot in applied)
     assert bridge.clear_insert_chain(1).ok
     assert bridge.get_insert_chain(1) == []

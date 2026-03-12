@@ -66,11 +66,13 @@ def main() -> None:
     assert int(native.insert_plugin(1, "midas.comp.basic", 1)["code"]) == 0
     assert int(native.move_plugin_to_top(1, 1)["code"]) == 0
     assert int(native.set_channel_insert_bypass(1, True)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
     chain = native.get_insert_chain(1)
     assert isinstance(chain, list)
     assert len(chain) >= 1
     assert str(chain[0].get("values", {}).get("plugin_id", "")) == "midas.comp.basic"
     assert str(chain[0].get("values", {}).get("bypassed", "")).lower() == "true"
+    assert str(chain[0].get("values", {}).get("runtime_status_message", "")) != ""
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
     assert len(native.get_insert_chain(1)) == 0

@@ -85,7 +85,8 @@ class InsertedPluginSlot:
     plugin_name: str = ""
     available: bool = False
     bypassed: bool = False
-    load_state: str = "empty"
+    load_state: str = "unloaded"
+    runtime_message: str = ""
 
 
 @dataclass(slots=True)
@@ -196,4 +197,7 @@ class BridgeClient(Protocol):
         ...
 
     def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
+        ...
+
+    def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
         ...

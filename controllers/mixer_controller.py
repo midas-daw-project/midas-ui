@@ -95,3 +95,10 @@ class MixerController:
         self._vm.last_error = "" if result.ok else result.message
         self.refresh_insert_chain(channel_id)
         return result
+
+    def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
+        result = self._bridge.refresh_insert_runtime_state(channel_id)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
