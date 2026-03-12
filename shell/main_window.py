@@ -258,6 +258,7 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("insert_plugin", result.code, result.message)
         if result.ok:
             self._workspace_controller.mark_action(f"Inserted {plugin_id} at ch{channel}:slot{slot}")
+            self._mark_session_modified()
         self._browser_panel.render(self._browser_vm)
         self._refresh_mixer()
 
@@ -268,6 +269,7 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("remove_plugin", result.code, result.message)
         if result.ok:
             self._workspace_controller.mark_action(f"Removed plugin at ch{channel}:slot{slot}")
+            self._mark_session_modified()
         self._refresh_mixer()
 
     def _refresh_workspace(self) -> None:
@@ -282,6 +284,8 @@ class MainWindow(QMainWindow):
         result = self._mixer_controller.set_mute(channel, self._mixer_panel.selected_mute())
         self._debug_panel.append_result("set_channel_mute", result.code, result.message)
         self._workspace_controller.mark_action(f"Set channel {channel} mute")
+        if result.ok:
+            self._mark_session_modified()
         self._refresh_mixer()
 
     def _apply_mixer_gain(self) -> None:
@@ -290,6 +294,8 @@ class MainWindow(QMainWindow):
         result = self._mixer_controller.set_gain(channel, self._mixer_panel.selected_gain())
         self._debug_panel.append_result("set_channel_gain", result.code, result.message)
         self._workspace_controller.mark_action(f"Set channel {channel} gain")
+        if result.ok:
+            self._mark_session_modified()
         self._refresh_mixer()
 
     def _save_session(self) -> None:
@@ -372,6 +378,9 @@ class MainWindow(QMainWindow):
         self._refresh_session()
         self._refresh_transport()
         self._refresh_browser()
+
+    def _mark_session_modified(self) -> None:
+        self._session_controller.mark_dirty()
 
     def _refresh_debug_summary(self) -> None:
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)

@@ -11,6 +11,11 @@ class WorkspaceViewModel:
     bridge_version: int = 0
     session_ref: str = "default-session"
     session_status: str = "idle"
+    session_phase: str = "none"
+    session_dirty: bool = False
+    session_storage_path: str = ""
+    session_storage_source: str = ""
+    session_last_operation: str = "none"
     audio_state: str = "idle"
     transport_state: str = "stopped"
     runtime_active: bool = False

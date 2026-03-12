@@ -160,9 +160,23 @@ class NativeBridgeClient(BridgeClient):
     def get_session_status(self) -> SessionStatus:
         raw = self._native.get_session_status()
         values = dict(raw.get("values", {}))
+        def _as_int(key: str, fallback: int = 0) -> int:
+            try:
+                return int(values.get(key, str(fallback)))
+            except (TypeError, ValueError):
+                return fallback
+
         return SessionStatus(
             status=str(values.get("status", "idle")),
             session_ref=str(values.get("session_ref", "default-session")),
+            phase=str(values.get("session_phase", "none")),
+            dirty=str(values.get("session_dirty", "false")).lower() in {"1", "true", "yes", "on"},
+            storage_path=str(values.get("storage_path", "")),
+            storage_source=str(values.get("storage_source", "")),
+            last_operation=str(values.get("last_operation", "none")),
+            last_save_epoch=_as_int("last_save_epoch", 0),
+            last_load_epoch=_as_int("last_load_epoch", 0),
+            last_apply_epoch=_as_int("last_apply_epoch", 0),
         )
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:

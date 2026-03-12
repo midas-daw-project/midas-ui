@@ -40,6 +40,8 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.bridge_mode == "fallback"
     assert workspace_vm.bridge_version == 1
     assert workspace_vm.session_ref == "local-session"
+    assert workspace_vm.session_phase in {"none", "modified", "saved", "loaded", "applied"}
+    assert workspace_vm.session_storage_source == "fallback-memory"
     assert workspace_vm.audio_state == "started"
     assert workspace_vm.runtime_active is True
     assert workspace_vm.transport_state == "playing"

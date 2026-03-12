@@ -30,6 +30,11 @@ class WorkspaceController:
 
         self._vm.session_ref = session.session_ref or self._vm.session_ref
         self._vm.session_status = session.status
+        self._vm.session_phase = session.phase
+        self._vm.session_dirty = session.dirty
+        self._vm.session_storage_path = session.storage_path
+        self._vm.session_storage_source = session.storage_source
+        self._vm.session_last_operation = session.last_operation
         self._vm.transport_state = transport.play_state
         self._vm.audio_state = runtime.audio.state
         self._vm.runtime_active = transport.runtime_active or runtime.runtime_started

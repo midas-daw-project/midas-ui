@@ -41,6 +41,14 @@ class MixerChannelStatus:
 class SessionStatus:
     status: str = "idle"
     session_ref: str = ""
+    phase: str = "none"
+    dirty: bool = False
+    storage_path: str = ""
+    storage_source: str = ""
+    last_operation: str = "none"
+    last_save_epoch: int = 0
+    last_load_epoch: int = 0
+    last_apply_epoch: int = 0
 
 
 @dataclass(slots=True)

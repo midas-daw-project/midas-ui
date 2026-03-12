@@ -35,9 +35,13 @@ class WorkspacePanel(QWidget):
         overview_form = QFormLayout(overview_box)
         self.session_label = QLabel("Session: default-session")
         self.session_status_label = QLabel("Session Status: idle")
+        self.session_identity_label = QLabel("Phase: none | Dirty: no")
+        self.session_storage_label = QLabel("Storage: -")
         self.bridge_label = QLabel("Bridge: unknown v0")
         overview_form.addRow(self.session_label)
         overview_form.addRow(self.session_status_label)
+        overview_form.addRow(self.session_identity_label)
+        overview_form.addRow(self.session_storage_label)
         overview_form.addRow(self.bridge_label)
         layout.addWidget(overview_box)
 
@@ -87,6 +91,12 @@ class WorkspacePanel(QWidget):
         self.mode_label.setText(vm.workspace_mode)
         self.session_label.setText(f"Session: {vm.session_ref}")
         self.session_status_label.setText(f"Session Status: {vm.session_status}")
+        self.session_identity_label.setText(
+            f"Phase: {vm.session_phase} | Dirty: {'yes' if vm.session_dirty else 'no'} | Last: {vm.session_last_operation}"
+        )
+        self.session_storage_label.setText(
+            f"Storage: {(vm.session_storage_path or '-')} | Source: {(vm.session_storage_source or '-')}"
+        )
         self.bridge_label.setText(f"Bridge: {vm.bridge_mode} v{vm.bridge_version}")
         self.audio_label.setText(f"Audio: {vm.audio_state}")
         self.transport_label.setText(f"Transport: {vm.transport_state}")

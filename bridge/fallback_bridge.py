@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable, Dict
 from typing import List
 from copy import deepcopy
+import time
 
 from bridge.protocol import (
     AudioStatus,
@@ -31,6 +32,9 @@ class FallbackBridgeClient(BridgeClient):
             1: MixerChannelStatus(channel_id=1, muted=False, gain=1.0)
         }
         self._session = SessionStatus(status="idle", session_ref="local-session")
+        self._session.phase = "none"
+        self._session.storage_source = "fallback-memory"
+        self._session.last_operation = "none"
         self._transport = TransportStatus(play_state="stopped")
         self._track_channel = 0
         self._plugin_registry = [
@@ -200,6 +204,7 @@ class FallbackBridgeClient(BridgeClient):
                 metadata={"channel": str(channel_id), "muted": "true" if muted else "false"},
             )
         )
+        self._mark_session_modified()
         return BridgeResult()
 
     def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
@@ -214,10 +219,16 @@ class FallbackBridgeClient(BridgeClient):
                 metadata={"channel": str(channel_id), "gain": f"{channel.gain:.6f}"},
             )
         )
+        self._mark_session_modified()
         return BridgeResult()
 
     def save_session(self) -> BridgeResult:
         self._session.status = "saved"
+        self._session.phase = "saved"
+        self._session.dirty = False
+        self._session.last_operation = "save"
+        self._session.last_save_epoch = int(time.time())
+        self._session.storage_path = "fallback://local-session"
         self._saved_insert_chains = deepcopy(self._insert_chains)
         self._publish(
             BridgeEvent(
@@ -230,6 +241,11 @@ class FallbackBridgeClient(BridgeClient):
 
     def load_session(self) -> BridgeResult:
         self._session.status = "loaded"
+        self._session.phase = "loaded"
+        self._session.dirty = False
+        self._session.last_operation = "load"
+        self._session.last_load_epoch = int(time.time())
+        self._session.storage_path = "fallback://local-session"
         self._insert_chains = deepcopy(self._saved_insert_chains)
         self._publish(
             BridgeEvent(
@@ -242,6 +258,11 @@ class FallbackBridgeClient(BridgeClient):
 
     def apply_session(self) -> BridgeResult:
         self._session.status = "applied"
+        self._session.phase = "applied"
+        self._session.dirty = False
+        self._session.last_operation = "apply"
+        self._session.last_apply_epoch = int(time.time())
+        self._session.storage_path = "fallback://local-session"
         self._insert_chains = deepcopy(self._saved_insert_chains)
         self._publish(
             BridgeEvent(
@@ -253,7 +274,18 @@ class FallbackBridgeClient(BridgeClient):
         return BridgeResult()
 
     def get_session_status(self) -> SessionStatus:
-        return SessionStatus(status=self._session.status, session_ref=self._session.session_ref)
+        return SessionStatus(
+            status=self._session.status,
+            session_ref=self._session.session_ref,
+            phase=self._session.phase,
+            dirty=self._session.dirty,
+            storage_path=self._session.storage_path,
+            storage_source=self._session.storage_source,
+            last_operation=self._session.last_operation,
+            last_save_epoch=self._session.last_save_epoch,
+            last_load_epoch=self._session.last_load_epoch,
+            last_apply_epoch=self._session.last_apply_epoch,
+        )
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
         return self.start_audio(track_channel, mixer_subsystem)
@@ -362,6 +394,7 @@ class FallbackBridgeClient(BridgeClient):
                 },
             )
         )
+        self._mark_session_modified()
         return BridgeResult()
 
     def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
@@ -379,7 +412,14 @@ class FallbackBridgeClient(BridgeClient):
                 metadata={"action": "remove_plugin", "channel": str(channel_id), "slot": str(slot_index)},
             )
         )
+        self._mark_session_modified()
         return BridgeResult()
+
+    def _mark_session_modified(self) -> None:
+        self._session.status = "modified"
+        self._session.phase = "modified"
+        self._session.dirty = True
+        self._session.last_operation = "modify"
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)
