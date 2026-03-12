@@ -65,6 +65,7 @@ class FallbackBridgeClient(BridgeClient):
         ]
         self._insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._saved_insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
+        self._next_placeholder_sequence = 1
 
     def bridge_version(self) -> int:
         return 1
@@ -349,6 +350,8 @@ class FallbackBridgeClient(BridgeClient):
                 runtime_message=slot.runtime_message,
                 host_lifecycle_state=slot.host_lifecycle_state,
                 host_message=slot.host_message,
+                placeholder_instance_id=slot.placeholder_instance_id,
+                placeholder_created_sequence=slot.placeholder_created_sequence,
             )
             for slot in self._insert_chains.get(int(channel_id), [])
         ]
@@ -377,6 +380,8 @@ class FallbackBridgeClient(BridgeClient):
                     runtime_message="plugin ready",
                     host_lifecycle_state="not_requested",
                     host_message="",
+                    placeholder_instance_id="",
+                    placeholder_created_sequence=0,
                 )
                 break
         else:
@@ -392,6 +397,8 @@ class FallbackBridgeClient(BridgeClient):
                     runtime_message="plugin ready",
                     host_lifecycle_state="not_requested",
                     host_message="",
+                    placeholder_instance_id="",
+                    placeholder_created_sequence=0,
                 )
             )
             chain.sort(key=lambda s: s.slot_index)
@@ -559,9 +566,16 @@ class FallbackBridgeClient(BridgeClient):
         if slot.load_state == "loaded":
             slot.host_lifecycle_state = "loaded_placeholder"
             slot.host_message = "placeholder loaded"
+            if not slot.placeholder_instance_id:
+                seq = self._next_placeholder_sequence
+                self._next_placeholder_sequence += 1
+                slot.placeholder_instance_id = f"ph-{seq}"
+                slot.placeholder_created_sequence = seq
         else:
             slot.host_lifecycle_state = "load_failed"
             slot.host_message = slot.runtime_message or "runtime not loadable"
+            slot.placeholder_instance_id = ""
+            slot.placeholder_created_sequence = 0
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -582,6 +596,8 @@ class FallbackBridgeClient(BridgeClient):
         slot.host_message = "unload requested"
         slot.host_lifecycle_state = "unloaded"
         slot.host_message = "placeholder unloaded"
+        slot.placeholder_instance_id = ""
+        slot.placeholder_created_sequence = 0
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -625,6 +641,8 @@ class FallbackBridgeClient(BridgeClient):
                         runtime_message="",
                         host_lifecycle_state="not_requested",
                         host_message="",
+                        placeholder_instance_id="",
+                        placeholder_created_sequence=0,
                     )
                 )
             snapshot[channel_id] = copied

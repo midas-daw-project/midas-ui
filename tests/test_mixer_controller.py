@@ -52,8 +52,16 @@ def test_mixer_plugin_insert_chain_flow():
     assert all(slot.load_state in {"loaded", "unavailable", "failed"} for slot in vm.insert_chain)
     assert controller.request_insert_load(1, 0).ok
     assert vm.insert_chain[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
+    if vm.insert_chain[0].host_lifecycle_state == "loaded_placeholder":
+        assert vm.insert_chain[0].placeholder_instance_id != ""
+        assert vm.insert_chain[0].placeholder_created_sequence > 0
+    else:
+        assert vm.insert_chain[0].placeholder_instance_id == ""
+        assert vm.insert_chain[0].placeholder_created_sequence == 0
     assert controller.request_insert_unload(1, 0).ok
     assert vm.insert_chain[0].host_lifecycle_state == "unloaded"
+    assert vm.insert_chain[0].placeholder_instance_id == ""
+    assert vm.insert_chain[0].placeholder_created_sequence == 0
     assert controller.remove_plugin(1, 0).ok
     assert len(vm.insert_chain) == 1
     assert controller.clear_insert_chain(1).ok

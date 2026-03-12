@@ -89,6 +89,8 @@ class InsertedPluginSlot:
     runtime_message: str = ""
     host_lifecycle_state: str = "not_requested"
     host_message: str = ""
+    placeholder_instance_id: str = ""
+    placeholder_created_sequence: int = 0
 
 
 @dataclass(slots=True)

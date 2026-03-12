@@ -182,7 +182,8 @@ class MixerPanel(QWidget):
                 f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
                 f"intent_bypassed={'true' if slot.bypassed else 'false'} runtime={slot.load_state} "
                 f"host={slot.host_lifecycle_state} note={slot.runtime_message or '-'} "
-                f"host_note={slot.host_message or '-'}"
+                f"host_note={slot.host_message or '-'} "
+                f"placeholder={slot.placeholder_instance_id or '-'}"
             )
             if slot.slot_index == self.selected_slot_index():
                 self.bypass_input.setChecked(slot.bypassed)

@@ -74,8 +74,20 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("plugin_id", "")) == "midas.comp.basic"
     assert str(chain[0].get("values", {}).get("bypassed", "")).lower() == "true"
     assert str(chain[0].get("values", {}).get("runtime_status_message", "")) != ""
-    assert str(chain[0].get("values", {}).get("host_lifecycle_state", "")) in {"loaded_placeholder", "load_failed"}
+    host_state = str(chain[0].get("values", {}).get("host_lifecycle_state", ""))
+    assert host_state in {"loaded_placeholder", "load_failed"}
+    placeholder_id = str(chain[0].get("values", {}).get("placeholder_instance_id", ""))
+    placeholder_seq = str(chain[0].get("values", {}).get("placeholder_created_seq", "0"))
+    if host_state == "loaded_placeholder":
+        assert placeholder_id
+        assert int(placeholder_seq) > 0
+    else:
+        assert placeholder_id == ""
+        assert int(placeholder_seq) == 0
     assert int(native.request_insert_unload(1, 0)["code"]) == 0
+    chain = native.get_insert_chain(1)
+    assert str(chain[0].get("values", {}).get("placeholder_instance_id", "")) == ""
+    assert str(chain[0].get("values", {}).get("placeholder_created_seq", "0")) == "0"
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
     assert len(native.get_insert_chain(1)) == 0

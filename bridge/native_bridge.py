@@ -51,6 +51,7 @@ class NativeBridgeClient(BridgeClient):
             ),
         ]
         self._insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
+        self._next_placeholder_sequence = 1
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -283,6 +284,8 @@ class NativeBridgeClient(BridgeClient):
                         runtime_message=str(values.get("runtime_status_message", "")),
                         host_lifecycle_state=str(values.get("host_lifecycle_state", "not_requested")),
                         host_message=str(values.get("host_status_message", "")),
+                        placeholder_instance_id=str(values.get("placeholder_instance_id", "")),
+                        placeholder_created_sequence=int(values.get("placeholder_created_seq", 0) or 0),
                     )
                 )
             self._insert_chain_cache[int(channel_id)] = slots
@@ -308,6 +311,8 @@ class NativeBridgeClient(BridgeClient):
             runtime_message="plugin ready",
             host_lifecycle_state="not_requested",
             host_message="",
+            placeholder_instance_id="",
+            placeholder_created_sequence=0,
         )
         for i, slot in enumerate(chain):
             if slot.slot_index == int(slot_index):
@@ -420,9 +425,16 @@ class NativeBridgeClient(BridgeClient):
         if slot.load_state == "loaded":
             slot.host_lifecycle_state = "loaded_placeholder"
             slot.host_message = "placeholder loaded"
+            if not slot.placeholder_instance_id:
+                seq = self._next_placeholder_sequence
+                self._next_placeholder_sequence += 1
+                slot.placeholder_instance_id = f"ph-{seq}"
+                slot.placeholder_created_sequence = seq
         else:
             slot.host_lifecycle_state = "load_failed"
             slot.host_message = slot.runtime_message or "runtime not loadable"
+            slot.placeholder_instance_id = ""
+            slot.placeholder_created_sequence = 0
         return BridgeResult()
 
     def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
@@ -436,6 +448,8 @@ class NativeBridgeClient(BridgeClient):
         slot.host_message = "unload requested"
         slot.host_lifecycle_state = "unloaded"
         slot.host_message = "placeholder unloaded"
+        slot.placeholder_instance_id = ""
+        slot.placeholder_created_sequence = 0
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

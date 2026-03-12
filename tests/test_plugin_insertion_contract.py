@@ -23,6 +23,12 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert chain[1].plugin_id == "midas.eq.basic"
     assert chain[1].bypassed is True
     assert chain[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
+    if chain[0].host_lifecycle_state == "loaded_placeholder":
+        assert chain[0].placeholder_instance_id
+        assert chain[0].placeholder_created_sequence > 0
+    else:
+        assert chain[0].placeholder_instance_id == ""
+        assert chain[0].placeholder_created_sequence == 0
 
     assert bridge.save_session().ok
 
@@ -41,6 +47,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert loaded[1].bypassed is True
     # host lifecycle is ephemeral; it is re-derived and starts from non-requested state after load/apply.
     assert loaded[0].host_lifecycle_state == "not_requested"
+    assert loaded[0].placeholder_instance_id == ""
+    assert loaded[0].placeholder_created_sequence == 0
 
     assert bridge.remove_plugin(1, 1).ok
     assert bridge.apply_session().ok
@@ -50,5 +58,7 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert len(applied) == 2
     assert all(slot.load_state in {"loaded", "unavailable", "failed"} for slot in applied)
     assert applied[0].host_lifecycle_state == "unloaded"
+    assert applied[0].placeholder_instance_id == ""
+    assert applied[0].placeholder_created_sequence == 0
     assert bridge.clear_insert_chain(1).ok
     assert bridge.get_insert_chain(1) == []
