@@ -39,6 +39,11 @@
 - audio lifecycle command dispatch
 - status refresh and ViewModel updates
 
+`WorkspaceController` owns:
+- central workspace overview aggregation
+- bridge identity display state
+- session/runtime/transport/mixer summary refresh
+
 ## Result Mapping
 
 - `code == 0`: success

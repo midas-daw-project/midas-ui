@@ -1,10 +1,88 @@
 from __future__ import annotations
 
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from typing import Callable
+
+from PySide6.QtWidgets import (
+    QFormLayout,
+    QGroupBox,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
 class WorkspacePanel(QWidget):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        on_refresh_all: Callable[[], None],
+        on_save_session: Callable[[], None],
+        on_load_session: Callable[[], None],
+        on_apply_session: Callable[[], None],
+    ) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Workspace placeholder (phase 1)."))
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        self.title_label = QLabel("MIDAS Workspace")
+        self.mode_label = QLabel("Shell / Runtime Overview")
+        layout.addWidget(self.title_label)
+        layout.addWidget(self.mode_label)
+
+        overview_box = QGroupBox("Project Context")
+        overview_form = QFormLayout(overview_box)
+        self.session_label = QLabel("Session: default-session")
+        self.session_status_label = QLabel("Session Status: idle")
+        self.bridge_label = QLabel("Bridge: unknown v0")
+        overview_form.addRow(self.session_label)
+        overview_form.addRow(self.session_status_label)
+        overview_form.addRow(self.bridge_label)
+        layout.addWidget(overview_box)
+
+        runtime_box = QGroupBox("Runtime Snapshot")
+        runtime_form = QFormLayout(runtime_box)
+        self.audio_label = QLabel("Audio: idle")
+        self.transport_label = QLabel("Transport: stopped")
+        self.runtime_label = QLabel("Runtime Active: no")
+        self.render_label = QLabel("Render: stopped")
+        self.mixer_label = QLabel("Mixer: channels=0, muted=0")
+        runtime_form.addRow(self.audio_label)
+        runtime_form.addRow(self.transport_label)
+        runtime_form.addRow(self.runtime_label)
+        runtime_form.addRow(self.render_label)
+        runtime_form.addRow(self.mixer_label)
+        layout.addWidget(runtime_box)
+
+        actions_box = QGroupBox("Quick Actions")
+        actions_layout = QVBoxLayout(actions_box)
+        self.refresh_button = QPushButton("Refresh All")
+        self.save_button = QPushButton("Save Session")
+        self.load_button = QPushButton("Load Session")
+        self.apply_button = QPushButton("Apply Session")
+        self.last_action_label = QLabel("Last Action: Ready")
+        actions_layout.addWidget(self.refresh_button)
+        actions_layout.addWidget(self.save_button)
+        actions_layout.addWidget(self.load_button)
+        actions_layout.addWidget(self.apply_button)
+        actions_layout.addWidget(self.last_action_label)
+        layout.addWidget(actions_box)
+
+        self.refresh_button.clicked.connect(on_refresh_all)
+        self.save_button.clicked.connect(on_save_session)
+        self.load_button.clicked.connect(on_load_session)
+        self.apply_button.clicked.connect(on_apply_session)
+
+    def render(self, vm: WorkspaceViewModel) -> None:
+        self.title_label.setText(vm.workspace_title)
+        self.mode_label.setText(vm.workspace_mode)
+        self.session_label.setText(f"Session: {vm.session_ref}")
+        self.session_status_label.setText(f"Session Status: {vm.session_status}")
+        self.bridge_label.setText(f"Bridge: {vm.bridge_mode} v{vm.bridge_version}")
+        self.audio_label.setText(f"Audio: {vm.audio_state}")
+        self.transport_label.setText(f"Transport: {vm.transport_state}")
+        self.runtime_label.setText(f"Runtime Active: {'yes' if vm.runtime_active else 'no'}")
+        self.render_label.setText(f"Render: {vm.render_status}")
+        self.mixer_label.setText(f"Mixer: channels={vm.mixer_channel_count}, muted={vm.muted_channel_count}")
+        self.last_action_label.setText(f"Last Action: {vm.last_action}")
