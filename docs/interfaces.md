@@ -24,6 +24,7 @@
 - `play_transport(track_channel, mixer_subsystem)`
 - `stop_transport()`
 - `get_transport_status()`
+- `get_runtime_status()`
 
 ## Controller Contract
 

@@ -61,3 +61,32 @@ class AudioController:
         self._vm.sample_rate = status.sample_rate
         self._vm.buffer_size = status.buffer_size
         self._vm.render_status = status.render_status
+        self._vm.render_produced = status.render_produced
+        self._vm.render_frames_produced = status.render_frames_produced
+        self._vm.render_frames_requested = status.render_frames_requested
+        self._vm.render_channel_count = status.render_channel_count
+        self._vm.tracked_channel = status.track_channel
+        self._vm.tracked_muted = status.tracked_muted
+        self._vm.tracked_gain = status.tracked_gain
+
+        try:
+            runtime = self._bridge.get_runtime_status()
+        except Exception:
+            runtime = None
+        if runtime is None:
+            return
+        self._vm.runtime_started = runtime.runtime_started
+        self._vm.state = runtime.audio.state or self._vm.state
+        self._vm.device_id = runtime.audio.device_id or self._vm.device_id
+        if runtime.audio.sample_rate:
+            self._vm.sample_rate = runtime.audio.sample_rate
+        if runtime.audio.buffer_size:
+            self._vm.buffer_size = runtime.audio.buffer_size
+        self._vm.render_status = runtime.audio.render_status or self._vm.render_status
+        self._vm.render_produced = runtime.audio.render_produced
+        self._vm.render_frames_produced = runtime.audio.render_frames_produced
+        self._vm.render_frames_requested = runtime.audio.render_frames_requested
+        self._vm.render_channel_count = runtime.audio.render_channel_count
+        self._vm.tracked_channel = runtime.audio.track_channel
+        self._vm.tracked_muted = runtime.audio.tracked_muted
+        self._vm.tracked_gain = runtime.audio.tracked_gain

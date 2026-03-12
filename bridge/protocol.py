@@ -21,6 +21,13 @@ class AudioStatus:
     sample_rate: int = 0
     buffer_size: int = 0
     render_status: str = "stopped"
+    render_produced: bool = False
+    render_frames_produced: int = 0
+    render_frames_requested: int = 0
+    render_channel_count: int = 0
+    track_channel: int = 0
+    tracked_muted: bool = False
+    tracked_gain: float = 1.0
 
 
 @dataclass(slots=True)
@@ -39,6 +46,13 @@ class SessionStatus:
 @dataclass(slots=True)
 class TransportStatus:
     play_state: str = "stopped"
+
+
+@dataclass(slots=True)
+class RuntimeStatus:
+    runtime_started: bool = False
+    bridge_version: int = 0
+    audio: AudioStatus = field(default_factory=AudioStatus)
 
 
 @dataclass(slots=True)
@@ -113,4 +127,7 @@ class BridgeClient(Protocol):
         ...
 
     def get_transport_status(self) -> TransportStatus:
+        ...
+
+    def get_runtime_status(self) -> RuntimeStatus:
         ...

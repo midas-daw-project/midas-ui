@@ -9,6 +9,7 @@ from bridge.protocol import (
     BridgeEvent,
     BridgeResult,
     MixerChannelStatus,
+    RuntimeStatus,
     SessionStatus,
     TransportStatus,
 )
@@ -63,6 +64,13 @@ class NativeBridgeClient(BridgeClient):
             sample_rate=int(raw.get("sample_rate", 0)),
             buffer_size=int(raw.get("buffer_size", 0)),
             render_status=str(raw.get("render_status", "stopped")),
+            render_produced=bool(raw.get("render_produced", False)),
+            render_frames_produced=int(raw.get("render_frames_produced", 0)),
+            render_frames_requested=int(raw.get("render_frames_requested", 0)),
+            render_channel_count=int(raw.get("render_channel_count", 0)),
+            track_channel=int(raw.get("track_channel", 0)),
+            tracked_muted=bool(raw.get("tracked_muted", False)),
+            tracked_gain=float(raw.get("tracked_gain", 1.0)),
         )
 
     def drain_recent_events(self, max_events: int) -> list[BridgeEvent]:
@@ -145,6 +153,46 @@ class NativeBridgeClient(BridgeClient):
     def get_transport_status(self) -> TransportStatus:
         status = self.get_audio_status()
         return TransportStatus(play_state="playing" if status.state == "started" else "stopped")
+
+    def get_runtime_status(self) -> RuntimeStatus:
+        raw = self._native.get_runtime_status()
+        values = dict(raw.get("values", {}))
+
+        def _as_int(key: str, fallback: int = 0) -> int:
+            try:
+                return int(values.get(key, str(fallback)))
+            except (TypeError, ValueError):
+                return fallback
+
+        def _as_float(key: str, fallback: float = 0.0) -> float:
+            try:
+                return float(values.get(key, str(fallback)))
+            except (TypeError, ValueError):
+                return fallback
+
+        def _as_bool(key: str, fallback: bool = False) -> bool:
+            raw_value = str(values.get(key, "true" if fallback else "false")).strip().lower()
+            return raw_value in {"1", "true", "yes", "on"}
+
+        audio = AudioStatus(
+            state=str(values.get("state", "idle")),
+            device_id=str(values.get("device_id", "")),
+            sample_rate=_as_int("sample_rate", 0),
+            buffer_size=_as_int("buffer_size", 0),
+            render_status=str(values.get("render_status", "stopped")),
+            render_produced=_as_bool("render_produced", False),
+            render_frames_produced=_as_int("render_frames_produced", 0),
+            render_frames_requested=_as_int("render_frames_requested", 0),
+            render_channel_count=_as_int("render_channel_count", 0),
+            track_channel=_as_int("track_channel", 0),
+            tracked_muted=_as_bool("muted", False),
+            tracked_gain=_as_float("gain", 1.0),
+        )
+        return RuntimeStatus(
+            runtime_started=_as_bool("runtime_started", False),
+            bridge_version=_as_int("bridge_version", self.bridge_version()),
+            audio=audio,
+        )
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):

@@ -18,5 +18,10 @@ def test_audio_lifecycle_flow():
     assert controller.open_audio().ok
     assert controller.start_audio().ok
     assert vm.state == "started"
+    assert vm.runtime_started is True
+    assert vm.render_status in {"no_callback", "ok", "partial", "failed", "invalid_runtime_state"}
+    assert vm.render_frames_produced == 0
+    assert vm.render_frames_requested == 0
+    assert vm.tracked_channel == 1
     assert controller.stop_audio().ok
     assert controller.close_audio().ok

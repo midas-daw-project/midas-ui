@@ -9,6 +9,7 @@ from bridge.protocol import (
     BridgeEvent,
     BridgeResult,
     MixerChannelStatus,
+    RuntimeStatus,
     SessionStatus,
     TransportStatus,
 )
@@ -28,6 +29,7 @@ class FallbackBridgeClient(BridgeClient):
         }
         self._session = SessionStatus(status="idle", session_ref="local-session")
         self._transport = TransportStatus(play_state="stopped")
+        self._track_channel = 0
 
     def bridge_version(self) -> int:
         return 1
@@ -65,6 +67,14 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not opened")
         self._status.state = "started"
         self._status.render_status = "no_callback"
+        self._status.render_produced = False
+        self._status.render_frames_produced = 0
+        self._status.render_frames_requested = 0
+        self._status.render_channel_count = 2
+        self._status.track_channel = int(track_channel)
+        self._status.tracked_muted = self._mixer_channels.get(track_channel, MixerChannelStatus()).muted
+        self._status.tracked_gain = self._mixer_channels.get(track_channel, MixerChannelStatus()).gain
+        self._track_channel = int(track_channel)
         self._transport.play_state = "playing"
         self._publish(
             BridgeEvent(
@@ -84,6 +94,10 @@ class FallbackBridgeClient(BridgeClient):
             return BridgeResult(code=3, message="audio not started")
         self._status.state = "opened"
         self._status.render_status = "stopped"
+        self._status.render_produced = False
+        self._status.render_frames_produced = 0
+        self._status.render_frames_requested = 0
+        self._status.render_channel_count = 0
         self._transport.play_state = "stopped"
         self._publish(BridgeEvent(category="transport", emitter=2002, metadata={"action": "stop"}))
         return BridgeResult()
@@ -96,6 +110,14 @@ class FallbackBridgeClient(BridgeClient):
         self._status.sample_rate = 0
         self._status.buffer_size = 0
         self._status.render_status = "stopped"
+        self._status.render_produced = False
+        self._status.render_frames_produced = 0
+        self._status.render_frames_requested = 0
+        self._status.render_channel_count = 0
+        self._status.track_channel = 0
+        self._status.tracked_muted = False
+        self._status.tracked_gain = 1.0
+        self._track_channel = 0
         self._publish(BridgeEvent(category="device", emitter=2002, metadata={"action": "close"}))
         return BridgeResult()
 
@@ -106,6 +128,13 @@ class FallbackBridgeClient(BridgeClient):
             sample_rate=self._status.sample_rate,
             buffer_size=self._status.buffer_size,
             render_status=self._status.render_status,
+            render_produced=self._status.render_produced,
+            render_frames_produced=self._status.render_frames_produced,
+            render_frames_requested=self._status.render_frames_requested,
+            render_channel_count=self._status.render_channel_count,
+            track_channel=self._status.track_channel,
+            tracked_muted=self._status.tracked_muted,
+            tracked_gain=self._status.tracked_gain,
         )
 
     def drain_recent_events(self, max_events: int) -> List[BridgeEvent]:
@@ -131,6 +160,8 @@ class FallbackBridgeClient(BridgeClient):
     def set_channel_mute(self, channel_id: int, muted: bool) -> BridgeResult:
         channel = self._mixer_channels.setdefault(channel_id, MixerChannelStatus(channel_id=channel_id))
         channel.muted = muted
+        if int(channel_id) == self._track_channel:
+            self._status.tracked_muted = muted
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -143,6 +174,8 @@ class FallbackBridgeClient(BridgeClient):
     def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
         channel = self._mixer_channels.setdefault(channel_id, MixerChannelStatus(channel_id=channel_id))
         channel.gain = float(gain)
+        if int(channel_id) == self._track_channel:
+            self._status.tracked_gain = float(gain)
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -196,6 +229,13 @@ class FallbackBridgeClient(BridgeClient):
 
     def get_transport_status(self) -> TransportStatus:
         return TransportStatus(play_state=self._transport.play_state)
+
+    def get_runtime_status(self) -> RuntimeStatus:
+        return RuntimeStatus(
+            runtime_started=self._runtime_started,
+            bridge_version=self.bridge_version(),
+            audio=self.get_audio_status(),
+        )
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)

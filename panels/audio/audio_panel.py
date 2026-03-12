@@ -83,10 +83,16 @@ class AudioPanel(QWidget):
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
         self.state_label = QLabel("State: idle")
+        self.runtime_label = QLabel("Runtime: stopped")
         self.render_status_label = QLabel("Render: stopped")
+        self.render_frames_label = QLabel("Frames: 0/0 @ ch=0")
+        self.tracked_channel_label = QLabel("Tracked Channel: -")
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.state_label)
+        status_layout.addWidget(self.runtime_label)
         status_layout.addWidget(self.render_status_label)
+        status_layout.addWidget(self.render_frames_label)
+        status_layout.addWidget(self.tracked_channel_label)
         status_layout.addWidget(self.error_label)
         root.addWidget(status_box)
 
@@ -110,5 +116,17 @@ class AudioPanel(QWidget):
             f"State: {vm.state} | Device: {vm.device_id or '-'} | "
             f"Rate: {vm.sample_rate} | Buffer: {vm.buffer_size}"
         )
-        self.render_status_label.setText(f"Render: {vm.render_status}")
+        self.runtime_label.setText(f"Runtime: {'started' if vm.runtime_started else 'stopped'}")
+        self.render_status_label.setText(
+            f"Render: {vm.render_status} | produced={'yes' if vm.render_produced else 'no'}"
+        )
+        self.render_frames_label.setText(
+            f"Frames: {vm.render_frames_produced}/{vm.render_frames_requested} @ ch={vm.render_channel_count}"
+        )
+        if vm.tracked_channel > 0:
+            self.tracked_channel_label.setText(
+                f"Tracked Channel: {vm.tracked_channel} | muted={vm.tracked_muted} | gain={vm.tracked_gain:.3f}"
+            )
+        else:
+            self.tracked_channel_label.setText("Tracked Channel: -")
         self.error_label.setText(f"Error: {vm.last_error}")

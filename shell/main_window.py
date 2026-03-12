@@ -277,7 +277,12 @@ class MainWindow(QMainWindow):
     def _refresh_debug_summary(self) -> None:
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
         self._debug_panel.set_domain_statuses(
-            audio=f"state={self._audio_vm.state}, render={self._audio_vm.render_status}",
+            audio=(
+                f"runtime={'on' if self._audio_vm.runtime_started else 'off'}, "
+                f"state={self._audio_vm.state}, "
+                f"render={self._audio_vm.render_status}, "
+                f"frames={self._audio_vm.render_frames_produced}/{self._audio_vm.render_frames_requested}"
+            ),
             mixer=f"ch={mixer_channel.channel_id}, muted={mixer_channel.muted}, gain={mixer_channel.gain:.3f}",
             session=f"status={self._session_vm.status}, ref={self._session_vm.session_ref}",
             transport=f"state={self._transport_vm.play_state}",

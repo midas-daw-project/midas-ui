@@ -69,7 +69,10 @@ def main() -> None:
     assert int(native.start_audio(1, 2001)["code"]) == 0
     transport_status = native.get_runtime_status()
     assert int(transport_status.get("code", 4)) == 0
-    assert str(transport_status.get("values", {}).get("state", "")) in {"started", "opened", "initialized", "idle"}
+    values = transport_status.get("values", {})
+    assert str(values.get("state", "")) in {"started", "opened", "initialized", "idle"}
+    assert str(values.get("runtime_started", "")) in {"true", "false"}
+    assert str(values.get("render_status", "")) in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state", "stopped"}
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
 
