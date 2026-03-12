@@ -470,6 +470,57 @@ class FallbackBridgeClient(BridgeClient):
         self._mark_session_modified()
         return BridgeResult()
 
+    def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
+        chain = self._insert_chains.get(int(channel_id), [])
+        if not chain:
+            return BridgeResult(code=2, message="insert chain is empty")
+        target = min(slot.slot_index for slot in chain)
+        return self.move_plugin(channel_id, slot_index, target)
+
+    def move_plugin_to_bottom(self, channel_id: int, slot_index: int) -> BridgeResult:
+        chain = self._insert_chains.get(int(channel_id), [])
+        if not chain:
+            return BridgeResult(code=2, message="insert chain is empty")
+        target = max(slot.slot_index for slot in chain)
+        return self.move_plugin(channel_id, slot_index, target)
+
+    def clear_insert_chain(self, channel_id: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        chain = self._insert_chains.get(channel_id, [])
+        if not chain:
+            return BridgeResult(code=0, message="")
+        self._insert_chains[channel_id] = []
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"action": "clear_insert_chain", "channel": str(channel_id)},
+            )
+        )
+        self._mark_session_modified()
+        return BridgeResult()
+
+    def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
+        channel_id = int(channel_id)
+        chain = self._insert_chains.get(channel_id, [])
+        for slot in chain:
+            slot.bypassed = bool(bypassed)
+            slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={
+                    "action": "set_channel_insert_bypass",
+                    "channel": str(channel_id),
+                    "bypassed": "true" if bool(bypassed) else "false",
+                },
+            )
+        )
+        if chain:
+            self._mark_session_modified()
+        return BridgeResult()
+
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"
         self._session.phase = "modified"

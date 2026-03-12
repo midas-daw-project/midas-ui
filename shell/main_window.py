@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QDockWidget, QMainWindow
+from PySide6.QtWidgets import QDockWidget, QMainWindow, QMessageBox
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
@@ -54,7 +54,11 @@ class MainWindow(QMainWindow):
             on_remove_plugin=self._remove_selected_slot_plugin,
             on_move_slot_up=self._move_selected_slot_up,
             on_move_slot_down=self._move_selected_slot_down,
+            on_move_slot_top=self._move_selected_slot_top,
+            on_move_slot_bottom=self._move_selected_slot_bottom,
             on_toggle_bypass=self._toggle_selected_slot_bypass,
+            on_toggle_channel_bypass=self._toggle_channel_insert_bypass,
+            on_clear_chain=self._clear_channel_insert_chain,
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
@@ -299,6 +303,26 @@ class MainWindow(QMainWindow):
             self._mixer_panel.slot_input.setValue(target_slot)
         self._refresh_mixer()
 
+    def _move_selected_slot_top(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        result = self._mixer_controller.move_plugin_to_top(channel, slot)
+        self._debug_panel.append_result("move_plugin_top", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Moved slot ch{channel}:{slot} to top")
+            self._mark_session_modified()
+        self._refresh_mixer()
+
+    def _move_selected_slot_bottom(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        result = self._mixer_controller.move_plugin_to_bottom(channel, slot)
+        self._debug_panel.append_result("move_plugin_bottom", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Moved slot ch{channel}:{slot} to bottom")
+            self._mark_session_modified()
+        self._refresh_mixer()
+
     def _toggle_selected_slot_bypass(self) -> None:
         channel = self._mixer_panel.selected_channel()
         slot = self._mixer_panel.selected_slot_index()
@@ -309,6 +333,36 @@ class MainWindow(QMainWindow):
             self._workspace_controller.mark_action(
                 f"{'Bypassed' if bypassed else 'Enabled'} slot ch{channel}:{slot}"
             )
+            self._mark_session_modified()
+        self._refresh_mixer()
+
+    def _toggle_channel_insert_bypass(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        bypassed = self._mixer_panel.selected_channel_bypass()
+        result = self._mixer_controller.set_channel_insert_bypass(channel, bypassed)
+        self._debug_panel.append_result("set_channel_insert_bypass", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(
+                f"{'Bypassed' if bypassed else 'Enabled'} all inserts on ch{channel}"
+            )
+            self._mark_session_modified()
+        self._refresh_mixer()
+
+    def _clear_channel_insert_chain(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        response = QMessageBox.question(
+            self,
+            "Clear Insert Chain",
+            f"Clear all inserts on channel {channel}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if response != QMessageBox.StandardButton.Yes:
+            return
+        result = self._mixer_controller.clear_insert_chain(channel)
+        self._debug_panel.append_result("clear_insert_chain", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Cleared insert chain on ch{channel}")
             self._mark_session_modified()
         self._refresh_mixer()
 

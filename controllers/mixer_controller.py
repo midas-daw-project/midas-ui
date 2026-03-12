@@ -67,3 +67,31 @@ class MixerController:
         self._vm.last_error = "" if result.ok else result.message
         self.refresh_insert_chain(channel_id)
         return result
+
+    def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
+        result = self._bridge.move_plugin_to_top(channel_id, slot_index)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
+
+    def move_plugin_to_bottom(self, channel_id: int, slot_index: int) -> BridgeResult:
+        result = self._bridge.move_plugin_to_bottom(channel_id, slot_index)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
+
+    def clear_insert_chain(self, channel_id: int) -> BridgeResult:
+        result = self._bridge.clear_insert_chain(channel_id)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
+
+    def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
+        result = self._bridge.set_channel_insert_bypass(channel_id, bypassed)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result

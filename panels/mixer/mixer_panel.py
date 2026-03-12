@@ -27,7 +27,11 @@ class MixerPanel(QWidget):
         on_remove_plugin: Callable[[], None],
         on_move_slot_up: Callable[[], None],
         on_move_slot_down: Callable[[], None],
+        on_move_slot_top: Callable[[], None],
+        on_move_slot_bottom: Callable[[], None],
         on_toggle_bypass: Callable[[], None],
+        on_toggle_channel_bypass: Callable[[], None],
+        on_clear_chain: Callable[[], None],
         on_refresh: Callable[[], None],
     ) -> None:
         super().__init__()
@@ -37,7 +41,11 @@ class MixerPanel(QWidget):
         self._on_remove_plugin = on_remove_plugin
         self._on_move_slot_up = on_move_slot_up
         self._on_move_slot_down = on_move_slot_down
+        self._on_move_slot_top = on_move_slot_top
+        self._on_move_slot_bottom = on_move_slot_bottom
         self._on_toggle_bypass = on_toggle_bypass
+        self._on_toggle_channel_bypass = on_toggle_channel_bypass
+        self._on_clear_chain = on_clear_chain
         self._on_refresh = on_refresh
 
         layout = QVBoxLayout(self)
@@ -63,8 +71,13 @@ class MixerPanel(QWidget):
         self.remove_button = QPushButton("Remove Slot Plugin")
         self.move_up_button = QPushButton("Move Slot Up")
         self.move_down_button = QPushButton("Move Slot Down")
+        self.move_top_button = QPushButton("Move Slot To Top")
+        self.move_bottom_button = QPushButton("Move Slot To Bottom")
         self.bypass_input = QCheckBox("Bypassed")
         self.apply_bypass_button = QPushButton("Apply Slot Bypass")
+        self.channel_bypass_input = QCheckBox("Bypass All Inserts")
+        self.apply_channel_bypass_button = QPushButton("Apply Channel Bypass")
+        self.clear_chain_button = QPushButton("Clear Channel Chain")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
@@ -77,8 +90,13 @@ class MixerPanel(QWidget):
         form.addRow(self.remove_button)
         form.addRow(self.move_up_button)
         form.addRow(self.move_down_button)
+        form.addRow(self.move_top_button)
+        form.addRow(self.move_bottom_button)
         form.addRow("Slot Bypass", self.bypass_input)
         form.addRow(self.apply_bypass_button)
+        form.addRow("Channel Bypass", self.channel_bypass_input)
+        form.addRow(self.apply_channel_bypass_button)
+        form.addRow(self.clear_chain_button)
         form.addRow(self.refresh_button)
         layout.addWidget(control_box)
 
@@ -100,7 +118,11 @@ class MixerPanel(QWidget):
         self.remove_button.clicked.connect(self._on_remove_plugin)
         self.move_up_button.clicked.connect(self._on_move_slot_up)
         self.move_down_button.clicked.connect(self._on_move_slot_down)
+        self.move_top_button.clicked.connect(self._on_move_slot_top)
+        self.move_bottom_button.clicked.connect(self._on_move_slot_bottom)
         self.apply_bypass_button.clicked.connect(self._on_toggle_bypass)
+        self.apply_channel_bypass_button.clicked.connect(self._on_toggle_channel_bypass)
+        self.clear_chain_button.clicked.connect(self._on_clear_chain)
         self.refresh_button.clicked.connect(self._on_refresh)
 
     def selected_channel(self) -> int:
@@ -117,6 +139,9 @@ class MixerPanel(QWidget):
 
     def selected_slot_bypass(self) -> bool:
         return bool(self.bypass_input.isChecked())
+
+    def selected_channel_bypass(self) -> bool:
+        return bool(self.channel_bypass_input.isChecked())
 
     def render(self, vm: MixerViewModel) -> None:
         channel = vm.selected_channel_id
@@ -135,6 +160,8 @@ class MixerPanel(QWidget):
             self.gain_input.setValue(state.gain)
         self.insert_status_label.setText(f"Insert Status: {vm.last_insert_status or '-'}")
         self.chain_list.clear()
+        all_bypassed = bool(vm.insert_chain) and all(slot.bypassed for slot in vm.insert_chain)
+        self.channel_bypass_input.setChecked(all_bypassed)
         for slot in vm.insert_chain:
             self.chain_list.addItem(
                 f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "

@@ -348,6 +348,39 @@ class NativeBridgeClient(BridgeClient):
         slot.load_state = "bypassed" if slot.bypassed else "inserted"
         return BridgeResult()
 
+    def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "move_plugin_to_top"):
+            return _to_result(self._native.move_plugin_to_top(int(channel_id), int(slot_index)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        if not chain:
+            return BridgeResult(code=2, message="insert chain is empty")
+        target = min(slot.slot_index for slot in chain)
+        return self.move_plugin(channel_id, slot_index, target)
+
+    def move_plugin_to_bottom(self, channel_id: int, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "move_plugin_to_bottom"):
+            return _to_result(self._native.move_plugin_to_bottom(int(channel_id), int(slot_index)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        if not chain:
+            return BridgeResult(code=2, message="insert chain is empty")
+        target = max(slot.slot_index for slot in chain)
+        return self.move_plugin(channel_id, slot_index, target)
+
+    def clear_insert_chain(self, channel_id: int) -> BridgeResult:
+        if hasattr(self._native, "clear_insert_chain"):
+            return _to_result(self._native.clear_insert_chain(int(channel_id)))
+        self._insert_chain_cache[int(channel_id)] = []
+        return BridgeResult()
+
+    def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
+        if hasattr(self._native, "set_channel_insert_bypass"):
+            return _to_result(self._native.set_channel_insert_bypass(int(channel_id), bool(bypassed)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        for slot in chain:
+            slot.bypassed = bool(bypassed)
+            slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        return BridgeResult()
+
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):
             self._native.shutdown_event_dispatcher()
