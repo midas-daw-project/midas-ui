@@ -281,6 +281,8 @@ class NativeBridgeClient(BridgeClient):
                         bypassed=bypassed,
                         load_state=str(values.get("load_state", "bypassed" if bypassed else "unloaded")),
                         runtime_message=str(values.get("runtime_status_message", "")),
+                        host_lifecycle_state=str(values.get("host_lifecycle_state", "not_requested")),
+                        host_message=str(values.get("host_status_message", "")),
                     )
                 )
             self._insert_chain_cache[int(channel_id)] = slots
@@ -304,6 +306,8 @@ class NativeBridgeClient(BridgeClient):
             bypassed=False,
             load_state="loaded",
             runtime_message="plugin ready",
+            host_lifecycle_state="not_requested",
+            host_message="",
         )
         for i, slot in enumerate(chain):
             if slot.slot_index == int(slot_index):
@@ -402,6 +406,36 @@ class NativeBridgeClient(BridgeClient):
             else:
                 slot.load_state = "loaded"
                 slot.runtime_message = "plugin ready"
+        return BridgeResult()
+
+    def request_insert_load(self, channel_id: int, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "request_insert_load"):
+            return _to_result(self._native.request_insert_load(int(channel_id), int(slot_index)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.host_lifecycle_state = "load_requested"
+        slot.host_message = "load requested"
+        if slot.load_state == "loaded":
+            slot.host_lifecycle_state = "loaded_placeholder"
+            slot.host_message = "placeholder loaded"
+        else:
+            slot.host_lifecycle_state = "load_failed"
+            slot.host_message = slot.runtime_message or "runtime not loadable"
+        return BridgeResult()
+
+    def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "request_insert_unload"):
+            return _to_result(self._native.request_insert_unload(int(channel_id), int(slot_index)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.host_lifecycle_state = "unload_requested"
+        slot.host_message = "unload requested"
+        slot.host_lifecycle_state = "unloaded"
+        slot.host_message = "placeholder unloaded"
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

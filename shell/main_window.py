@@ -60,6 +60,8 @@ class MainWindow(QMainWindow):
             on_toggle_channel_bypass=self._toggle_channel_insert_bypass,
             on_clear_chain=self._clear_channel_insert_chain,
             on_refresh_runtime_state=self._refresh_channel_insert_runtime_state,
+            on_request_slot_load=self._request_slot_host_load,
+            on_request_slot_unload=self._request_slot_host_unload,
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
@@ -373,6 +375,24 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("refresh_insert_runtime_state", result.code, result.message)
         if result.ok:
             self._workspace_controller.mark_action(f"Refreshed insert runtime state on ch{channel}")
+        self._refresh_mixer()
+
+    def _request_slot_host_load(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        result = self._mixer_controller.request_insert_load(channel, slot)
+        self._debug_panel.append_result("request_insert_load", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Requested host load for ch{channel}:slot{slot}")
+        self._refresh_mixer()
+
+    def _request_slot_host_unload(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        result = self._mixer_controller.request_insert_unload(channel, slot)
+        self._debug_panel.append_result("request_insert_unload", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Requested host unload for ch{channel}:slot{slot}")
         self._refresh_mixer()
 
     def _refresh_workspace(self) -> None:

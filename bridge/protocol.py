@@ -87,6 +87,8 @@ class InsertedPluginSlot:
     bypassed: bool = False
     load_state: str = "unloaded"
     runtime_message: str = ""
+    host_lifecycle_state: str = "not_requested"
+    host_message: str = ""
 
 
 @dataclass(slots=True)
@@ -200,4 +202,10 @@ class BridgeClient(Protocol):
         ...
 
     def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
+        ...
+
+    def request_insert_load(self, channel_id: int, slot_index: int) -> BridgeResult:
+        ...
+
+    def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
         ...

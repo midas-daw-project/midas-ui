@@ -53,7 +53,7 @@ class WorkspaceController:
             first = mixer_vm.insert_chain[0]
             bypass = "bypassed" if first.bypassed else "active"
             self._vm.selected_insert_summary = (
-                f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}:{bypass}:{first.load_state}"
+                f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}:{bypass}:{first.load_state}:{first.host_lifecycle_state}"
             )
         else:
             self._vm.selected_insert_summary = ""

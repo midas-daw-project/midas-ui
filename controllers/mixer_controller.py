@@ -102,3 +102,17 @@ class MixerController:
         self._vm.last_error = "" if result.ok else result.message
         self.refresh_insert_chain(channel_id)
         return result
+
+    def request_insert_load(self, channel_id: int, slot_index: int) -> BridgeResult:
+        result = self._bridge.request_insert_load(channel_id, slot_index)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
+
+    def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
+        result = self._bridge.request_insert_unload(channel_id, slot_index)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result

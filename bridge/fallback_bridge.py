@@ -229,7 +229,7 @@ class FallbackBridgeClient(BridgeClient):
         self._session.last_operation = "save"
         self._session.last_save_epoch = int(time.time())
         self._session.storage_path = "fallback://local-session"
-        self._saved_insert_chains = deepcopy(self._insert_chains)
+        self._saved_insert_chains = self._intent_snapshot(self._insert_chains)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -347,6 +347,8 @@ class FallbackBridgeClient(BridgeClient):
                 bypassed=slot.bypassed,
                 load_state=slot.load_state,
                 runtime_message=slot.runtime_message,
+                host_lifecycle_state=slot.host_lifecycle_state,
+                host_message=slot.host_message,
             )
             for slot in self._insert_chains.get(int(channel_id), [])
         ]
@@ -373,6 +375,8 @@ class FallbackBridgeClient(BridgeClient):
                     bypassed=False,
                     load_state="loaded",
                     runtime_message="plugin ready",
+                    host_lifecycle_state="not_requested",
+                    host_message="",
                 )
                 break
         else:
@@ -386,6 +390,8 @@ class FallbackBridgeClient(BridgeClient):
                     bypassed=False,
                     load_state="loaded",
                     runtime_message="plugin ready",
+                    host_lifecycle_state="not_requested",
+                    host_message="",
                 )
             )
             chain.sort(key=lambda s: s.slot_index)
@@ -541,6 +547,50 @@ class FallbackBridgeClient(BridgeClient):
         )
         return BridgeResult()
 
+    def request_insert_load(self, channel_id: int, slot_index: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        slot_index = int(slot_index)
+        chain = self._insert_chains.get(channel_id, [])
+        slot = next((item for item in chain if item.slot_index == slot_index), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.host_lifecycle_state = "load_requested"
+        slot.host_message = "load requested"
+        if slot.load_state == "loaded":
+            slot.host_lifecycle_state = "loaded_placeholder"
+            slot.host_message = "placeholder loaded"
+        else:
+            slot.host_lifecycle_state = "load_failed"
+            slot.host_message = slot.runtime_message or "runtime not loadable"
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"action": "request_insert_load", "channel": str(channel_id), "slot": str(slot_index)},
+            )
+        )
+        return BridgeResult()
+
+    def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        slot_index = int(slot_index)
+        chain = self._insert_chains.get(channel_id, [])
+        slot = next((item for item in chain if item.slot_index == slot_index), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.host_lifecycle_state = "unload_requested"
+        slot.host_message = "unload requested"
+        slot.host_lifecycle_state = "unloaded"
+        slot.host_message = "placeholder unloaded"
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"action": "request_insert_unload", "channel": str(channel_id), "slot": str(slot_index)},
+            )
+        )
+        return BridgeResult()
+
     @staticmethod
     def _evaluate_runtime_state(chain: List[InsertedPluginSlot]) -> None:
         for slot in chain:
@@ -556,6 +606,29 @@ class FallbackBridgeClient(BridgeClient):
             else:
                 slot.load_state = "loaded"
                 slot.runtime_message = "plugin ready"
+
+    @staticmethod
+    def _intent_snapshot(chains: Dict[int, List[InsertedPluginSlot]]) -> Dict[int, List[InsertedPluginSlot]]:
+        snapshot: Dict[int, List[InsertedPluginSlot]] = {}
+        for channel_id, chain in chains.items():
+            copied: List[InsertedPluginSlot] = []
+            for slot in chain:
+                copied.append(
+                    InsertedPluginSlot(
+                        channel_id=slot.channel_id,
+                        slot_index=slot.slot_index,
+                        plugin_id=slot.plugin_id,
+                        plugin_name=slot.plugin_name,
+                        available=slot.available,
+                        bypassed=slot.bypassed,
+                        load_state="unloaded",
+                        runtime_message="",
+                        host_lifecycle_state="not_requested",
+                        host_message="",
+                    )
+                )
+            snapshot[channel_id] = copied
+        return snapshot
 
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"
