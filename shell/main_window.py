@@ -85,6 +85,7 @@ class MainWindow(QMainWindow):
             on_save_session=self._save_session,
             on_load_session=self._load_session,
             on_apply_session=self._apply_session,
+            on_reconcile_inserts=self._reconcile_all_inserts,
         )
         bridge_mode = "native" if self._bridge.__class__.__name__ == "NativeBridgeClient" else "fallback"
         self._workspace_controller.set_bridge_identity(mode=bridge_mode, version=self._bridge.bridge_version())
@@ -438,6 +439,13 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("apply_session", result.code, result.message)
         self._workspace_controller.mark_action("Applied session")
         self._refresh_session()
+
+    def _reconcile_all_inserts(self) -> None:
+        ok = self._workspace_controller.reconcile_all_inserts()
+        self._debug_panel.append_result("reconcile_all_inserts", 0 if ok else 4, "" if ok else "reconcile failed")
+        self._workspace_controller.mark_action("Reconciled inserts")
+        self._refresh_mixer()
+        self._refresh_workspace()
 
     def _play_transport(self) -> None:
         self._transport_vm.track_channel = self._transport_panel.selected_track_channel()

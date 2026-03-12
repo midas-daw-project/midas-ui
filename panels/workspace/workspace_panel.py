@@ -21,6 +21,7 @@ class WorkspacePanel(QWidget):
         on_save_session: Callable[[], None],
         on_load_session: Callable[[], None],
         on_apply_session: Callable[[], None],
+        on_reconcile_inserts: Callable[[], None],
     ) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
@@ -56,6 +57,7 @@ class WorkspacePanel(QWidget):
         self.selected_plugin_label = QLabel("Selected Plugin: -")
         self.inserted_plugin_label = QLabel("Inserted Plugins: 0")
         self.selected_insert_label = QLabel("Selected Insert: -")
+        self.reconcile_label = QLabel("Reconcile: attempted=0 resolved=0 failed=0 created=0 cleared=0")
         runtime_form.addRow(self.audio_label)
         runtime_form.addRow(self.transport_label)
         runtime_form.addRow(self.runtime_label)
@@ -65,6 +67,7 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.selected_plugin_label)
         runtime_form.addRow(self.inserted_plugin_label)
         runtime_form.addRow(self.selected_insert_label)
+        runtime_form.addRow(self.reconcile_label)
         layout.addWidget(runtime_box)
 
         actions_box = QGroupBox("Quick Actions")
@@ -73,11 +76,13 @@ class WorkspacePanel(QWidget):
         self.save_button = QPushButton("Save Session")
         self.load_button = QPushButton("Load Session")
         self.apply_button = QPushButton("Apply Session")
+        self.reconcile_button = QPushButton("Reconcile Inserts")
         self.last_action_label = QLabel("Last Action: Ready")
         actions_layout.addWidget(self.refresh_button)
         actions_layout.addWidget(self.save_button)
         actions_layout.addWidget(self.load_button)
         actions_layout.addWidget(self.apply_button)
+        actions_layout.addWidget(self.reconcile_button)
         actions_layout.addWidget(self.last_action_label)
         layout.addWidget(actions_box)
 
@@ -85,6 +90,7 @@ class WorkspacePanel(QWidget):
         self.save_button.clicked.connect(on_save_session)
         self.load_button.clicked.connect(on_load_session)
         self.apply_button.clicked.connect(on_apply_session)
+        self.reconcile_button.clicked.connect(on_reconcile_inserts)
 
     def render(self, vm: WorkspaceViewModel) -> None:
         self.title_label.setText(vm.workspace_title)
@@ -109,4 +115,13 @@ class WorkspacePanel(QWidget):
         self.selected_plugin_label.setText(f"Selected Plugin: {vm.selected_plugin_name or '-'}")
         self.inserted_plugin_label.setText(f"Inserted Plugins: {vm.inserted_plugin_count}")
         self.selected_insert_label.setText(f"Selected Insert: {vm.selected_insert_summary or '-'}")
+        self.reconcile_label.setText(
+            "Reconcile: "
+            f"attempted={vm.reconcile_attempted} "
+            f"resolved={vm.reconcile_resolved} "
+            f"failed={vm.reconcile_failed} "
+            f"created={vm.reconcile_created} "
+            f"cleared={vm.reconcile_cleared} "
+            f"msg={vm.reconcile_last_message or '-'}"
+        )
         self.last_action_label.setText(f"Last Action: {vm.last_action}")

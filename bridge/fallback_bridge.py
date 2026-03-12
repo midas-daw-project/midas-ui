@@ -14,6 +14,7 @@ from bridge.protocol import (
     BridgeResult,
     MixerChannelStatus,
     RuntimeStatus,
+    ReconcileStatus,
     SessionStatus,
     TransportStatus,
 )
@@ -66,6 +67,7 @@ class FallbackBridgeClient(BridgeClient):
         self._insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._saved_insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
+        self._reconcile_status = ReconcileStatus()
 
     def bridge_version(self) -> int:
         return 1
@@ -250,6 +252,7 @@ class FallbackBridgeClient(BridgeClient):
         self._insert_chains = deepcopy(self._saved_insert_chains)
         for chain in self._insert_chains.values():
             self._evaluate_runtime_state(chain)
+        self.reconcile_all_inserts()
         self._publish(
             BridgeEvent(
                 category="session",
@@ -269,6 +272,7 @@ class FallbackBridgeClient(BridgeClient):
         self._insert_chains = deepcopy(self._saved_insert_chains)
         for chain in self._insert_chains.values():
             self._evaluate_runtime_state(chain)
+        self.reconcile_all_inserts()
         self._publish(
             BridgeEvent(
                 category="session",
@@ -625,6 +629,18 @@ class FallbackBridgeClient(BridgeClient):
         )
         return BridgeResult()
 
+    def reconcile_channel_inserts(self, channel_id: int) -> BridgeResult:
+        return self._reconcile([int(channel_id)])
+
+    def reconcile_all_inserts(self) -> BridgeResult:
+        channels = sorted(self._insert_chains.keys())
+        if not channels:
+            channels = [1]
+        return self._reconcile(channels)
+
+    def get_reconcile_status(self) -> ReconcileStatus:
+        return deepcopy(self._reconcile_status)
+
     @staticmethod
     def _evaluate_runtime_state(chain: List[InsertedPluginSlot]) -> None:
         for slot in chain:
@@ -668,6 +684,57 @@ class FallbackBridgeClient(BridgeClient):
                 )
             snapshot[channel_id] = copied
         return snapshot
+
+    def _reconcile(self, channels: List[int]) -> BridgeResult:
+        previous = {
+            channel_id: {slot.slot_index: slot.placeholder_instance_id for slot in slots if slot.placeholder_instance_id}
+            for channel_id, slots in self._insert_chains.items()
+        }
+
+        self._reconcile_status = ReconcileStatus()
+        self._reconcile_status.channels_scanned = len(channels)
+        for channel_id in channels:
+            self.refresh_insert_runtime_state(channel_id)
+            chain = self._insert_chains.get(channel_id, [])
+            self._reconcile_status.slots_scanned += len(chain)
+            for slot in chain:
+                if not slot.plugin_id:
+                    continue
+                self._reconcile_status.attempted += 1
+                self.request_insert_load(channel_id, slot.slot_index)
+                if slot.loader_outcome == "ok":
+                    self._reconcile_status.resolved += 1
+                else:
+                    self._reconcile_status.failed += 1
+            before = previous.get(channel_id, {})
+            after = {
+                slot.slot_index: slot.placeholder_instance_id
+                for slot in chain
+                if slot.placeholder_instance_id
+            }
+            for slot_index, placeholder_id in before.items():
+                if slot_index not in after or after.get(slot_index) != placeholder_id:
+                    self._reconcile_status.cleared += 1
+            for slot_index, placeholder_id in after.items():
+                if slot_index not in before and placeholder_id:
+                    self._reconcile_status.created += 1
+
+        self._reconcile_status.last_message = "ok"
+        self._publish(
+            BridgeEvent(
+                category="session",
+                emitter=2003,
+                metadata={
+                    "action": "reconcile_inserts",
+                    "attempted": str(self._reconcile_status.attempted),
+                    "resolved": str(self._reconcile_status.resolved),
+                    "failed": str(self._reconcile_status.failed),
+                    "created": str(self._reconcile_status.created),
+                    "cleared": str(self._reconcile_status.cleared),
+                },
+            )
+        )
+        return BridgeResult()
 
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"

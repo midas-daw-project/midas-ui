@@ -27,4 +27,10 @@ class WorkspaceViewModel:
     selected_plugin_name: str = ""
     inserted_plugin_count: int = 0
     selected_insert_summary: str = ""
+    reconcile_attempted: int = 0
+    reconcile_resolved: int = 0
+    reconcile_failed: int = 0
+    reconcile_created: int = 0
+    reconcile_cleared: int = 0
+    reconcile_last_message: str = ""
     last_action: str = "Ready"

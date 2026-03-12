@@ -41,23 +41,28 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert bridge.move_plugin_to_bottom(1, 1).ok
 
     assert bridge.load_session().ok
-    assert bridge.refresh_insert_runtime_state(1).ok
+    reconcile_after_load = bridge.get_reconcile_status()
+    assert reconcile_after_load.attempted >= 2
+    assert reconcile_after_load.resolved >= 1
     loaded = bridge.get_insert_chain(1)
     assert len(loaded) == 2
     assert loaded[0].plugin_id == "midas.comp.basic"
     assert loaded[0].bypassed is True
     assert loaded[1].plugin_id == "midas.eq.basic"
     assert loaded[1].bypassed is True
-    # host lifecycle is ephemeral; it is re-derived and starts from non-requested state after load/apply.
-    assert loaded[0].host_lifecycle_state == "not_requested"
-    assert loaded[0].placeholder_instance_id == ""
-    assert loaded[0].placeholder_created_sequence == 0
-    assert loaded[0].loader_outcome == ""
-    assert loaded[0].loader_reason_code == ""
+    # host/runtime/loader state is re-derived during reconcile after load.
+    assert loaded[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
+    if loaded[0].host_lifecycle_state == "loaded_placeholder":
+        assert loaded[0].placeholder_instance_id != ""
+        assert loaded[0].loader_outcome == "ok"
+    else:
+        assert loaded[0].placeholder_instance_id == ""
+        assert loaded[0].loader_outcome != ""
 
     assert bridge.remove_plugin(1, 1).ok
     assert bridge.apply_session().ok
-    assert bridge.refresh_insert_runtime_state(1).ok
+    reconcile_after_apply = bridge.get_reconcile_status()
+    assert reconcile_after_apply.attempted >= 2
     assert bridge.request_insert_unload(1, 0).ok
     applied = bridge.get_insert_chain(1)
     assert len(applied) == 2

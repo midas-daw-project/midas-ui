@@ -12,6 +12,7 @@ from bridge.protocol import (
     BridgeResult,
     MixerChannelStatus,
     RuntimeStatus,
+    ReconcileStatus,
     SessionStatus,
     TransportStatus,
 )
@@ -52,6 +53,7 @@ class NativeBridgeClient(BridgeClient):
         ]
         self._insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
+        self._reconcile_status = ReconcileStatus()
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -153,10 +155,16 @@ class NativeBridgeClient(BridgeClient):
         return _to_result(self._native.save_session())
 
     def load_session(self) -> BridgeResult:
-        return _to_result(self._native.load_session())
+        result = _to_result(self._native.load_session())
+        if result.ok:
+            self._reconcile_status = self.get_reconcile_status()
+        return result
 
     def apply_session(self) -> BridgeResult:
-        return _to_result(self._native.apply_session())
+        result = _to_result(self._native.apply_session())
+        if result.ok:
+            self._reconcile_status = self.get_reconcile_status()
+        return result
 
     def get_session_status(self) -> SessionStatus:
         raw = self._native.get_session_status()
@@ -466,6 +474,71 @@ class NativeBridgeClient(BridgeClient):
         slot.loader_reason_code = "unloaded"
         slot.loader_message = "placeholder unloaded"
         return BridgeResult()
+
+    def reconcile_channel_inserts(self, channel_id: int) -> BridgeResult:
+        if hasattr(self._native, "reconcile_channel_inserts"):
+            result = _to_result(self._native.reconcile_channel_inserts(int(channel_id)))
+            self._reconcile_status = self.get_reconcile_status()
+            return result
+        return self.reconcile_all_inserts()
+
+    def reconcile_all_inserts(self) -> BridgeResult:
+        if hasattr(self._native, "reconcile_all_inserts"):
+            result = _to_result(self._native.reconcile_all_inserts())
+            self._reconcile_status = self.get_reconcile_status()
+            return result
+        channels = sorted(self._insert_chain_cache.keys()) or [1]
+        attempted = resolved = failed = created = cleared = slots_scanned = 0
+        before = {
+            channel: {slot.slot_index: slot.placeholder_instance_id for slot in slots if slot.placeholder_instance_id}
+            for channel, slots in self._insert_chain_cache.items()
+        }
+        for channel in channels:
+            chain = self._insert_chain_cache.get(channel, [])
+            slots_scanned += len(chain)
+            for slot in chain:
+                if not slot.plugin_id:
+                    continue
+                attempted += 1
+                self.request_insert_load(channel, slot.slot_index)
+                if slot.loader_outcome == "ok":
+                    resolved += 1
+                else:
+                    failed += 1
+            after = {slot.slot_index: slot.placeholder_instance_id for slot in chain if slot.placeholder_instance_id}
+            for slot_index, placeholder_id in before.get(channel, {}).items():
+                if slot_index not in after or after.get(slot_index) != placeholder_id:
+                    cleared += 1
+            for slot_index, placeholder_id in after.items():
+                if slot_index not in before.get(channel, {}) and placeholder_id:
+                    created += 1
+        self._reconcile_status = ReconcileStatus(
+            channels_scanned=len(channels),
+            slots_scanned=slots_scanned,
+            attempted=attempted,
+            resolved=resolved,
+            failed=failed,
+            created=created,
+            cleared=cleared,
+            last_message="ok",
+        )
+        return BridgeResult()
+
+    def get_reconcile_status(self) -> ReconcileStatus:
+        if hasattr(self._native, "get_reconcile_status"):
+            raw = self._native.get_reconcile_status()
+            values = dict(raw.get("values", {}))
+            return ReconcileStatus(
+                channels_scanned=int(values.get("channels_scanned", 0)),
+                slots_scanned=int(values.get("slots_scanned", 0)),
+                attempted=int(values.get("attempted", 0)),
+                resolved=int(values.get("resolved", 0)),
+                failed=int(values.get("failed", 0)),
+                created=int(values.get("created", 0)),
+                cleared=int(values.get("cleared", 0)),
+                last_message=str(values.get("last_message", "")),
+            )
+        return self._reconcile_status
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):

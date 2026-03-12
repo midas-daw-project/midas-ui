@@ -50,3 +50,7 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.plugin_count >= 1
     assert workspace_vm.available_plugin_count >= 1
     assert workspace_vm.inserted_plugin_count >= 1
+    assert workspace.reconcile_all_inserts() is True
+    workspace.refresh_overview()
+    assert workspace_vm.reconcile_attempted >= 1
+    assert workspace_vm.reconcile_resolved + workspace_vm.reconcile_failed >= 1

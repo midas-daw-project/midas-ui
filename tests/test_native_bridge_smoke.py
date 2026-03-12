@@ -95,6 +95,12 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("placeholder_created_seq", "0")) == "0"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
+    assert int(native.reconcile_channel_inserts(1)["code"]) == 0
+    reconcile = native.get_reconcile_status()
+    assert int(reconcile.get("code", 4)) == 0
+    rv = reconcile.get("values", {})
+    assert int(rv.get("channels_scanned", "0")) >= 1
+    assert int(rv.get("attempted", "0")) >= 1
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
     assert len(native.get_insert_chain(1)) == 0

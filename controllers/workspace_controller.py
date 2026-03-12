@@ -26,6 +26,7 @@ class WorkspaceController:
         session = self._bridge.get_session_status()
         transport = self._bridge.get_transport_status()
         runtime = self._bridge.get_runtime_status()
+        reconcile = self._bridge.get_reconcile_status()
         channels = self._bridge.get_mixer_channels()
 
         self._vm.session_ref = session.session_ref or self._vm.session_ref
@@ -41,6 +42,12 @@ class WorkspaceController:
         self._vm.render_status = runtime.audio.render_status
         self._vm.mixer_channel_count = len(channels)
         self._vm.muted_channel_count = sum(1 for channel in channels if channel.muted)
+        self._vm.reconcile_attempted = reconcile.attempted
+        self._vm.reconcile_resolved = reconcile.resolved
+        self._vm.reconcile_failed = reconcile.failed
+        self._vm.reconcile_created = reconcile.created
+        self._vm.reconcile_cleared = reconcile.cleared
+        self._vm.reconcile_last_message = reconcile.last_message
 
     def ingest_browser_state(self, browser_vm: BrowserViewModel) -> None:
         self._vm.plugin_count = len(browser_vm.plugins)
@@ -60,3 +67,11 @@ class WorkspaceController:
             )
         else:
             self._vm.selected_insert_summary = ""
+
+    def reconcile_channel_inserts(self, channel_id: int) -> bool:
+        result = self._bridge.reconcile_channel_inserts(channel_id)
+        return result.ok
+
+    def reconcile_all_inserts(self) -> bool:
+        result = self._bridge.reconcile_all_inserts()
+        return result.ok

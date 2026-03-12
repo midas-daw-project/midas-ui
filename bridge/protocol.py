@@ -68,6 +68,18 @@ class RuntimeStatus:
 
 
 @dataclass(slots=True)
+class ReconcileStatus:
+    channels_scanned: int = 0
+    slots_scanned: int = 0
+    attempted: int = 0
+    resolved: int = 0
+    failed: int = 0
+    created: int = 0
+    cleared: int = 0
+    last_message: str = ""
+
+
+@dataclass(slots=True)
 class PluginRegistryEntry:
     plugin_id: str
     name: str
@@ -213,4 +225,13 @@ class BridgeClient(Protocol):
         ...
 
     def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
+        ...
+
+    def reconcile_channel_inserts(self, channel_id: int) -> BridgeResult:
+        ...
+
+    def reconcile_all_inserts(self) -> BridgeResult:
+        ...
+
+    def get_reconcile_status(self) -> ReconcileStatus:
         ...
