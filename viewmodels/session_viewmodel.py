@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from bridge.protocol import RecentSessionEntry
 
 
 @dataclass(slots=True)
@@ -19,3 +21,4 @@ class SessionViewModel:
     last_load_status: str = ""
     last_apply_status: str = ""
     last_error: str = ""
+    recent_sessions: list[RecentSessionEntry] = field(default_factory=list)

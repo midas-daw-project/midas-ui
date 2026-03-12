@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLabel,
+    QLineEdit,
+    QListWidget,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -18,6 +20,9 @@ class WorkspacePanel(QWidget):
     def __init__(
         self,
         on_refresh_all: Callable[[], None],
+        on_new_session: Callable[[str], None],
+        on_open_session: Callable[[str], None],
+        on_open_recent: Callable[[str], None],
         on_save_session: Callable[[], None],
         on_load_session: Callable[[], None],
         on_apply_session: Callable[[], None],
@@ -44,6 +49,8 @@ class WorkspacePanel(QWidget):
         overview_form.addRow(self.session_identity_label)
         overview_form.addRow(self.session_storage_label)
         overview_form.addRow(self.bridge_label)
+        self.recent_summary_label = QLabel("Recent: none")
+        overview_form.addRow(self.recent_summary_label)
         layout.addWidget(overview_box)
 
         runtime_box = QGroupBox("Runtime Snapshot")
@@ -74,29 +81,43 @@ class WorkspacePanel(QWidget):
 
         actions_box = QGroupBox("Quick Actions")
         actions_layout = QVBoxLayout(actions_box)
+        self.session_ref_input = QLineEdit("default-session")
+        self.new_session_button = QPushButton("New Session")
+        self.open_session_button = QPushButton("Open Session")
         self.refresh_button = QPushButton("Refresh All")
         self.save_button = QPushButton("Save Session")
         self.load_button = QPushButton("Load Session")
         self.apply_button = QPushButton("Apply Session")
         self.reconcile_button = QPushButton("Reconcile Inserts")
+        self.recent_list = QListWidget()
+        self.open_recent_button = QPushButton("Open Selected Recent")
         self.last_action_label = QLabel("Last Action: Ready")
+        actions_layout.addWidget(self.session_ref_input)
+        actions_layout.addWidget(self.new_session_button)
+        actions_layout.addWidget(self.open_session_button)
         actions_layout.addWidget(self.refresh_button)
         actions_layout.addWidget(self.save_button)
         actions_layout.addWidget(self.load_button)
         actions_layout.addWidget(self.apply_button)
         actions_layout.addWidget(self.reconcile_button)
+        actions_layout.addWidget(self.recent_list)
+        actions_layout.addWidget(self.open_recent_button)
         actions_layout.addWidget(self.last_action_label)
         layout.addWidget(actions_box)
 
+        self.new_session_button.clicked.connect(lambda: on_new_session(self.session_ref_input.text()))
+        self.open_session_button.clicked.connect(lambda: on_open_session(self.session_ref_input.text()))
         self.refresh_button.clicked.connect(on_refresh_all)
         self.save_button.clicked.connect(on_save_session)
         self.load_button.clicked.connect(on_load_session)
         self.apply_button.clicked.connect(on_apply_session)
         self.reconcile_button.clicked.connect(on_reconcile_inserts)
+        self.open_recent_button.clicked.connect(lambda: on_open_recent(self.selected_recent_session_ref()))
 
     def render(self, vm: WorkspaceViewModel) -> None:
         self.title_label.setText(vm.workspace_title)
         self.mode_label.setText(vm.workspace_mode)
+        self.session_ref_input.setText(vm.session_ref)
         self.session_label.setText(f"Session: {vm.session_ref}")
         self.session_status_label.setText(f"Session Status: {vm.session_status}")
         self.session_identity_label.setText(
@@ -106,6 +127,9 @@ class WorkspacePanel(QWidget):
             f"Storage: {(vm.session_storage_path or '-')} | Source: {(vm.session_storage_source or '-')}"
         )
         self.bridge_label.setText(f"Bridge: {vm.bridge_mode} v{vm.bridge_version}")
+        self.recent_summary_label.setText(
+            f"Recent: {vm.recent_session_count} | Latest: {vm.recent_session_summary or 'none'}"
+        )
         self.audio_label.setText(f"Audio: {vm.audio_state}")
         self.transport_label.setText(f"Transport: {vm.transport_state}")
         self.runtime_label.setText(f"Runtime Active: {'yes' if vm.runtime_active else 'no'}")
@@ -132,4 +156,14 @@ class WorkspacePanel(QWidget):
             f"action={vm.reconcile_policy_action} "
             f"pending_manual={'yes' if vm.reconcile_pending_manual else 'no'}"
         )
+        self.recent_list.clear()
+        for entry in vm.recent_sessions:
+            label = f"{entry.session_ref} | {entry.last_operation} | {entry.storage_path or '-'}"
+            self.recent_list.addItem(label)
         self.last_action_label.setText(f"Last Action: {vm.last_action}")
+
+    def selected_recent_session_ref(self) -> str:
+        item = self.recent_list.currentItem()
+        if item is None:
+            return ""
+        return item.text().split(" | ", 1)[0].strip()

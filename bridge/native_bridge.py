@@ -13,6 +13,7 @@ from bridge.protocol import (
     MixerChannelStatus,
     RuntimeStatus,
     ReconcileStatus,
+    RecentSessionEntry,
     SessionStatus,
     TransportStatus,
 )
@@ -155,6 +156,15 @@ class NativeBridgeClient(BridgeClient):
     def save_session(self) -> BridgeResult:
         return _to_result(self._native.save_session())
 
+    def new_session(self, session_ref: str) -> BridgeResult:
+        return _to_result(self._native.new_session(session_ref))
+
+    def open_session(self, session_ref: str) -> BridgeResult:
+        result = _to_result(self._native.open_session(session_ref))
+        if result.ok:
+            self._reconcile_status = self.get_reconcile_status()
+        return result
+
     def load_session(self) -> BridgeResult:
         result = _to_result(self._native.load_session())
         if result.ok:
@@ -188,6 +198,22 @@ class NativeBridgeClient(BridgeClient):
             last_load_epoch=_as_int("last_load_epoch", 0),
             last_apply_epoch=_as_int("last_apply_epoch", 0),
         )
+
+    def get_recent_sessions(self) -> list[RecentSessionEntry]:
+        raw_entries = self._native.get_recent_sessions()
+        entries: list[RecentSessionEntry] = []
+        for item in raw_entries:
+            values = dict(item.get("values", {}))
+            entries.append(
+                RecentSessionEntry(
+                    session_ref=str(values.get("session_ref", "")),
+                    storage_path=str(values.get("storage_path", "")),
+                    storage_source=str(values.get("storage_source", "")),
+                    last_operation=str(values.get("last_operation", "none")),
+                    last_touched_epoch=int(values.get("last_touched_epoch", 0) or 0),
+                )
+            )
+        return entries
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
         return self.start_audio(track_channel, mixer_subsystem)

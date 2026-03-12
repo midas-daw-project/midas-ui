@@ -24,6 +24,7 @@ class WorkspaceController:
 
     def refresh_overview(self) -> None:
         session = self._bridge.get_session_status()
+        recents = self._bridge.get_recent_sessions()
         transport = self._bridge.get_transport_status()
         runtime = self._bridge.get_runtime_status()
         reconcile = self._bridge.get_reconcile_status()
@@ -36,6 +37,11 @@ class WorkspaceController:
         self._vm.session_storage_path = session.storage_path
         self._vm.session_storage_source = session.storage_source
         self._vm.session_last_operation = session.last_operation
+        self._vm.recent_sessions = recents
+        self._vm.recent_session_count = len(recents)
+        self._vm.recent_session_summary = (
+            f"{recents[0].session_ref} ({recents[0].last_operation})" if recents else "none"
+        )
         self._vm.transport_state = transport.play_state
         self._vm.audio_state = runtime.audio.state
         self._vm.runtime_active = transport.runtime_active or runtime.runtime_started
@@ -78,3 +84,9 @@ class WorkspaceController:
     def reconcile_all_inserts(self) -> bool:
         result = self._bridge.reconcile_all_inserts()
         return result.ok
+
+    def new_session(self, session_ref: str) -> bool:
+        return self._bridge.new_session(session_ref).ok
+
+    def open_session(self, session_ref: str) -> bool:
+        return self._bridge.open_session(session_ref).ok

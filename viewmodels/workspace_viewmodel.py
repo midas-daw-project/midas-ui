@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from bridge.protocol import RecentSessionEntry
 
 
 @dataclass(slots=True)
@@ -36,4 +38,7 @@ class WorkspaceViewModel:
     reconcile_policy_mode: str = "none"
     reconcile_policy_action: str = "none"
     reconcile_pending_manual: bool = False
+    recent_sessions: list[RecentSessionEntry] = field(default_factory=list)
+    recent_session_count: int = 0
+    recent_session_summary: str = ""
     last_action: str = "Ready"

@@ -65,6 +65,8 @@ class MainWindow(QMainWindow):
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
+            on_new=self._new_session,
+            on_open=self._open_session,
             on_save=self._save_session,
             on_load=self._load_session,
             on_apply=self._apply_session,
@@ -82,6 +84,9 @@ class MainWindow(QMainWindow):
         )
         self._workspace_panel = WorkspacePanel(
             on_refresh_all=self._manual_refresh_all,
+            on_new_session=self._new_session,
+            on_open_session=self._open_session,
+            on_open_recent=self._open_recent_session,
             on_save_session=self._save_session,
             on_load_session=self._load_session,
             on_apply_session=self._apply_session,
@@ -428,17 +433,39 @@ class MainWindow(QMainWindow):
         self._workspace_controller.mark_action("Saved session")
         self._refresh_session()
 
+    def _new_session(self, session_ref: str) -> None:
+        result = self._session_controller.new_session(session_ref)
+        self._debug_panel.append_result("new_session", result.code, result.message)
+        self._workspace_controller.mark_action(f"New session {session_ref.strip() or '-'}")
+        self._refresh_session()
+        self._refresh_mixer()
+
+    def _open_session(self, session_ref: str) -> None:
+        result = self._session_controller.open_session(session_ref)
+        self._debug_panel.append_result("open_session", result.code, result.message)
+        self._workspace_controller.mark_action(f"Open session {session_ref.strip() or '-'}")
+        self._refresh_session()
+        self._refresh_mixer()
+
+    def _open_recent_session(self, session_ref: str) -> None:
+        if not session_ref:
+            self._debug_panel.append_result("open_recent_session", 3, "No recent session selected")
+            return
+        self._open_session(session_ref)
+
     def _load_session(self) -> None:
         result = self._session_controller.load_session()
         self._debug_panel.append_result("load_session", result.code, result.message)
         self._workspace_controller.mark_action("Loaded session")
         self._refresh_session()
+        self._refresh_mixer()
 
     def _apply_session(self) -> None:
         result = self._session_controller.apply_session()
         self._debug_panel.append_result("apply_session", result.code, result.message)
         self._workspace_controller.mark_action("Applied session")
         self._refresh_session()
+        self._refresh_mixer()
 
     def _reconcile_all_inserts(self) -> None:
         ok = self._workspace_controller.reconcile_all_inserts()

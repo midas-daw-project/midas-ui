@@ -63,6 +63,15 @@ def main() -> None:
         plugins = native.get_plugin_registry()
     assert isinstance(plugins, list)
     assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
+    assert int(native.new_session("smoke-session")["code"]) == 0
+    assert native.get_session_status().get("values", {}).get("session_ref", "") == "smoke-session"
+    assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
+    assert int(native.save_session()["code"]) == 0
+    recent = native.get_recent_sessions()
+    assert isinstance(recent, list)
+    assert str(recent[0].get("values", {}).get("session_ref", "")) == "smoke-session"
+    assert int(native.open_session("smoke-session")["code"]) == 0
+    assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
     policy = native.get_reconcile_status().get("values", {})
     assert str(policy.get("policy_mode", "")) == "immediate"
     assert str(policy.get("policy_action", "")) == "insert_plugin"

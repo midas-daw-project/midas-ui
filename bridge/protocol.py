@@ -52,6 +52,15 @@ class SessionStatus:
 
 
 @dataclass(slots=True)
+class RecentSessionEntry:
+    session_ref: str = ""
+    storage_path: str = ""
+    storage_source: str = ""
+    last_operation: str = "none"
+    last_touched_epoch: int = 0
+
+
+@dataclass(slots=True)
 class TransportStatus:
     play_state: str = "stopped"
     runtime_active: bool = False
@@ -167,6 +176,12 @@ class BridgeClient(Protocol):
     def save_session(self) -> BridgeResult:
         ...
 
+    def new_session(self, session_ref: str) -> BridgeResult:
+        ...
+
+    def open_session(self, session_ref: str) -> BridgeResult:
+        ...
+
     def load_session(self) -> BridgeResult:
         ...
 
@@ -174,6 +189,9 @@ class BridgeClient(Protocol):
         ...
 
     def get_session_status(self) -> SessionStatus:
+        ...
+
+    def get_recent_sessions(self) -> List[RecentSessionEntry]:
         ...
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:

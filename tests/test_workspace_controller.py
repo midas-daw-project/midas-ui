@@ -55,3 +55,10 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.reconcile_attempted >= 1
     assert workspace_vm.reconcile_resolved + workspace_vm.reconcile_failed >= 1
     assert workspace_vm.reconcile_policy_mode in {"manual", "immediate", "auto_after_load_apply", "manual_recommended"}
+    assert workspace.new_session("workspace-home") is True
+    assert workspace.open_session("workspace-home") is False
+    assert bridge.save_session().ok
+    workspace.refresh_overview()
+    assert workspace_vm.recent_session_count >= 1
+    assert workspace_vm.recent_sessions[0].session_ref == "workspace-home"
+    assert workspace_vm.recent_session_summary.startswith("workspace-home")

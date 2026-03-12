@@ -19,12 +19,16 @@ from viewmodels.session_viewmodel import SessionViewModel
 class SessionPanel(QWidget):
     def __init__(
         self,
+        on_new: Callable[[str], None],
+        on_open: Callable[[str], None],
         on_save: Callable[[], None],
         on_load: Callable[[], None],
         on_apply: Callable[[], None],
         on_refresh: Callable[[], None],
     ) -> None:
         super().__init__()
+        self._on_new = on_new
+        self._on_open = on_open
         self._on_save = on_save
         self._on_load = on_load
         self._on_apply = on_apply
@@ -36,11 +40,15 @@ class SessionPanel(QWidget):
         control_box = QGroupBox("Session Actions")
         form = QFormLayout(control_box)
         self.session_ref_input = QLineEdit("default-session")
+        self.new_button = QPushButton("New")
+        self.open_button = QPushButton("Open")
         self.save_button = QPushButton("Save")
         self.load_button = QPushButton("Load")
         self.apply_button = QPushButton("Apply")
         self.refresh_button = QPushButton("Refresh")
         form.addRow("Session Ref", self.session_ref_input)
+        form.addRow(self.new_button)
+        form.addRow(self.open_button)
         form.addRow(self.save_button)
         form.addRow(self.load_button)
         form.addRow(self.apply_button)
@@ -54,21 +62,26 @@ class SessionPanel(QWidget):
         self.storage_label = QLabel("Storage: -")
         self.last_ops_label = QLabel("Last op: none")
         self.last_actions_label = QLabel("Save=- Load=- Apply=-")
+        self.recent_label = QLabel("Recent: -")
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.identity_label)
         status_layout.addWidget(self.storage_label)
         status_layout.addWidget(self.last_ops_label)
         status_layout.addWidget(self.last_actions_label)
+        status_layout.addWidget(self.recent_label)
         status_layout.addWidget(self.error_label)
         layout.addWidget(status_box)
 
+        self.new_button.clicked.connect(lambda: self._on_new(self.session_ref_input.text()))
+        self.open_button.clicked.connect(lambda: self._on_open(self.session_ref_input.text()))
         self.save_button.clicked.connect(self._on_save)
         self.load_button.clicked.connect(self._on_load)
         self.apply_button.clicked.connect(self._on_apply)
         self.refresh_button.clicked.connect(self._on_refresh)
 
     def render(self, vm: SessionViewModel) -> None:
+        self.session_ref_input.setText(vm.session_ref)
         self.status_label.setText(f"Status: {vm.status} | Session: {vm.session_ref}")
         self.identity_label.setText(f"Phase: {vm.phase} | Dirty: {'yes' if vm.dirty else 'no'}")
         storage = vm.storage_path if vm.storage_path else "-"
@@ -85,6 +98,11 @@ class SessionPanel(QWidget):
             f"Load={vm.last_load_status or '-'} "
             f"Apply={vm.last_apply_status or '-'}"
         )
+        if vm.recent_sessions:
+            summary = ", ".join(entry.session_ref for entry in vm.recent_sessions[:3])
+        else:
+            summary = "-"
+        self.recent_label.setText(f"Recent: {summary}")
         self.error_label.setText(f"Error: {vm.last_error}")
 
     @staticmethod

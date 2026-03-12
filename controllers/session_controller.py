@@ -15,6 +15,7 @@ class SessionController:
 
     def refresh_status(self) -> None:
         status = self._bridge.get_session_status()
+        recents = self._bridge.get_recent_sessions()
         self._vm.status = status.status
         self._vm.phase = status.phase
         self._vm.dirty = status.dirty
@@ -26,6 +27,21 @@ class SessionController:
         self._vm.last_save_epoch = status.last_save_epoch
         self._vm.last_load_epoch = status.last_load_epoch
         self._vm.last_apply_epoch = status.last_apply_epoch
+        self._vm.recent_sessions = recents
+
+    def new_session(self, session_ref: str) -> BridgeResult:
+        result = self._bridge.new_session(session_ref)
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_status()
+        return result
+
+    def open_session(self, session_ref: str) -> BridgeResult:
+        result = self._bridge.open_session(session_ref)
+        self._vm.last_load_status = "ok" if result.ok else "error"
+        self._vm.last_apply_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_status()
+        return result
 
     def save_session(self) -> BridgeResult:
         result = self._bridge.save_session()
