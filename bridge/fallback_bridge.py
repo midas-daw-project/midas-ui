@@ -228,7 +228,13 @@ class FallbackBridgeClient(BridgeClient):
         return self.stop_audio()
 
     def get_transport_status(self) -> TransportStatus:
-        return TransportStatus(play_state=self._transport.play_state)
+        return TransportStatus(
+            play_state=self._transport.play_state,
+            runtime_active=self._status.state == "started",
+            audio_lifecycle_state=self._status.state,
+            render_status=self._status.render_status,
+            render_produced=self._status.render_produced,
+        )
 
     def get_runtime_status(self) -> RuntimeStatus:
         return RuntimeStatus(

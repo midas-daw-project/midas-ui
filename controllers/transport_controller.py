@@ -28,3 +28,7 @@ class TransportController:
     def refresh_status(self) -> None:
         status = self._bridge.get_transport_status()
         self._vm.play_state = status.play_state
+        self._vm.runtime_active = status.runtime_active
+        self._vm.audio_lifecycle_state = status.audio_lifecycle_state
+        self._vm.render_status = status.render_status
+        self._vm.render_produced = status.render_produced

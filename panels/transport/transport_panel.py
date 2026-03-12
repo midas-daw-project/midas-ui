@@ -46,9 +46,15 @@ class TransportPanel(QWidget):
 
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
-        self.status_label = QLabel("Play state: stopped")
+        self.status_label = QLabel("Transport control: stopped")
+        self.runtime_label = QLabel("Runtime active: no")
+        self.lifecycle_label = QLabel("Audio lifecycle: idle")
+        self.render_label = QLabel("Render: stopped (produced=no)")
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.runtime_label)
+        status_layout.addWidget(self.lifecycle_label)
+        status_layout.addWidget(self.render_label)
         status_layout.addWidget(self.error_label)
         layout.addWidget(status_box)
 
@@ -60,5 +66,10 @@ class TransportPanel(QWidget):
         return int(self.track_channel_input.value())
 
     def render(self, vm: TransportViewModel) -> None:
-        self.status_label.setText(f"Play state: {vm.play_state}")
+        self.status_label.setText(f"Transport control: {vm.play_state}")
+        self.runtime_label.setText(f"Runtime active: {'yes' if vm.runtime_active else 'no'}")
+        self.lifecycle_label.setText(f"Audio lifecycle: {vm.audio_lifecycle_state}")
+        self.render_label.setText(
+            f"Render: {vm.render_status} (produced={'yes' if vm.render_produced else 'no'})"
+        )
         self.error_label.setText(f"Error: {vm.last_error}")

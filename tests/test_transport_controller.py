@@ -23,6 +23,11 @@ def test_transport_play_stop_flow():
 
     assert transport.play().ok
     assert transport_vm.play_state == "playing"
+    assert transport_vm.runtime_active is True
+    assert transport_vm.audio_lifecycle_state == "started"
+    assert transport_vm.render_status in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state"}
 
     assert transport.stop().ok
     assert transport_vm.play_state == "stopped"
+    assert transport_vm.runtime_active is False
+    assert transport_vm.audio_lifecycle_state == "opened"

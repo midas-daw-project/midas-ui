@@ -26,6 +26,12 @@
 - `get_transport_status()`
 - `get_runtime_status()`
 
+`get_transport_status()` exposes control/runtime alignment fields:
+- `play_state` (control intent)
+- `runtime_active` (backend runtime truth)
+- `audio_lifecycle_state` (audio subsystem lifecycle)
+- `render_status` / `render_produced` (render path truth)
+
 ## Controller Contract
 
 `AudioController` owns:

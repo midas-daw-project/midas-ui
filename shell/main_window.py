@@ -285,7 +285,12 @@ class MainWindow(QMainWindow):
             ),
             mixer=f"ch={mixer_channel.channel_id}, muted={mixer_channel.muted}, gain={mixer_channel.gain:.3f}",
             session=f"status={self._session_vm.status}, ref={self._session_vm.session_ref}",
-            transport=f"state={self._transport_vm.play_state}",
+            transport=(
+                f"control={self._transport_vm.play_state}, "
+                f"runtime={'on' if self._transport_vm.runtime_active else 'off'}, "
+                f"audio={self._transport_vm.audio_lifecycle_state}, "
+                f"render={self._transport_vm.render_status}"
+            ),
         )
 
     def _restore_shell_state(self) -> None:

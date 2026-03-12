@@ -151,8 +151,14 @@ class NativeBridgeClient(BridgeClient):
         return self.stop_audio()
 
     def get_transport_status(self) -> TransportStatus:
-        status = self.get_audio_status()
-        return TransportStatus(play_state="playing" if status.state == "started" else "stopped")
+        runtime = self.get_runtime_status()
+        return TransportStatus(
+            play_state="playing" if runtime.audio.state == "started" else "stopped",
+            runtime_active=runtime.audio.state == "started",
+            audio_lifecycle_state=runtime.audio.state,
+            render_status=runtime.audio.render_status,
+            render_produced=runtime.audio.render_produced,
+        )
 
     def get_runtime_status(self) -> RuntimeStatus:
         raw = self._native.get_runtime_status()

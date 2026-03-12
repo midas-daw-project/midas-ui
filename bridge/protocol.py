@@ -46,6 +46,10 @@ class SessionStatus:
 @dataclass(slots=True)
 class TransportStatus:
     play_state: str = "stopped"
+    runtime_active: bool = False
+    audio_lifecycle_state: str = "idle"
+    render_status: str = "stopped"
+    render_produced: bool = False
 
 
 @dataclass(slots=True)
