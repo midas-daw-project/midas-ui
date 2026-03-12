@@ -77,6 +77,9 @@ class ReconcileStatus:
     created: int = 0
     cleared: int = 0
     last_message: str = ""
+    policy_mode: str = "none"
+    policy_action: str = "none"
+    pending_manual_reconcile: bool = False
 
 
 @dataclass(slots=True)

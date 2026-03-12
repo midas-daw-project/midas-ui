@@ -32,12 +32,20 @@ def test_mixer_plugin_insert_chain_flow():
 
     controller.refresh_channels()
     assert controller.insert_plugin(1, "midas.eq.basic", 0).ok
+    status = bridge.get_reconcile_status()
+    assert status.policy_mode == "immediate"
+    assert status.policy_action == "insert_plugin"
+    assert status.pending_manual_reconcile is False
     assert len(vm.insert_chain) == 1
     assert vm.insert_chain[0].plugin_id == "midas.eq.basic"
     assert vm.insert_chain[0].bypassed is False
     assert vm.insert_chain[0].load_state == "loaded"
     assert controller.insert_plugin(1, "midas.comp.basic", 1).ok
     assert controller.move_plugin(1, 1, 0).ok
+    status = bridge.get_reconcile_status()
+    assert status.policy_mode == "manual_recommended"
+    assert status.policy_action == "move_plugin"
+    assert status.pending_manual_reconcile is True
     assert vm.insert_chain[0].plugin_id == "midas.comp.basic"
     assert vm.insert_chain[1].plugin_id == "midas.eq.basic"
     assert controller.set_plugin_bypass(1, 0, True).ok
@@ -51,6 +59,10 @@ def test_mixer_plugin_insert_chain_flow():
     assert controller.refresh_insert_runtime_state(1).ok
     assert all(slot.load_state in {"loaded", "unavailable", "failed"} for slot in vm.insert_chain)
     assert controller.request_insert_load(1, 0).ok
+    status = bridge.get_reconcile_status()
+    assert status.policy_mode == "immediate"
+    assert status.policy_action == "request_insert_load"
+    assert status.pending_manual_reconcile is False
     assert vm.insert_chain[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
     if vm.insert_chain[0].host_lifecycle_state == "loaded_placeholder":
         assert vm.insert_chain[0].loader_outcome == "ok"

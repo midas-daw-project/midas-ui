@@ -54,3 +54,4 @@ def test_workspace_overview_reflects_runtime_and_session():
     workspace.refresh_overview()
     assert workspace_vm.reconcile_attempted >= 1
     assert workspace_vm.reconcile_resolved + workspace_vm.reconcile_failed >= 1
+    assert workspace_vm.reconcile_policy_mode in {"manual", "immediate", "auto_after_load_apply", "manual_recommended"}

@@ -44,6 +44,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     reconcile_after_load = bridge.get_reconcile_status()
     assert reconcile_after_load.attempted >= 2
     assert reconcile_after_load.resolved >= 1
+    assert reconcile_after_load.policy_mode == "auto_after_load_apply"
+    assert reconcile_after_load.policy_action == "session_load"
     loaded = bridge.get_insert_chain(1)
     assert len(loaded) == 2
     assert loaded[0].plugin_id == "midas.comp.basic"
@@ -63,6 +65,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert bridge.apply_session().ok
     reconcile_after_apply = bridge.get_reconcile_status()
     assert reconcile_after_apply.attempted >= 2
+    assert reconcile_after_apply.policy_mode == "auto_after_load_apply"
+    assert reconcile_after_apply.policy_action == "session_apply"
     assert bridge.request_insert_unload(1, 0).ok
     applied = bridge.get_insert_chain(1)
     assert len(applied) == 2

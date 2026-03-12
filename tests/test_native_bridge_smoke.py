@@ -63,8 +63,13 @@ def main() -> None:
         plugins = native.get_plugin_registry()
     assert isinstance(plugins, list)
     assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
+    policy = native.get_reconcile_status().get("values", {})
+    assert str(policy.get("policy_mode", "")) == "immediate"
+    assert str(policy.get("policy_action", "")) == "insert_plugin"
     assert int(native.insert_plugin(1, "midas.comp.basic", 1)["code"]) == 0
     assert int(native.move_plugin_to_top(1, 1)["code"]) == 0
+    policy = native.get_reconcile_status().get("values", {})
+    assert str(policy.get("policy_mode", "")) == "manual_recommended"
     assert int(native.set_channel_insert_bypass(1, True)["code"]) == 0
     assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
     assert int(native.request_insert_load(1, 0)["code"]) == 0

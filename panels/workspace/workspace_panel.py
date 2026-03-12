@@ -58,6 +58,7 @@ class WorkspacePanel(QWidget):
         self.inserted_plugin_label = QLabel("Inserted Plugins: 0")
         self.selected_insert_label = QLabel("Selected Insert: -")
         self.reconcile_label = QLabel("Reconcile: attempted=0 resolved=0 failed=0 created=0 cleared=0")
+        self.reconcile_policy_label = QLabel("Reconcile Policy: mode=none action=none pending_manual=no")
         runtime_form.addRow(self.audio_label)
         runtime_form.addRow(self.transport_label)
         runtime_form.addRow(self.runtime_label)
@@ -68,6 +69,7 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.inserted_plugin_label)
         runtime_form.addRow(self.selected_insert_label)
         runtime_form.addRow(self.reconcile_label)
+        runtime_form.addRow(self.reconcile_policy_label)
         layout.addWidget(runtime_box)
 
         actions_box = QGroupBox("Quick Actions")
@@ -123,5 +125,11 @@ class WorkspacePanel(QWidget):
             f"created={vm.reconcile_created} "
             f"cleared={vm.reconcile_cleared} "
             f"msg={vm.reconcile_last_message or '-'}"
+        )
+        self.reconcile_policy_label.setText(
+            "Reconcile Policy: "
+            f"mode={vm.reconcile_policy_mode} "
+            f"action={vm.reconcile_policy_action} "
+            f"pending_manual={'yes' if vm.reconcile_pending_manual else 'no'}"
         )
         self.last_action_label.setText(f"Last Action: {vm.last_action}")

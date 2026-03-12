@@ -48,6 +48,9 @@ class WorkspaceController:
         self._vm.reconcile_created = reconcile.created
         self._vm.reconcile_cleared = reconcile.cleared
         self._vm.reconcile_last_message = reconcile.last_message
+        self._vm.reconcile_policy_mode = reconcile.policy_mode
+        self._vm.reconcile_policy_action = reconcile.policy_action
+        self._vm.reconcile_pending_manual = reconcile.pending_manual_reconcile
 
     def ingest_browser_state(self, browser_vm: BrowserViewModel) -> None:
         self._vm.plugin_count = len(browser_vm.plugins)

@@ -33,4 +33,7 @@ class WorkspaceViewModel:
     reconcile_created: int = 0
     reconcile_cleared: int = 0
     reconcile_last_message: str = ""
+    reconcile_policy_mode: str = "none"
+    reconcile_policy_action: str = "none"
+    reconcile_pending_manual: bool = False
     last_action: str = "Ready"

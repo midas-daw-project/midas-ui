@@ -68,6 +68,7 @@ class FallbackBridgeClient(BridgeClient):
         self._saved_insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
         self._reconcile_status = ReconcileStatus()
+        self._in_reconcile = False
 
     def bridge_version(self) -> int:
         return 1
@@ -208,7 +209,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("insert_plugin", channel_id, result, immediate=True)
+        return result
 
     def set_channel_gain(self, channel_id: int, gain: float) -> BridgeResult:
         channel = self._mixer_channels.setdefault(channel_id, MixerChannelStatus(channel_id=channel_id))
@@ -223,7 +226,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("remove_plugin", channel_id, result, immediate=True)
+        return result
 
     def save_session(self) -> BridgeResult:
         self._session.status = "saved"
@@ -252,6 +257,8 @@ class FallbackBridgeClient(BridgeClient):
         self._insert_chains = deepcopy(self._saved_insert_chains)
         for chain in self._insert_chains.values():
             self._evaluate_runtime_state(chain)
+        self._reconcile_status.policy_mode = "auto_after_load_apply"
+        self._reconcile_status.policy_action = "session_load"
         self.reconcile_all_inserts()
         self._publish(
             BridgeEvent(
@@ -272,6 +279,8 @@ class FallbackBridgeClient(BridgeClient):
         self._insert_chains = deepcopy(self._saved_insert_chains)
         for chain in self._insert_chains.values():
             self._evaluate_runtime_state(chain)
+        self._reconcile_status.policy_mode = "auto_after_load_apply"
+        self._reconcile_status.policy_action = "session_apply"
         self.reconcile_all_inserts()
         self._publish(
             BridgeEvent(
@@ -428,7 +437,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("insert_plugin", channel_id, result, immediate=True)
+        return result
 
     def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
         channel_id = int(channel_id)
@@ -446,7 +457,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("remove_plugin", channel_id, result, immediate=True)
+        return result
 
     def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
         channel_id = int(channel_id)
@@ -477,7 +490,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("move_plugin", channel_id, result, immediate=False)
+        return result
 
     def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
         channel_id = int(channel_id)
@@ -501,7 +516,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("set_plugin_bypass", channel_id, result, immediate=False)
+        return result
 
     def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
         chain = self._insert_chains.get(int(channel_id), [])
@@ -531,7 +548,9 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("clear_insert_chain", channel_id, result, immediate=False)
+        return result
 
     def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
         channel_id = int(channel_id)
@@ -552,7 +571,9 @@ class FallbackBridgeClient(BridgeClient):
         )
         if chain:
             self._mark_session_modified()
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("set_channel_insert_bypass", channel_id, result, immediate=False)
+        return result
 
     def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
         channel_id = int(channel_id)
@@ -602,7 +623,10 @@ class FallbackBridgeClient(BridgeClient):
                 metadata={"action": "request_insert_load", "channel": str(channel_id), "slot": str(slot_index)},
             )
         )
-        return BridgeResult()
+        result = BridgeResult()
+        if not self._in_reconcile:
+            self._apply_live_reconcile_policy("request_insert_load", channel_id, result, immediate=True)
+        return result
 
     def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
         channel_id = int(channel_id)
@@ -627,15 +651,23 @@ class FallbackBridgeClient(BridgeClient):
                 metadata={"action": "request_insert_unload", "channel": str(channel_id), "slot": str(slot_index)},
             )
         )
-        return BridgeResult()
+        result = BridgeResult()
+        if not self._in_reconcile:
+            self._apply_live_reconcile_policy("request_insert_unload", channel_id, result, immediate=True)
+        return result
 
     def reconcile_channel_inserts(self, channel_id: int) -> BridgeResult:
+        self._reconcile_status.policy_mode = "manual"
+        self._reconcile_status.policy_action = "reconcile_channel_inserts"
         return self._reconcile([int(channel_id)])
 
     def reconcile_all_inserts(self) -> BridgeResult:
         channels = sorted(self._insert_chains.keys())
         if not channels:
             channels = [1]
+        if self._reconcile_status.policy_mode == "none":
+            self._reconcile_status.policy_mode = "manual"
+            self._reconcile_status.policy_action = "reconcile_all_inserts"
         return self._reconcile(channels)
 
     def get_reconcile_status(self) -> ReconcileStatus:
@@ -686,40 +718,51 @@ class FallbackBridgeClient(BridgeClient):
         return snapshot
 
     def _reconcile(self, channels: List[int]) -> BridgeResult:
+        policy_mode = self._reconcile_status.policy_mode
+        policy_action = self._reconcile_status.policy_action
         previous = {
             channel_id: {slot.slot_index: slot.placeholder_instance_id for slot in slots if slot.placeholder_instance_id}
             for channel_id, slots in self._insert_chains.items()
         }
 
         self._reconcile_status = ReconcileStatus()
+        self._reconcile_status.policy_mode = policy_mode
+        self._reconcile_status.policy_action = policy_action
         self._reconcile_status.channels_scanned = len(channels)
-        for channel_id in channels:
-            self.refresh_insert_runtime_state(channel_id)
-            chain = self._insert_chains.get(channel_id, [])
-            self._reconcile_status.slots_scanned += len(chain)
-            for slot in chain:
-                if not slot.plugin_id:
-                    continue
-                self._reconcile_status.attempted += 1
-                self.request_insert_load(channel_id, slot.slot_index)
-                if slot.loader_outcome == "ok":
-                    self._reconcile_status.resolved += 1
-                else:
-                    self._reconcile_status.failed += 1
-            before = previous.get(channel_id, {})
-            after = {
-                slot.slot_index: slot.placeholder_instance_id
-                for slot in chain
-                if slot.placeholder_instance_id
-            }
-            for slot_index, placeholder_id in before.items():
-                if slot_index not in after or after.get(slot_index) != placeholder_id:
-                    self._reconcile_status.cleared += 1
-            for slot_index, placeholder_id in after.items():
-                if slot_index not in before and placeholder_id:
-                    self._reconcile_status.created += 1
+        self._in_reconcile = True
+        try:
+            for channel_id in channels:
+                self.refresh_insert_runtime_state(channel_id)
+                chain = self._insert_chains.get(channel_id, [])
+                self._reconcile_status.slots_scanned += len(chain)
+                for slot in chain:
+                    if not slot.plugin_id:
+                        continue
+                    if slot.host_lifecycle_state == "unloaded":
+                        continue
+                    self._reconcile_status.attempted += 1
+                    self.request_insert_load(channel_id, slot.slot_index)
+                    if slot.loader_outcome == "ok":
+                        self._reconcile_status.resolved += 1
+                    else:
+                        self._reconcile_status.failed += 1
+                before = previous.get(channel_id, {})
+                after = {
+                    slot.slot_index: slot.placeholder_instance_id
+                    for slot in chain
+                    if slot.placeholder_instance_id
+                }
+                for slot_index, placeholder_id in before.items():
+                    if slot_index not in after or after.get(slot_index) != placeholder_id:
+                        self._reconcile_status.cleared += 1
+                for slot_index, placeholder_id in after.items():
+                    if slot_index not in before and placeholder_id:
+                        self._reconcile_status.created += 1
+        finally:
+            self._in_reconcile = False
 
         self._reconcile_status.last_message = "ok"
+        self._reconcile_status.pending_manual_reconcile = False
         self._publish(
             BridgeEvent(
                 category="session",
@@ -735,6 +778,19 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         return BridgeResult()
+
+    def _apply_live_reconcile_policy(self, action: str, channel_id: int, result: BridgeResult, immediate: bool) -> None:
+        self._reconcile_status.policy_action = action
+        if not result.ok:
+            self._reconcile_status.policy_mode = "none"
+            return
+        if immediate:
+            self._reconcile_status.policy_mode = "immediate"
+            self._reconcile([int(channel_id)])
+            return
+        self._reconcile_status.policy_mode = "manual_recommended"
+        self._reconcile_status.pending_manual_reconcile = True
+        self._reconcile_status.last_message = "manual reconcile recommended"
 
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"

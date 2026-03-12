@@ -54,6 +54,7 @@ class NativeBridgeClient(BridgeClient):
         self._insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
         self._reconcile_status = ReconcileStatus()
+        self._in_reconcile = False
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -304,7 +305,9 @@ class NativeBridgeClient(BridgeClient):
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "insert_plugin"):
-            return _to_result(self._native.insert_plugin(int(channel_id), plugin_id, int(slot_index)))
+            result = _to_result(self._native.insert_plugin(int(channel_id), plugin_id, int(slot_index)))
+            self._capture_policy_status()
+            return result
         plugin = next((p for p in self.get_plugin_registry() if p.plugin_id == plugin_id), None)
         if plugin is None:
             return BridgeResult(code=3, message=f"unknown plugin id: {plugin_id}")
@@ -335,21 +338,29 @@ class NativeBridgeClient(BridgeClient):
         else:
             chain.append(inserted)
             chain.sort(key=lambda s: s.slot_index)
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("insert_plugin", int(channel_id), result, immediate=True)
+        return result
 
     def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "remove_plugin"):
-            return _to_result(self._native.remove_plugin(int(channel_id), int(slot_index)))
+            result = _to_result(self._native.remove_plugin(int(channel_id), int(slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         remaining = [slot for slot in chain if slot.slot_index != int(slot_index)]
         if len(remaining) == len(chain):
             return BridgeResult(code=2, message="plugin slot not found")
         self._insert_chain_cache[int(channel_id)] = remaining
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("remove_plugin", int(channel_id), result, immediate=True)
+        return result
 
     def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
         if hasattr(self._native, "move_plugin"):
-            return _to_result(self._native.move_plugin(int(channel_id), int(from_slot_index), int(to_slot_index)))
+            result = _to_result(self._native.move_plugin(int(channel_id), int(from_slot_index), int(to_slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         source = next((slot for slot in chain if slot.slot_index == int(from_slot_index)), None)
         if source is None:
@@ -360,11 +371,15 @@ class NativeBridgeClient(BridgeClient):
             if dest is not None and dest is not source:
                 dest.slot_index = int(from_slot_index)
             chain.sort(key=lambda s: s.slot_index)
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("move_plugin", int(channel_id), result, immediate=False)
+        return result
 
     def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
         if hasattr(self._native, "set_plugin_bypass"):
-            return _to_result(self._native.set_plugin_bypass(int(channel_id), int(slot_index), bool(bypassed)))
+            result = _to_result(self._native.set_plugin_bypass(int(channel_id), int(slot_index), bool(bypassed)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
         if slot is None:
@@ -372,11 +387,15 @@ class NativeBridgeClient(BridgeClient):
         slot.bypassed = bool(bypassed)
         slot.load_state = "loaded" if slot.available else "unavailable"
         slot.runtime_message = "plugin ready" if slot.available else "plugin unavailable"
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("set_plugin_bypass", int(channel_id), result, immediate=False)
+        return result
 
     def move_plugin_to_top(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "move_plugin_to_top"):
-            return _to_result(self._native.move_plugin_to_top(int(channel_id), int(slot_index)))
+            result = _to_result(self._native.move_plugin_to_top(int(channel_id), int(slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         if not chain:
             return BridgeResult(code=2, message="insert chain is empty")
@@ -385,7 +404,9 @@ class NativeBridgeClient(BridgeClient):
 
     def move_plugin_to_bottom(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "move_plugin_to_bottom"):
-            return _to_result(self._native.move_plugin_to_bottom(int(channel_id), int(slot_index)))
+            result = _to_result(self._native.move_plugin_to_bottom(int(channel_id), int(slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         if not chain:
             return BridgeResult(code=2, message="insert chain is empty")
@@ -394,19 +415,27 @@ class NativeBridgeClient(BridgeClient):
 
     def clear_insert_chain(self, channel_id: int) -> BridgeResult:
         if hasattr(self._native, "clear_insert_chain"):
-            return _to_result(self._native.clear_insert_chain(int(channel_id)))
+            result = _to_result(self._native.clear_insert_chain(int(channel_id)))
+            self._capture_policy_status()
+            return result
         self._insert_chain_cache[int(channel_id)] = []
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("clear_insert_chain", int(channel_id), result, immediate=False)
+        return result
 
     def set_channel_insert_bypass(self, channel_id: int, bypassed: bool) -> BridgeResult:
         if hasattr(self._native, "set_channel_insert_bypass"):
-            return _to_result(self._native.set_channel_insert_bypass(int(channel_id), bool(bypassed)))
+            result = _to_result(self._native.set_channel_insert_bypass(int(channel_id), bool(bypassed)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         for slot in chain:
             slot.bypassed = bool(bypassed)
             slot.load_state = "loaded" if slot.available else "unavailable"
             slot.runtime_message = "plugin ready" if slot.available else "plugin unavailable"
-        return BridgeResult()
+        result = BridgeResult()
+        self._apply_live_reconcile_policy("set_channel_insert_bypass", int(channel_id), result, immediate=False)
+        return result
 
     def refresh_insert_runtime_state(self, channel_id: int) -> BridgeResult:
         if hasattr(self._native, "refresh_insert_runtime_state"):
@@ -429,7 +458,9 @@ class NativeBridgeClient(BridgeClient):
 
     def request_insert_load(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "request_insert_load"):
-            return _to_result(self._native.request_insert_load(int(channel_id), int(slot_index)))
+            result = _to_result(self._native.request_insert_load(int(channel_id), int(slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
         if slot is None:
@@ -455,11 +486,16 @@ class NativeBridgeClient(BridgeClient):
             slot.loader_outcome = "unavailable"
             slot.loader_reason_code = "runtime_not_loadable"
             slot.loader_message = slot.host_message
-        return BridgeResult()
+        result = BridgeResult()
+        if not self._in_reconcile:
+            self._apply_live_reconcile_policy("request_insert_load", int(channel_id), result, immediate=True)
+        return result
 
     def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "request_insert_unload"):
-            return _to_result(self._native.request_insert_unload(int(channel_id), int(slot_index)))
+            result = _to_result(self._native.request_insert_unload(int(channel_id), int(slot_index)))
+            self._capture_policy_status()
+            return result
         chain = self._insert_chain_cache.get(int(channel_id), [])
         slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
         if slot is None:
@@ -473,13 +509,18 @@ class NativeBridgeClient(BridgeClient):
         slot.loader_outcome = "ok"
         slot.loader_reason_code = "unloaded"
         slot.loader_message = "placeholder unloaded"
-        return BridgeResult()
+        result = BridgeResult()
+        if not self._in_reconcile:
+            self._apply_live_reconcile_policy("request_insert_unload", int(channel_id), result, immediate=True)
+        return result
 
     def reconcile_channel_inserts(self, channel_id: int) -> BridgeResult:
         if hasattr(self._native, "reconcile_channel_inserts"):
             result = _to_result(self._native.reconcile_channel_inserts(int(channel_id)))
             self._reconcile_status = self.get_reconcile_status()
             return result
+        self._reconcile_status.policy_mode = "manual"
+        self._reconcile_status.policy_action = "reconcile_channel_inserts"
         return self.reconcile_all_inserts()
 
     def reconcile_all_inserts(self) -> BridgeResult:
@@ -493,25 +534,31 @@ class NativeBridgeClient(BridgeClient):
             channel: {slot.slot_index: slot.placeholder_instance_id for slot in slots if slot.placeholder_instance_id}
             for channel, slots in self._insert_chain_cache.items()
         }
-        for channel in channels:
-            chain = self._insert_chain_cache.get(channel, [])
-            slots_scanned += len(chain)
-            for slot in chain:
-                if not slot.plugin_id:
-                    continue
-                attempted += 1
-                self.request_insert_load(channel, slot.slot_index)
-                if slot.loader_outcome == "ok":
-                    resolved += 1
-                else:
-                    failed += 1
-            after = {slot.slot_index: slot.placeholder_instance_id for slot in chain if slot.placeholder_instance_id}
-            for slot_index, placeholder_id in before.get(channel, {}).items():
-                if slot_index not in after or after.get(slot_index) != placeholder_id:
-                    cleared += 1
-            for slot_index, placeholder_id in after.items():
-                if slot_index not in before.get(channel, {}) and placeholder_id:
-                    created += 1
+        self._in_reconcile = True
+        try:
+            for channel in channels:
+                chain = self._insert_chain_cache.get(channel, [])
+                slots_scanned += len(chain)
+                for slot in chain:
+                    if not slot.plugin_id:
+                        continue
+                    if slot.host_lifecycle_state == "unloaded":
+                        continue
+                    attempted += 1
+                    self.request_insert_load(channel, slot.slot_index)
+                    if slot.loader_outcome == "ok":
+                        resolved += 1
+                    else:
+                        failed += 1
+                after = {slot.slot_index: slot.placeholder_instance_id for slot in chain if slot.placeholder_instance_id}
+                for slot_index, placeholder_id in before.get(channel, {}).items():
+                    if slot_index not in after or after.get(slot_index) != placeholder_id:
+                        cleared += 1
+                for slot_index, placeholder_id in after.items():
+                    if slot_index not in before.get(channel, {}) and placeholder_id:
+                        created += 1
+        finally:
+            self._in_reconcile = False
         self._reconcile_status = ReconcileStatus(
             channels_scanned=len(channels),
             slots_scanned=slots_scanned,
@@ -521,6 +568,9 @@ class NativeBridgeClient(BridgeClient):
             created=created,
             cleared=cleared,
             last_message="ok",
+            policy_mode="manual",
+            policy_action="reconcile_all_inserts",
+            pending_manual_reconcile=False,
         )
         return BridgeResult()
 
@@ -537,8 +587,27 @@ class NativeBridgeClient(BridgeClient):
                 created=int(values.get("created", 0)),
                 cleared=int(values.get("cleared", 0)),
                 last_message=str(values.get("last_message", "")),
+                policy_mode=str(values.get("policy_mode", "none")),
+                policy_action=str(values.get("policy_action", "none")),
+                pending_manual_reconcile=str(values.get("pending_manual_reconcile", "false")).lower() == "true",
             )
         return self._reconcile_status
+
+    def _capture_policy_status(self) -> None:
+        self._reconcile_status = self.get_reconcile_status()
+
+    def _apply_live_reconcile_policy(self, action: str, channel_id: int, result: BridgeResult, immediate: bool) -> None:
+        self._reconcile_status.policy_action = action
+        if not result.ok:
+            self._reconcile_status.policy_mode = "none"
+            return
+        if immediate:
+            self._reconcile_status.policy_mode = "immediate"
+            self.reconcile_channel_inserts(channel_id)
+            return
+        self._reconcile_status.policy_mode = "manual_recommended"
+        self._reconcile_status.pending_manual_reconcile = True
+        self._reconcile_status.last_message = "manual reconcile recommended"
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):
