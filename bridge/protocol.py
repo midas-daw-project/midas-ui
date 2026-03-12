@@ -60,6 +60,16 @@ class RuntimeStatus:
 
 
 @dataclass(slots=True)
+class PluginRegistryEntry:
+    plugin_id: str
+    name: str
+    category: str
+    vendor: str
+    available: bool = True
+    source: str = "builtin"
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -134,4 +144,10 @@ class BridgeClient(Protocol):
         ...
 
     def get_runtime_status(self) -> RuntimeStatus:
+        ...
+
+    def get_plugin_registry(self) -> List[PluginRegistryEntry]:
+        ...
+
+    def refresh_plugin_registry(self) -> BridgeResult:
         ...

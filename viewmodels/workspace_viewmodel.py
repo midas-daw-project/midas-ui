@@ -17,4 +17,7 @@ class WorkspaceViewModel:
     render_status: str = "stopped"
     mixer_channel_count: int = 0
     muted_channel_count: int = 0
+    plugin_count: int = 0
+    available_plugin_count: int = 0
+    selected_plugin_name: str = ""
     last_action: str = "Ready"

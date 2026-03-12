@@ -48,11 +48,15 @@ class WorkspacePanel(QWidget):
         self.runtime_label = QLabel("Runtime Active: no")
         self.render_label = QLabel("Render: stopped")
         self.mixer_label = QLabel("Mixer: channels=0, muted=0")
+        self.plugin_label = QLabel("Plugins: total=0, available=0")
+        self.selected_plugin_label = QLabel("Selected Plugin: -")
         runtime_form.addRow(self.audio_label)
         runtime_form.addRow(self.transport_label)
         runtime_form.addRow(self.runtime_label)
         runtime_form.addRow(self.render_label)
         runtime_form.addRow(self.mixer_label)
+        runtime_form.addRow(self.plugin_label)
+        runtime_form.addRow(self.selected_plugin_label)
         layout.addWidget(runtime_box)
 
         actions_box = QGroupBox("Quick Actions")
@@ -85,4 +89,8 @@ class WorkspacePanel(QWidget):
         self.runtime_label.setText(f"Runtime Active: {'yes' if vm.runtime_active else 'no'}")
         self.render_label.setText(f"Render: {vm.render_status}")
         self.mixer_label.setText(f"Mixer: channels={vm.mixer_channel_count}, muted={vm.muted_channel_count}")
+        self.plugin_label.setText(
+            f"Plugins: total={vm.plugin_count}, available={vm.available_plugin_count}"
+        )
+        self.selected_plugin_label.setText(f"Selected Plugin: {vm.selected_plugin_name or '-'}")
         self.last_action_label.setText(f"Last Action: {vm.last_action}")

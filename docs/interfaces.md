@@ -25,6 +25,8 @@
 - `stop_transport()`
 - `get_transport_status()`
 - `get_runtime_status()`
+- `get_plugin_registry()`
+- `refresh_plugin_registry()`
 
 `get_transport_status()` exposes control/runtime alignment fields:
 - `play_state` (control intent)
@@ -43,6 +45,11 @@
 - central workspace overview aggregation
 - bridge identity display state
 - session/runtime/transport/mixer summary refresh
+
+`BrowserController` owns:
+- plugin registry load/refresh
+- selected plugin detail state
+- browser-facing error/refresh status
 
 ## Result Mapping
 

@@ -5,8 +5,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bridge.fallback_bridge import FallbackBridgeClient
 from controllers.audio_controller import AudioController
+from controllers.browser_controller import BrowserController
 from controllers.workspace_controller import WorkspaceController
 from viewmodels.audio_viewmodel import AudioViewModel
+from viewmodels.browser_viewmodel import BrowserViewModel
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
@@ -18,6 +20,8 @@ def test_workspace_overview_reflects_runtime_and_session():
     workspace_vm = WorkspaceViewModel()
     workspace = WorkspaceController(bridge, workspace_vm)
     workspace.set_bridge_identity("fallback", bridge.bridge_version())
+    browser_vm = BrowserViewModel()
+    browser = BrowserController(bridge, browser_vm)
 
     assert audio.start_runtime_profile().ok
     assert audio.init_audio().ok
@@ -25,6 +29,8 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert audio.start_audio().ok
 
     workspace.refresh_overview()
+    browser.load_registry()
+    workspace.ingest_browser_state(browser_vm)
     assert workspace_vm.bridge_mode == "fallback"
     assert workspace_vm.bridge_version == 1
     assert workspace_vm.session_ref == "local-session"
@@ -33,3 +39,5 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.transport_state == "playing"
     assert workspace_vm.render_status in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state"}
     assert workspace_vm.mixer_channel_count >= 1
+    assert workspace_vm.plugin_count >= 1
+    assert workspace_vm.available_plugin_count >= 1

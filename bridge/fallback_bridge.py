@@ -7,6 +7,7 @@ from bridge.protocol import (
     AudioStatus,
     BridgeClient,
     BridgeEvent,
+    PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
     RuntimeStatus,
@@ -30,6 +31,32 @@ class FallbackBridgeClient(BridgeClient):
         self._session = SessionStatus(status="idle", session_ref="local-session")
         self._transport = TransportStatus(play_state="stopped")
         self._track_channel = 0
+        self._plugin_registry = [
+            PluginRegistryEntry(
+                plugin_id="midas.eq.basic",
+                name="MIDAS Basic EQ",
+                category="EQ",
+                vendor="MIDAS Labs",
+                available=True,
+                source="builtin",
+            ),
+            PluginRegistryEntry(
+                plugin_id="midas.comp.basic",
+                name="MIDAS Basic Compressor",
+                category="Dynamics",
+                vendor="MIDAS Labs",
+                available=True,
+                source="builtin",
+            ),
+            PluginRegistryEntry(
+                plugin_id="thirdparty.reverb.demo",
+                name="ThirdParty Demo Reverb",
+                category="Reverb",
+                vendor="ThirdParty Audio",
+                available=False,
+                source="registry",
+            ),
+        ]
 
     def bridge_version(self) -> int:
         return 1
@@ -242,6 +269,29 @@ class FallbackBridgeClient(BridgeClient):
             bridge_version=self.bridge_version(),
             audio=self.get_audio_status(),
         )
+
+    def get_plugin_registry(self) -> List[PluginRegistryEntry]:
+        return [
+            PluginRegistryEntry(
+                plugin_id=entry.plugin_id,
+                name=entry.name,
+                category=entry.category,
+                vendor=entry.vendor,
+                available=entry.available,
+                source=entry.source,
+            )
+            for entry in self._plugin_registry
+        ]
+
+    def refresh_plugin_registry(self) -> BridgeResult:
+        self._publish(
+            BridgeEvent(
+                category="subsystem",
+                emitter=2003,
+                metadata={"action": "refresh_plugin_registry", "count": str(len(self._plugin_registry))},
+            )
+        )
+        return BridgeResult()
 
     def _publish(self, event: BridgeEvent) -> None:
         self._events.append(event)

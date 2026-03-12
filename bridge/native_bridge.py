@@ -7,6 +7,7 @@ from bridge.protocol import (
     AudioStatus,
     BridgeClient,
     BridgeEvent,
+    PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
     RuntimeStatus,
@@ -30,6 +31,24 @@ class NativeBridgeClient(BridgeClient):
         self._native = native_module
         self._handles: Dict[int, int] = {}
         self._next_local_handle = 1
+        self._plugin_registry_cache: list[PluginRegistryEntry] = [
+            PluginRegistryEntry(
+                plugin_id="midas.eq.basic",
+                name="MIDAS Basic EQ",
+                category="EQ",
+                vendor="MIDAS Labs",
+                available=True,
+                source="builtin",
+            ),
+            PluginRegistryEntry(
+                plugin_id="midas.comp.basic",
+                name="MIDAS Basic Compressor",
+                category="Dynamics",
+                vendor="MIDAS Labs",
+                available=True,
+                source="builtin",
+            ),
+        ]
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -199,6 +218,32 @@ class NativeBridgeClient(BridgeClient):
             bridge_version=_as_int("bridge_version", self.bridge_version()),
             audio=audio,
         )
+
+    def get_plugin_registry(self) -> list[PluginRegistryEntry]:
+        if hasattr(self._native, "get_plugin_registry"):
+            raw_entries = self._native.get_plugin_registry()
+            entries: list[PluginRegistryEntry] = []
+            for item in raw_entries:
+                values = dict(item.get("values", {}))
+                entries.append(
+                    PluginRegistryEntry(
+                        plugin_id=str(values.get("plugin_id", "")),
+                        name=str(values.get("name", "")),
+                        category=str(values.get("category", "Unknown")),
+                        vendor=str(values.get("vendor", "Unknown")),
+                        available=str(values.get("available", "false")).lower() == "true",
+                        source=str(values.get("source", "registry")),
+                    )
+                )
+            if entries:
+                self._plugin_registry_cache = entries
+        return list(self._plugin_registry_cache)
+
+    def refresh_plugin_registry(self) -> BridgeResult:
+        if hasattr(self._native, "refresh_plugin_registry"):
+            return _to_result(self._native.refresh_plugin_registry())
+        self.get_plugin_registry()
+        return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:
         if hasattr(self._native, "shutdown_event_dispatcher"):

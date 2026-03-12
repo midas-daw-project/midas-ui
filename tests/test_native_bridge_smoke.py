@@ -57,6 +57,11 @@ def main() -> None:
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
 
+    plugins = []
+    if hasattr(native, "get_plugin_registry"):
+        plugins = native.get_plugin_registry()
+    assert isinstance(plugins, list)
+
     assert int(native.save_session()["code"]) == 0
     assert int(native.load_session()["code"]) == 0
     assert int(native.apply_session()["code"]) == 0

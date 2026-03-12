@@ -5,11 +5,13 @@ from PySide6.QtWidgets import QDockWidget, QMainWindow
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
+from controllers.browser_controller import BrowserController
 from controllers.mixer_controller import MixerController
 from controllers.session_controller import SessionController
 from controllers.transport_controller import TransportController
 from controllers.workspace_controller import WorkspaceController
 from panels.audio.audio_panel import AudioPanel
+from panels.browser.browser_panel import BrowserPanel
 from panels.debug.debug_panel import DebugPanel
 from panels.mixer.mixer_panel import MixerPanel
 from panels.session.session_panel import SessionPanel
@@ -17,6 +19,7 @@ from panels.transport.transport_panel import TransportPanel
 from panels.workspace.workspace_panel import WorkspacePanel
 from shell.settings_store import ShellSettingsStore
 from viewmodels.audio_viewmodel import AudioViewModel
+from viewmodels.browser_viewmodel import BrowserViewModel
 from viewmodels.mixer_viewmodel import MixerViewModel
 from viewmodels.session_viewmodel import SessionViewModel
 from viewmodels.transport_viewmodel import TransportViewModel
@@ -35,8 +38,10 @@ class MainWindow(QMainWindow):
         self._mixer_vm = MixerViewModel()
         self._session_vm = SessionViewModel()
         self._transport_vm = TransportViewModel()
+        self._browser_vm = BrowserViewModel()
         self._workspace_vm = WorkspaceViewModel()
         self._audio_controller = AudioController(bridge, self._audio_vm)
+        self._browser_controller = BrowserController(bridge, self._browser_vm)
         self._mixer_controller = MixerController(bridge, self._mixer_vm)
         self._session_controller = SessionController(bridge, self._session_vm)
         self._transport_controller = TransportController(bridge, self._transport_vm)
@@ -57,6 +62,10 @@ class MainWindow(QMainWindow):
             on_play=self._play_transport,
             on_stop=self._stop_transport,
             on_refresh=self._refresh_transport,
+        )
+        self._browser_panel = BrowserPanel(
+            on_refresh_registry=self._refresh_plugin_registry,
+            on_select_plugin=self._select_plugin,
         )
         self._workspace_panel = WorkspacePanel(
             on_refresh_all=self._manual_refresh_all,
@@ -90,6 +99,7 @@ class MainWindow(QMainWindow):
         self._refresh_mixer()
         self._refresh_session()
         self._refresh_transport()
+        self._refresh_browser()
         self._refresh_workspace()
 
         self._event_relay = _UiEventRelay()
@@ -138,6 +148,11 @@ class MainWindow(QMainWindow):
         transport_dock.setObjectName("dock.transport")
         transport_dock.setWidget(self._transport_panel)
         self.addDockWidget(Qt.TopDockWidgetArea, transport_dock)
+
+        browser_dock = QDockWidget("Browser", self)
+        browser_dock.setObjectName("dock.browser")
+        browser_dock.setWidget(self._browser_panel)
+        self.addDockWidget(Qt.LeftDockWidgetArea, browser_dock)
 
     def _start_runtime(self) -> None:
         result = self._audio_controller.start_runtime_profile()
@@ -209,8 +224,27 @@ class MainWindow(QMainWindow):
         self._refresh_debug_summary()
         self._refresh_workspace()
 
+    def _refresh_browser(self) -> None:
+        self._browser_controller.load_registry()
+        self._browser_panel.render(self._browser_vm)
+        self._refresh_workspace()
+
+    def _refresh_plugin_registry(self) -> None:
+        result = self._browser_controller.refresh_registry()
+        self._debug_panel.append_result("refresh_plugin_registry", result.code, result.message)
+        self._workspace_controller.mark_action("Refreshed plugin registry")
+        self._browser_panel.render(self._browser_vm)
+        self._refresh_workspace()
+
+    def _select_plugin(self, plugin_id: str) -> None:
+        self._browser_controller.select_plugin(plugin_id)
+        self._workspace_controller.mark_action(f"Selected plugin {plugin_id}")
+        self._browser_panel.render(self._browser_vm)
+        self._refresh_workspace()
+
     def _refresh_workspace(self) -> None:
         self._workspace_controller.refresh_overview()
+        self._workspace_controller.ingest_browser_state(self._browser_vm)
         self._workspace_panel.render(self._workspace_vm)
 
     def _apply_mixer_mute(self) -> None:
@@ -308,6 +342,7 @@ class MainWindow(QMainWindow):
         self._refresh_mixer()
         self._refresh_session()
         self._refresh_transport()
+        self._refresh_browser()
 
     def _refresh_debug_summary(self) -> None:
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)

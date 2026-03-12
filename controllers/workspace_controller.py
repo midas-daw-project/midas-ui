@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from bridge.protocol import BridgeClient
+from viewmodels.browser_viewmodel import BrowserViewModel
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
@@ -34,3 +35,8 @@ class WorkspaceController:
         self._vm.render_status = runtime.audio.render_status
         self._vm.mixer_channel_count = len(channels)
         self._vm.muted_channel_count = sum(1 for channel in channels if channel.muted)
+
+    def ingest_browser_state(self, browser_vm: BrowserViewModel) -> None:
+        self._vm.plugin_count = len(browser_vm.plugins)
+        self._vm.available_plugin_count = sum(1 for plugin in browser_vm.plugins if plugin.available)
+        self._vm.selected_plugin_name = browser_vm.selected_name
