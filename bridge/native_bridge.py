@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import atexit
-from copy import deepcopy
 from typing import Callable, Dict
 
 from bridge.protocol import (
@@ -52,7 +51,6 @@ class NativeBridgeClient(BridgeClient):
             ),
         ]
         self._insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
-        self._saved_insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -151,22 +149,13 @@ class NativeBridgeClient(BridgeClient):
         return _to_result(self._native.set_channel_gain(channel_id, float(gain)))
 
     def save_session(self) -> BridgeResult:
-        result = _to_result(self._native.save_session())
-        if result.ok:
-            self._saved_insert_chain_cache = deepcopy(self._insert_chain_cache)
-        return result
+        return _to_result(self._native.save_session())
 
     def load_session(self) -> BridgeResult:
-        result = _to_result(self._native.load_session())
-        if result.ok:
-            self._insert_chain_cache = deepcopy(self._saved_insert_chain_cache)
-        return result
+        return _to_result(self._native.load_session())
 
     def apply_session(self) -> BridgeResult:
-        result = _to_result(self._native.apply_session())
-        if result.ok:
-            self._insert_chain_cache = deepcopy(self._saved_insert_chain_cache)
-        return result
+        return _to_result(self._native.apply_session())
 
     def get_session_status(self) -> SessionStatus:
         raw = self._native.get_session_status()
@@ -266,10 +255,10 @@ class NativeBridgeClient(BridgeClient):
                 values = dict(item.get("values", {}))
                 slots.append(
                     InsertedPluginSlot(
-                        channel_id=int(values.get("channel_id", str(channel_id))),
+                        channel_id=int(values.get("channel_id", values.get("channel", str(channel_id)))),
                         slot_index=int(values.get("slot_index", "0")),
                         plugin_id=str(values.get("plugin_id", "")),
-                        plugin_name=str(values.get("plugin_name", "")),
+                        plugin_name=str(values.get("plugin_name", values.get("plugin_id", ""))),
                         available=str(values.get("available", "false")).lower() == "true",
                         bypassed=str(values.get("bypassed", "false")).lower() == "true",
                         load_state=str(values.get("load_state", "inserted")),
@@ -280,9 +269,7 @@ class NativeBridgeClient(BridgeClient):
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "insert_plugin"):
-            result = _to_result(self._native.insert_plugin(int(channel_id), plugin_id, int(slot_index)))
-            if not result.ok:
-                return result
+            return _to_result(self._native.insert_plugin(int(channel_id), plugin_id, int(slot_index)))
         plugin = next((p for p in self.get_plugin_registry() if p.plugin_id == plugin_id), None)
         if plugin is None:
             return BridgeResult(code=3, message=f"unknown plugin id: {plugin_id}")
@@ -309,9 +296,7 @@ class NativeBridgeClient(BridgeClient):
 
     def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "remove_plugin"):
-            result = _to_result(self._native.remove_plugin(int(channel_id), int(slot_index)))
-            if not result.ok:
-                return result
+            return _to_result(self._native.remove_plugin(int(channel_id), int(slot_index)))
         chain = self._insert_chain_cache.get(int(channel_id), [])
         remaining = [slot for slot in chain if slot.slot_index != int(slot_index)]
         if len(remaining) == len(chain):

@@ -61,9 +61,15 @@ def main() -> None:
     if hasattr(native, "get_plugin_registry"):
         plugins = native.get_plugin_registry()
     assert isinstance(plugins, list)
-
+    assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
+    chain = native.get_insert_chain(1)
+    assert isinstance(chain, list)
+    assert len(chain) >= 1
+    assert str(chain[0].get("values", {}).get("plugin_id", "")) == "midas.eq.basic"
     assert int(native.save_session()["code"]) == 0
+    assert int(native.remove_plugin(1, 0)["code"]) == 0
     assert int(native.load_session()["code"]) == 0
+
     assert int(native.apply_session()["code"]) == 0
     session_status = native.get_session_status()
     assert int(session_status.get("code", 4)) == 0
