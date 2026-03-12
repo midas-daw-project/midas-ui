@@ -352,6 +352,9 @@ class FallbackBridgeClient(BridgeClient):
                 host_message=slot.host_message,
                 placeholder_instance_id=slot.placeholder_instance_id,
                 placeholder_created_sequence=slot.placeholder_created_sequence,
+                loader_outcome=slot.loader_outcome,
+                loader_reason_code=slot.loader_reason_code,
+                loader_message=slot.loader_message,
             )
             for slot in self._insert_chains.get(int(channel_id), [])
         ]
@@ -382,6 +385,9 @@ class FallbackBridgeClient(BridgeClient):
                     host_message="",
                     placeholder_instance_id="",
                     placeholder_created_sequence=0,
+                    loader_outcome="",
+                    loader_reason_code="",
+                    loader_message="",
                 )
                 break
         else:
@@ -399,6 +405,9 @@ class FallbackBridgeClient(BridgeClient):
                     host_message="",
                     placeholder_instance_id="",
                     placeholder_created_sequence=0,
+                    loader_outcome="",
+                    loader_reason_code="",
+                    loader_message="",
                 )
             )
             chain.sort(key=lambda s: s.slot_index)
@@ -571,11 +580,17 @@ class FallbackBridgeClient(BridgeClient):
                 self._next_placeholder_sequence += 1
                 slot.placeholder_instance_id = f"ph-{seq}"
                 slot.placeholder_created_sequence = seq
+            slot.loader_outcome = "ok"
+            slot.loader_reason_code = "resolved"
+            slot.loader_message = "plugin resolved and placeholder created"
         else:
             slot.host_lifecycle_state = "load_failed"
             slot.host_message = slot.runtime_message or "runtime not loadable"
             slot.placeholder_instance_id = ""
             slot.placeholder_created_sequence = 0
+            slot.loader_outcome = "unavailable"
+            slot.loader_reason_code = "runtime_not_loadable"
+            slot.loader_message = slot.host_message
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -598,6 +613,9 @@ class FallbackBridgeClient(BridgeClient):
         slot.host_message = "placeholder unloaded"
         slot.placeholder_instance_id = ""
         slot.placeholder_created_sequence = 0
+        slot.loader_outcome = "ok"
+        slot.loader_reason_code = "unloaded"
+        slot.loader_message = "placeholder unloaded"
         self._publish(
             BridgeEvent(
                 category="mixer",
@@ -643,6 +661,9 @@ class FallbackBridgeClient(BridgeClient):
                         host_message="",
                         placeholder_instance_id="",
                         placeholder_created_sequence=0,
+                        loader_outcome="",
+                        loader_reason_code="",
+                        loader_message="",
                     )
                 )
             snapshot[channel_id] = copied

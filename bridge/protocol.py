@@ -91,6 +91,9 @@ class InsertedPluginSlot:
     host_message: str = ""
     placeholder_instance_id: str = ""
     placeholder_created_sequence: int = 0
+    loader_outcome: str = ""
+    loader_reason_code: str = ""
+    loader_message: str = ""
 
 
 @dataclass(slots=True)

@@ -24,9 +24,12 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert chain[1].bypassed is True
     assert chain[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
     if chain[0].host_lifecycle_state == "loaded_placeholder":
+        assert chain[0].loader_outcome == "ok"
+        assert chain[0].loader_reason_code == "resolved"
         assert chain[0].placeholder_instance_id
         assert chain[0].placeholder_created_sequence > 0
     else:
+        assert chain[0].loader_outcome != ""
         assert chain[0].placeholder_instance_id == ""
         assert chain[0].placeholder_created_sequence == 0
 
@@ -49,6 +52,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert loaded[0].host_lifecycle_state == "not_requested"
     assert loaded[0].placeholder_instance_id == ""
     assert loaded[0].placeholder_created_sequence == 0
+    assert loaded[0].loader_outcome == ""
+    assert loaded[0].loader_reason_code == ""
 
     assert bridge.remove_plugin(1, 1).ok
     assert bridge.apply_session().ok
@@ -60,5 +65,7 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert applied[0].host_lifecycle_state == "unloaded"
     assert applied[0].placeholder_instance_id == ""
     assert applied[0].placeholder_created_sequence == 0
+    assert applied[0].loader_outcome == "ok"
+    assert applied[0].loader_reason_code == "unloaded"
     assert bridge.clear_insert_chain(1).ok
     assert bridge.get_insert_chain(1) == []

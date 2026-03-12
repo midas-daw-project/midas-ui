@@ -286,6 +286,9 @@ class NativeBridgeClient(BridgeClient):
                         host_message=str(values.get("host_status_message", "")),
                         placeholder_instance_id=str(values.get("placeholder_instance_id", "")),
                         placeholder_created_sequence=int(values.get("placeholder_created_seq", 0) or 0),
+                        loader_outcome=str(values.get("loader_outcome", "")),
+                        loader_reason_code=str(values.get("loader_reason_code", "")),
+                        loader_message=str(values.get("loader_message", "")),
                     )
                 )
             self._insert_chain_cache[int(channel_id)] = slots
@@ -313,6 +316,9 @@ class NativeBridgeClient(BridgeClient):
             host_message="",
             placeholder_instance_id="",
             placeholder_created_sequence=0,
+            loader_outcome="",
+            loader_reason_code="",
+            loader_message="",
         )
         for i, slot in enumerate(chain):
             if slot.slot_index == int(slot_index):
@@ -430,11 +436,17 @@ class NativeBridgeClient(BridgeClient):
                 self._next_placeholder_sequence += 1
                 slot.placeholder_instance_id = f"ph-{seq}"
                 slot.placeholder_created_sequence = seq
+            slot.loader_outcome = "ok"
+            slot.loader_reason_code = "resolved"
+            slot.loader_message = "plugin resolved and placeholder created"
         else:
             slot.host_lifecycle_state = "load_failed"
             slot.host_message = slot.runtime_message or "runtime not loadable"
             slot.placeholder_instance_id = ""
             slot.placeholder_created_sequence = 0
+            slot.loader_outcome = "unavailable"
+            slot.loader_reason_code = "runtime_not_loadable"
+            slot.loader_message = slot.host_message
         return BridgeResult()
 
     def request_insert_unload(self, channel_id: int, slot_index: int) -> BridgeResult:
@@ -450,6 +462,9 @@ class NativeBridgeClient(BridgeClient):
         slot.host_message = "placeholder unloaded"
         slot.placeholder_instance_id = ""
         slot.placeholder_created_sequence = 0
+        slot.loader_outcome = "ok"
+        slot.loader_reason_code = "unloaded"
+        slot.loader_message = "placeholder unloaded"
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

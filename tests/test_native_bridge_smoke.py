@@ -78,16 +78,23 @@ def main() -> None:
     assert host_state in {"loaded_placeholder", "load_failed"}
     placeholder_id = str(chain[0].get("values", {}).get("placeholder_instance_id", ""))
     placeholder_seq = str(chain[0].get("values", {}).get("placeholder_created_seq", "0"))
+    loader_outcome = str(chain[0].get("values", {}).get("loader_outcome", ""))
+    loader_reason = str(chain[0].get("values", {}).get("loader_reason_code", ""))
     if host_state == "loaded_placeholder":
         assert placeholder_id
         assert int(placeholder_seq) > 0
+        assert loader_outcome == "ok"
+        assert loader_reason == "resolved"
     else:
         assert placeholder_id == ""
         assert int(placeholder_seq) == 0
+        assert loader_outcome in {"not_found", "unavailable", "incompatible", "load_not_supported_yet", "internal_error"}
     assert int(native.request_insert_unload(1, 0)["code"]) == 0
     chain = native.get_insert_chain(1)
     assert str(chain[0].get("values", {}).get("placeholder_instance_id", "")) == ""
     assert str(chain[0].get("values", {}).get("placeholder_created_seq", "0")) == "0"
+    assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
+    assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
     assert len(native.get_insert_chain(1)) == 0
