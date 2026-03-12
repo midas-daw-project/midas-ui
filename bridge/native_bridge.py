@@ -267,6 +267,10 @@ class NativeBridgeClient(BridgeClient):
             slots: list[InsertedPluginSlot] = []
             for item in raw:
                 values = dict(item.get("values", {}))
+                bypassed = (
+                    str(values.get("bypassed", "false")).lower() == "true"
+                    or str(values.get("enabled", "true")).lower() == "false"
+                )
                 slots.append(
                     InsertedPluginSlot(
                         channel_id=int(values.get("channel_id", values.get("channel", str(channel_id)))),
@@ -274,8 +278,8 @@ class NativeBridgeClient(BridgeClient):
                         plugin_id=str(values.get("plugin_id", "")),
                         plugin_name=str(values.get("plugin_name", values.get("plugin_id", ""))),
                         available=str(values.get("available", "false")).lower() == "true",
-                        bypassed=str(values.get("bypassed", "false")).lower() == "true",
-                        load_state=str(values.get("load_state", "inserted")),
+                        bypassed=bypassed,
+                        load_state=str(values.get("load_state", "bypassed" if bypassed else "inserted")),
                     )
                 )
             self._insert_chain_cache[int(channel_id)] = slots
@@ -316,6 +320,32 @@ class NativeBridgeClient(BridgeClient):
         if len(remaining) == len(chain):
             return BridgeResult(code=2, message="plugin slot not found")
         self._insert_chain_cache[int(channel_id)] = remaining
+        return BridgeResult()
+
+    def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "move_plugin"):
+            return _to_result(self._native.move_plugin(int(channel_id), int(from_slot_index), int(to_slot_index)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        source = next((slot for slot in chain if slot.slot_index == int(from_slot_index)), None)
+        if source is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        if int(from_slot_index) != int(to_slot_index):
+            dest = next((slot for slot in chain if slot.slot_index == int(to_slot_index)), None)
+            source.slot_index = int(to_slot_index)
+            if dest is not None and dest is not source:
+                dest.slot_index = int(from_slot_index)
+            chain.sort(key=lambda s: s.slot_index)
+        return BridgeResult()
+
+    def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
+        if hasattr(self._native, "set_plugin_bypass"):
+            return _to_result(self._native.set_plugin_bypass(int(channel_id), int(slot_index), bool(bypassed)))
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        slot = next((item for item in chain if item.slot_index == int(slot_index)), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.bypassed = bool(bypassed)
+        slot.load_state = "bypassed" if slot.bypassed else "inserted"
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

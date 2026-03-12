@@ -415,6 +415,61 @@ class FallbackBridgeClient(BridgeClient):
         self._mark_session_modified()
         return BridgeResult()
 
+    def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        from_slot_index = int(from_slot_index)
+        to_slot_index = int(to_slot_index)
+        if from_slot_index < 0 or to_slot_index < 0:
+            return BridgeResult(code=3, message="slot_index must be >= 0")
+        chain = self._insert_chains.get(channel_id, [])
+        from_slot = next((slot for slot in chain if slot.slot_index == from_slot_index), None)
+        if from_slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        if from_slot_index != to_slot_index:
+            to_slot = next((slot for slot in chain if slot.slot_index == to_slot_index), None)
+            from_slot.slot_index = to_slot_index
+            if to_slot is not None and to_slot is not from_slot:
+                to_slot.slot_index = from_slot_index
+            chain.sort(key=lambda s: s.slot_index)
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={
+                    "action": "move_plugin",
+                    "channel": str(channel_id),
+                    "from_slot": str(from_slot_index),
+                    "to_slot": str(to_slot_index),
+                },
+            )
+        )
+        self._mark_session_modified()
+        return BridgeResult()
+
+    def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
+        channel_id = int(channel_id)
+        slot_index = int(slot_index)
+        chain = self._insert_chains.get(channel_id, [])
+        slot = next((item for item in chain if item.slot_index == slot_index), None)
+        if slot is None:
+            return BridgeResult(code=2, message="plugin slot not found")
+        slot.bypassed = bool(bypassed)
+        slot.load_state = "bypassed" if slot.bypassed else "inserted"
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={
+                    "action": "set_plugin_bypass",
+                    "channel": str(channel_id),
+                    "slot": str(slot_index),
+                    "bypassed": "true" if slot.bypassed else "false",
+                },
+            )
+        )
+        self._mark_session_modified()
+        return BridgeResult()
+
     def _mark_session_modified(self) -> None:
         self._session.status = "modified"
         self._session.phase = "modified"

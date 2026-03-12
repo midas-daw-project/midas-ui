@@ -34,5 +34,12 @@ def test_mixer_plugin_insert_chain_flow():
     assert controller.insert_plugin(1, "midas.eq.basic", 0).ok
     assert len(vm.insert_chain) == 1
     assert vm.insert_chain[0].plugin_id == "midas.eq.basic"
+    assert vm.insert_chain[0].bypassed is False
+    assert controller.insert_plugin(1, "midas.comp.basic", 1).ok
+    assert controller.move_plugin(1, 1, 0).ok
+    assert vm.insert_chain[0].plugin_id == "midas.comp.basic"
+    assert vm.insert_chain[1].plugin_id == "midas.eq.basic"
+    assert controller.set_plugin_bypass(1, 0, True).ok
+    assert vm.insert_chain[0].bypassed is True
     assert controller.remove_plugin(1, 0).ok
-    assert vm.insert_chain == []
+    assert len(vm.insert_chain) == 1

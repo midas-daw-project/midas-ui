@@ -53,3 +53,17 @@ class MixerController:
         self._vm.last_error = "" if result.ok else result.message
         self.refresh_insert_chain(channel_id)
         return result
+
+    def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
+        result = self._bridge.move_plugin(channel_id, from_slot_index, to_slot_index)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result
+
+    def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
+        result = self._bridge.set_plugin_bypass(channel_id, slot_index, bypassed)
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message
+        self.refresh_insert_chain(channel_id)
+        return result

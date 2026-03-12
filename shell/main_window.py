@@ -52,6 +52,9 @@ class MainWindow(QMainWindow):
             on_apply_gain=self._apply_mixer_gain,
             on_insert_plugin=self._insert_selected_plugin,
             on_remove_plugin=self._remove_selected_slot_plugin,
+            on_move_slot_up=self._move_selected_slot_up,
+            on_move_slot_down=self._move_selected_slot_down,
+            on_toggle_bypass=self._toggle_selected_slot_bypass,
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
@@ -269,6 +272,43 @@ class MainWindow(QMainWindow):
         self._debug_panel.append_result("remove_plugin", result.code, result.message)
         if result.ok:
             self._workspace_controller.mark_action(f"Removed plugin at ch{channel}:slot{slot}")
+            self._mark_session_modified()
+        self._refresh_mixer()
+
+    def _move_selected_slot_up(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        target_slot = max(0, slot - 1)
+        result = self._mixer_controller.move_plugin(channel, slot, target_slot)
+        self._debug_panel.append_result("move_plugin_up", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Moved slot ch{channel}:{slot}->{target_slot}")
+            self._mark_session_modified()
+            self._mixer_panel.slot_input.setValue(target_slot)
+        self._refresh_mixer()
+
+    def _move_selected_slot_down(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        target_slot = slot + 1
+        result = self._mixer_controller.move_plugin(channel, slot, target_slot)
+        self._debug_panel.append_result("move_plugin_down", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Moved slot ch{channel}:{slot}->{target_slot}")
+            self._mark_session_modified()
+            self._mixer_panel.slot_input.setValue(target_slot)
+        self._refresh_mixer()
+
+    def _toggle_selected_slot_bypass(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        bypassed = self._mixer_panel.selected_slot_bypass()
+        result = self._mixer_controller.set_plugin_bypass(channel, slot, bypassed)
+        self._debug_panel.append_result("set_plugin_bypass", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(
+                f"{'Bypassed' if bypassed else 'Enabled'} slot ch{channel}:{slot}"
+            )
             self._mark_session_modified()
         self._refresh_mixer()
 

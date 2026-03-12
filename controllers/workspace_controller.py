@@ -51,6 +51,9 @@ class WorkspaceController:
         self._vm.inserted_plugin_count = len([slot for slot in mixer_vm.insert_chain if slot.plugin_id])
         if mixer_vm.insert_chain:
             first = mixer_vm.insert_chain[0]
-            self._vm.selected_insert_summary = f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}"
+            bypass = "bypassed" if first.bypassed else "active"
+            self._vm.selected_insert_summary = (
+                f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}:{bypass}"
+            )
         else:
             self._vm.selected_insert_summary = ""

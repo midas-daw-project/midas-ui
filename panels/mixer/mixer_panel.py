@@ -25,6 +25,9 @@ class MixerPanel(QWidget):
         on_apply_gain: Callable[[], None],
         on_insert_plugin: Callable[[], None],
         on_remove_plugin: Callable[[], None],
+        on_move_slot_up: Callable[[], None],
+        on_move_slot_down: Callable[[], None],
+        on_toggle_bypass: Callable[[], None],
         on_refresh: Callable[[], None],
     ) -> None:
         super().__init__()
@@ -32,6 +35,9 @@ class MixerPanel(QWidget):
         self._on_apply_gain = on_apply_gain
         self._on_insert_plugin = on_insert_plugin
         self._on_remove_plugin = on_remove_plugin
+        self._on_move_slot_up = on_move_slot_up
+        self._on_move_slot_down = on_move_slot_down
+        self._on_toggle_bypass = on_toggle_bypass
         self._on_refresh = on_refresh
 
         layout = QVBoxLayout(self)
@@ -55,6 +61,10 @@ class MixerPanel(QWidget):
         self.slot_input.setValue(0)
         self.insert_button = QPushButton("Insert Selected Plugin")
         self.remove_button = QPushButton("Remove Slot Plugin")
+        self.move_up_button = QPushButton("Move Slot Up")
+        self.move_down_button = QPushButton("Move Slot Down")
+        self.bypass_input = QCheckBox("Bypassed")
+        self.apply_bypass_button = QPushButton("Apply Slot Bypass")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
@@ -65,6 +75,10 @@ class MixerPanel(QWidget):
         form.addRow("Insert Slot", self.slot_input)
         form.addRow(self.insert_button)
         form.addRow(self.remove_button)
+        form.addRow(self.move_up_button)
+        form.addRow(self.move_down_button)
+        form.addRow("Slot Bypass", self.bypass_input)
+        form.addRow(self.apply_bypass_button)
         form.addRow(self.refresh_button)
         layout.addWidget(control_box)
 
@@ -84,6 +98,9 @@ class MixerPanel(QWidget):
         self.apply_gain_button.clicked.connect(self._on_apply_gain)
         self.insert_button.clicked.connect(self._on_insert_plugin)
         self.remove_button.clicked.connect(self._on_remove_plugin)
+        self.move_up_button.clicked.connect(self._on_move_slot_up)
+        self.move_down_button.clicked.connect(self._on_move_slot_down)
+        self.apply_bypass_button.clicked.connect(self._on_toggle_bypass)
         self.refresh_button.clicked.connect(self._on_refresh)
 
     def selected_channel(self) -> int:
@@ -97,6 +114,9 @@ class MixerPanel(QWidget):
 
     def selected_slot_index(self) -> int:
         return int(self.slot_input.value())
+
+    def selected_slot_bypass(self) -> bool:
+        return bool(self.bypass_input.isChecked())
 
     def render(self, vm: MixerViewModel) -> None:
         channel = vm.selected_channel_id
@@ -118,6 +138,8 @@ class MixerPanel(QWidget):
         for slot in vm.insert_chain:
             self.chain_list.addItem(
                 f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
-                f"state={slot.load_state}"
+                f"bypassed={'true' if slot.bypassed else 'false'} state={slot.load_state}"
             )
+            if slot.slot_index == self.selected_slot_index():
+                self.bypass_input.setChecked(slot.bypassed)
         self.error_label.setText(f"Error: {vm.last_error}")

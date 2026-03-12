@@ -179,3 +179,9 @@ class BridgeClient(Protocol):
 
     def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
         ...
+
+    def move_plugin(self, channel_id: int, from_slot_index: int, to_slot_index: int) -> BridgeResult:
+        ...
+
+    def set_plugin_bypass(self, channel_id: int, slot_index: int, bypassed: bool) -> BridgeResult:
+        ...
