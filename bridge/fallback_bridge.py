@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 from typing import List
+from copy import deepcopy
 
 from bridge.protocol import (
     AudioStatus,
     BridgeClient,
     BridgeEvent,
+    InsertedPluginSlot,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -57,6 +59,8 @@ class FallbackBridgeClient(BridgeClient):
                 source="registry",
             ),
         ]
+        self._insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
+        self._saved_insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
 
     def bridge_version(self) -> int:
         return 1
@@ -214,6 +218,7 @@ class FallbackBridgeClient(BridgeClient):
 
     def save_session(self) -> BridgeResult:
         self._session.status = "saved"
+        self._saved_insert_chains = deepcopy(self._insert_chains)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -225,6 +230,7 @@ class FallbackBridgeClient(BridgeClient):
 
     def load_session(self) -> BridgeResult:
         self._session.status = "loaded"
+        self._insert_chains = deepcopy(self._saved_insert_chains)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -236,6 +242,7 @@ class FallbackBridgeClient(BridgeClient):
 
     def apply_session(self) -> BridgeResult:
         self._session.status = "applied"
+        self._insert_chains = deepcopy(self._saved_insert_chains)
         self._publish(
             BridgeEvent(
                 category="session",
@@ -289,6 +296,87 @@ class FallbackBridgeClient(BridgeClient):
                 category="subsystem",
                 emitter=2003,
                 metadata={"action": "refresh_plugin_registry", "count": str(len(self._plugin_registry))},
+            )
+        )
+        return BridgeResult()
+
+    def get_insert_chain(self, channel_id: int) -> List[InsertedPluginSlot]:
+        return [
+            InsertedPluginSlot(
+                channel_id=slot.channel_id,
+                slot_index=slot.slot_index,
+                plugin_id=slot.plugin_id,
+                plugin_name=slot.plugin_name,
+                available=slot.available,
+                bypassed=slot.bypassed,
+                load_state=slot.load_state,
+            )
+            for slot in self._insert_chains.get(int(channel_id), [])
+        ]
+
+    def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
+        plugin = next((p for p in self._plugin_registry if p.plugin_id == plugin_id), None)
+        if plugin is None:
+            return BridgeResult(code=3, message=f"unknown plugin id: {plugin_id}")
+        if not plugin.available:
+            return BridgeResult(code=3, message=f"plugin unavailable: {plugin_id}")
+        channel_id = int(channel_id)
+        slot_index = int(slot_index)
+        if slot_index < 0:
+            return BridgeResult(code=3, message="slot_index must be >= 0")
+        chain = self._insert_chains.setdefault(channel_id, [])
+        for i, slot in enumerate(chain):
+            if slot.slot_index == slot_index:
+                chain[i] = InsertedPluginSlot(
+                    channel_id=channel_id,
+                    slot_index=slot_index,
+                    plugin_id=plugin.plugin_id,
+                    plugin_name=plugin.name,
+                    available=True,
+                    bypassed=False,
+                    load_state="inserted",
+                )
+                break
+        else:
+            chain.append(
+                InsertedPluginSlot(
+                    channel_id=channel_id,
+                    slot_index=slot_index,
+                    plugin_id=plugin.plugin_id,
+                    plugin_name=plugin.name,
+                    available=True,
+                    bypassed=False,
+                    load_state="inserted",
+                )
+            )
+            chain.sort(key=lambda s: s.slot_index)
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={
+                    "action": "insert_plugin",
+                    "channel": str(channel_id),
+                    "slot": str(slot_index),
+                    "plugin_id": plugin.plugin_id,
+                },
+            )
+        )
+        return BridgeResult()
+
+    def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
+        channel_id = int(channel_id)
+        slot_index = int(slot_index)
+        chain = self._insert_chains.get(channel_id, [])
+        remaining = [slot for slot in chain if slot.slot_index != slot_index]
+        if len(remaining) == len(chain):
+            return BridgeResult(code=2, message="plugin slot not found")
+        self._insert_chains[channel_id] = remaining
+        self._publish(
+            BridgeEvent(
+                category="mixer",
+                emitter=2001,
+                metadata={"action": "remove_plugin", "channel": str(channel_id), "slot": str(slot_index)},
             )
         )
         return BridgeResult()

@@ -50,6 +50,8 @@ class WorkspacePanel(QWidget):
         self.mixer_label = QLabel("Mixer: channels=0, muted=0")
         self.plugin_label = QLabel("Plugins: total=0, available=0")
         self.selected_plugin_label = QLabel("Selected Plugin: -")
+        self.inserted_plugin_label = QLabel("Inserted Plugins: 0")
+        self.selected_insert_label = QLabel("Selected Insert: -")
         runtime_form.addRow(self.audio_label)
         runtime_form.addRow(self.transport_label)
         runtime_form.addRow(self.runtime_label)
@@ -57,6 +59,8 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.mixer_label)
         runtime_form.addRow(self.plugin_label)
         runtime_form.addRow(self.selected_plugin_label)
+        runtime_form.addRow(self.inserted_plugin_label)
+        runtime_form.addRow(self.selected_insert_label)
         layout.addWidget(runtime_box)
 
         actions_box = QGroupBox("Quick Actions")
@@ -93,4 +97,6 @@ class WorkspacePanel(QWidget):
             f"Plugins: total={vm.plugin_count}, available={vm.available_plugin_count}"
         )
         self.selected_plugin_label.setText(f"Selected Plugin: {vm.selected_plugin_name or '-'}")
+        self.inserted_plugin_label.setText(f"Inserted Plugins: {vm.inserted_plugin_count}")
+        self.selected_insert_label.setText(f"Selected Insert: {vm.selected_insert_summary or '-'}")
         self.last_action_label.setText(f"Last Action: {vm.last_action}")

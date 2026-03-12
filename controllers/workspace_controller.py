@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bridge.protocol import BridgeClient
 from viewmodels.browser_viewmodel import BrowserViewModel
+from viewmodels.mixer_viewmodel import MixerViewModel
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
@@ -40,3 +41,11 @@ class WorkspaceController:
         self._vm.plugin_count = len(browser_vm.plugins)
         self._vm.available_plugin_count = sum(1 for plugin in browser_vm.plugins if plugin.available)
         self._vm.selected_plugin_name = browser_vm.selected_name
+
+    def ingest_mixer_state(self, mixer_vm: MixerViewModel) -> None:
+        self._vm.inserted_plugin_count = len([slot for slot in mixer_vm.insert_chain if slot.plugin_id])
+        if mixer_vm.insert_chain:
+            first = mixer_vm.insert_chain[0]
+            self._vm.selected_insert_summary = f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}"
+        else:
+            self._vm.selected_insert_summary = ""

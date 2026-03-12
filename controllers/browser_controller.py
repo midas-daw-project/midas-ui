@@ -44,3 +44,7 @@ class BrowserController:
             self._vm.selected_source = plugin.source
             self._vm.selected_available = plugin.available
             return
+
+    def mark_insert_result(self, result: BridgeResult) -> None:
+        self._vm.last_insert_status = "ok" if result.ok else "error"
+        self._vm.last_error = "" if result.ok else result.message

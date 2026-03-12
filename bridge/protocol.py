@@ -70,6 +70,17 @@ class PluginRegistryEntry:
 
 
 @dataclass(slots=True)
+class InsertedPluginSlot:
+    channel_id: int
+    slot_index: int
+    plugin_id: str = ""
+    plugin_name: str = ""
+    available: bool = False
+    bypassed: bool = False
+    load_state: str = "empty"
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -150,4 +161,13 @@ class BridgeClient(Protocol):
         ...
 
     def refresh_plugin_registry(self) -> BridgeResult:
+        ...
+
+    def get_insert_chain(self, channel_id: int) -> List[InsertedPluginSlot]:
+        ...
+
+    def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
+        ...
+
+    def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
         ...

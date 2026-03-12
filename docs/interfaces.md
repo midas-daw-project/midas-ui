@@ -27,6 +27,9 @@
 - `get_runtime_status()`
 - `get_plugin_registry()`
 - `refresh_plugin_registry()`
+- `get_insert_chain(channel_id)`
+- `insert_plugin(channel_id, plugin_id, slot_index)`
+- `remove_plugin(channel_id, slot_index)`
 
 `get_transport_status()` exposes control/runtime alignment fields:
 - `play_state` (control intent)
@@ -50,6 +53,10 @@
 - plugin registry load/refresh
 - selected plugin detail state
 - browser-facing error/refresh status
+
+`MixerController` now also owns:
+- insert-chain query for selected channel
+- plugin insert/remove command dispatch
 
 ## Result Mapping
 

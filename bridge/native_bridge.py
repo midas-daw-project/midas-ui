@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import atexit
+from copy import deepcopy
 from typing import Callable, Dict
 
 from bridge.protocol import (
     AudioStatus,
     BridgeClient,
     BridgeEvent,
+    InsertedPluginSlot,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -49,6 +51,8 @@ class NativeBridgeClient(BridgeClient):
                 source="builtin",
             ),
         ]
+        self._insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
+        self._saved_insert_chain_cache: dict[int, list[InsertedPluginSlot]] = {}
         atexit.register(self._shutdown_dispatcher)
 
     def bridge_version(self) -> int:
@@ -147,13 +151,22 @@ class NativeBridgeClient(BridgeClient):
         return _to_result(self._native.set_channel_gain(channel_id, float(gain)))
 
     def save_session(self) -> BridgeResult:
-        return _to_result(self._native.save_session())
+        result = _to_result(self._native.save_session())
+        if result.ok:
+            self._saved_insert_chain_cache = deepcopy(self._insert_chain_cache)
+        return result
 
     def load_session(self) -> BridgeResult:
-        return _to_result(self._native.load_session())
+        result = _to_result(self._native.load_session())
+        if result.ok:
+            self._insert_chain_cache = deepcopy(self._saved_insert_chain_cache)
+        return result
 
     def apply_session(self) -> BridgeResult:
-        return _to_result(self._native.apply_session())
+        result = _to_result(self._native.apply_session())
+        if result.ok:
+            self._insert_chain_cache = deepcopy(self._saved_insert_chain_cache)
+        return result
 
     def get_session_status(self) -> SessionStatus:
         raw = self._native.get_session_status()
@@ -243,6 +256,67 @@ class NativeBridgeClient(BridgeClient):
         if hasattr(self._native, "refresh_plugin_registry"):
             return _to_result(self._native.refresh_plugin_registry())
         self.get_plugin_registry()
+        return BridgeResult()
+
+    def get_insert_chain(self, channel_id: int) -> list[InsertedPluginSlot]:
+        if hasattr(self._native, "get_insert_chain"):
+            raw = self._native.get_insert_chain(int(channel_id))
+            slots: list[InsertedPluginSlot] = []
+            for item in raw:
+                values = dict(item.get("values", {}))
+                slots.append(
+                    InsertedPluginSlot(
+                        channel_id=int(values.get("channel_id", str(channel_id))),
+                        slot_index=int(values.get("slot_index", "0")),
+                        plugin_id=str(values.get("plugin_id", "")),
+                        plugin_name=str(values.get("plugin_name", "")),
+                        available=str(values.get("available", "false")).lower() == "true",
+                        bypassed=str(values.get("bypassed", "false")).lower() == "true",
+                        load_state=str(values.get("load_state", "inserted")),
+                    )
+                )
+            self._insert_chain_cache[int(channel_id)] = slots
+        return list(self._insert_chain_cache.get(int(channel_id), []))
+
+    def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "insert_plugin"):
+            result = _to_result(self._native.insert_plugin(int(channel_id), plugin_id, int(slot_index)))
+            if not result.ok:
+                return result
+        plugin = next((p for p in self.get_plugin_registry() if p.plugin_id == plugin_id), None)
+        if plugin is None:
+            return BridgeResult(code=3, message=f"unknown plugin id: {plugin_id}")
+        if not plugin.available:
+            return BridgeResult(code=3, message=f"plugin unavailable: {plugin_id}")
+        chain = self._insert_chain_cache.setdefault(int(channel_id), [])
+        inserted = InsertedPluginSlot(
+            channel_id=int(channel_id),
+            slot_index=int(slot_index),
+            plugin_id=plugin.plugin_id,
+            plugin_name=plugin.name,
+            available=True,
+            bypassed=False,
+            load_state="inserted",
+        )
+        for i, slot in enumerate(chain):
+            if slot.slot_index == int(slot_index):
+                chain[i] = inserted
+                break
+        else:
+            chain.append(inserted)
+            chain.sort(key=lambda s: s.slot_index)
+        return BridgeResult()
+
+    def remove_plugin(self, channel_id: int, slot_index: int) -> BridgeResult:
+        if hasattr(self._native, "remove_plugin"):
+            result = _to_result(self._native.remove_plugin(int(channel_id), int(slot_index)))
+            if not result.ok:
+                return result
+        chain = self._insert_chain_cache.get(int(channel_id), [])
+        remaining = [slot for slot in chain if slot.slot_index != int(slot_index)]
+        if len(remaining) == len(chain):
+            return BridgeResult(code=2, message="plugin slot not found")
+        self._insert_chain_cache[int(channel_id)] = remaining
         return BridgeResult()
 
     def _shutdown_dispatcher(self) -> None:

@@ -50,6 +50,8 @@ class MainWindow(QMainWindow):
         self._mixer_panel = MixerPanel(
             on_apply_mute=self._apply_mixer_mute,
             on_apply_gain=self._apply_mixer_gain,
+            on_insert_plugin=self._insert_selected_plugin,
+            on_remove_plugin=self._remove_selected_slot_plugin,
             on_refresh=self._refresh_mixer,
         )
         self._session_panel = SessionPanel(
@@ -66,6 +68,7 @@ class MainWindow(QMainWindow):
         self._browser_panel = BrowserPanel(
             on_refresh_registry=self._refresh_plugin_registry,
             on_select_plugin=self._select_plugin,
+            on_insert_plugin=self._insert_selected_plugin,
         )
         self._workspace_panel = WorkspacePanel(
             on_refresh_all=self._manual_refresh_all,
@@ -206,6 +209,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_mixer(self) -> None:
         self._mixer_vm.selected_channel_id = self._mixer_panel.selected_channel()
+        self._mixer_vm.selected_slot_index = self._mixer_panel.selected_slot_index()
         self._mixer_controller.refresh_channels()
         self._mixer_panel.render(self._mixer_vm)
         self._refresh_debug_summary()
@@ -242,9 +246,34 @@ class MainWindow(QMainWindow):
         self._browser_panel.render(self._browser_vm)
         self._refresh_workspace()
 
+    def _insert_selected_plugin(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        plugin_id = self._browser_vm.selected_plugin_id.strip()
+        if not plugin_id:
+            self._debug_panel.append_result("insert_plugin", 3, "No plugin selected")
+            return
+        result = self._mixer_controller.insert_plugin(channel, plugin_id, slot)
+        self._browser_controller.mark_insert_result(result)
+        self._debug_panel.append_result("insert_plugin", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Inserted {plugin_id} at ch{channel}:slot{slot}")
+        self._browser_panel.render(self._browser_vm)
+        self._refresh_mixer()
+
+    def _remove_selected_slot_plugin(self) -> None:
+        channel = self._mixer_panel.selected_channel()
+        slot = self._mixer_panel.selected_slot_index()
+        result = self._mixer_controller.remove_plugin(channel, slot)
+        self._debug_panel.append_result("remove_plugin", result.code, result.message)
+        if result.ok:
+            self._workspace_controller.mark_action(f"Removed plugin at ch{channel}:slot{slot}")
+        self._refresh_mixer()
+
     def _refresh_workspace(self) -> None:
         self._workspace_controller.refresh_overview()
         self._workspace_controller.ingest_browser_state(self._browser_vm)
+        self._workspace_controller.ingest_mixer_state(self._mixer_vm)
         self._workspace_panel.render(self._workspace_vm)
 
     def _apply_mixer_mute(self) -> None:

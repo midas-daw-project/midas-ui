@@ -20,4 +20,6 @@ class WorkspaceViewModel:
     plugin_count: int = 0
     available_plugin_count: int = 0
     selected_plugin_name: str = ""
+    inserted_plugin_count: int = 0
+    selected_insert_summary: str = ""
     last_action: str = "Ready"

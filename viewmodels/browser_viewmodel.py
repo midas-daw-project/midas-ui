@@ -14,5 +14,6 @@ class BrowserViewModel:
     selected_vendor: str = ""
     selected_source: str = ""
     selected_available: bool = False
+    last_insert_status: str = ""
     last_refresh_status: str = ""
     last_error: str = ""

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLabel,
+    QListWidget,
     QPushButton,
     QSpinBox,
     QDoubleSpinBox,
@@ -22,11 +23,15 @@ class MixerPanel(QWidget):
         self,
         on_apply_mute: Callable[[], None],
         on_apply_gain: Callable[[], None],
+        on_insert_plugin: Callable[[], None],
+        on_remove_plugin: Callable[[], None],
         on_refresh: Callable[[], None],
     ) -> None:
         super().__init__()
         self._on_apply_mute = on_apply_mute
         self._on_apply_gain = on_apply_gain
+        self._on_insert_plugin = on_insert_plugin
+        self._on_remove_plugin = on_remove_plugin
         self._on_refresh = on_refresh
 
         layout = QVBoxLayout(self)
@@ -45,6 +50,11 @@ class MixerPanel(QWidget):
 
         self.apply_mute_button = QPushButton("Apply Mute")
         self.apply_gain_button = QPushButton("Apply Gain")
+        self.slot_input = QSpinBox()
+        self.slot_input.setRange(0, 32)
+        self.slot_input.setValue(0)
+        self.insert_button = QPushButton("Insert Selected Plugin")
+        self.remove_button = QPushButton("Remove Slot Plugin")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
@@ -52,19 +62,28 @@ class MixerPanel(QWidget):
         form.addRow("Gain", self.gain_input)
         form.addRow(self.apply_mute_button)
         form.addRow(self.apply_gain_button)
+        form.addRow("Insert Slot", self.slot_input)
+        form.addRow(self.insert_button)
+        form.addRow(self.remove_button)
         form.addRow(self.refresh_button)
         layout.addWidget(control_box)
 
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
         self.status_label = QLabel("Channel 1 | muted=false | gain=1.0")
+        self.insert_status_label = QLabel("Insert Status: -")
+        self.chain_list = QListWidget()
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.insert_status_label)
+        status_layout.addWidget(self.chain_list)
         status_layout.addWidget(self.error_label)
         layout.addWidget(status_box)
 
         self.apply_mute_button.clicked.connect(self._on_apply_mute)
         self.apply_gain_button.clicked.connect(self._on_apply_gain)
+        self.insert_button.clicked.connect(self._on_insert_plugin)
+        self.remove_button.clicked.connect(self._on_remove_plugin)
         self.refresh_button.clicked.connect(self._on_refresh)
 
     def selected_channel(self) -> int:
@@ -75,6 +94,9 @@ class MixerPanel(QWidget):
 
     def selected_gain(self) -> float:
         return float(self.gain_input.value())
+
+    def selected_slot_index(self) -> int:
+        return int(self.slot_input.value())
 
     def render(self, vm: MixerViewModel) -> None:
         channel = vm.selected_channel_id
@@ -91,4 +113,11 @@ class MixerPanel(QWidget):
             )
             self.mute_input.setChecked(state.muted)
             self.gain_input.setValue(state.gain)
+        self.insert_status_label.setText(f"Insert Status: {vm.last_insert_status or '-'}")
+        self.chain_list.clear()
+        for slot in vm.insert_chain:
+            self.chain_list.addItem(
+                f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
+                f"state={slot.load_state}"
+            )
         self.error_label.setText(f"Error: {vm.last_error}")

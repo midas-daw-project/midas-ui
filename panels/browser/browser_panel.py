@@ -20,16 +20,20 @@ class BrowserPanel(QWidget):
         self,
         on_refresh_registry: Callable[[], None],
         on_select_plugin: Callable[[str], None],
+        on_insert_plugin: Callable[[], None],
     ) -> None:
         super().__init__()
         self._on_refresh_registry = on_refresh_registry
         self._on_select_plugin = on_select_plugin
+        self._on_insert_plugin = on_insert_plugin
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
         self.refresh_button = QPushButton("Refresh Registry")
+        self.insert_button = QPushButton("Insert To Selected Mixer Slot")
         layout.addWidget(self.refresh_button)
+        layout.addWidget(self.insert_button)
 
         self.plugin_list = QListWidget()
         layout.addWidget(self.plugin_list)
@@ -43,6 +47,7 @@ class BrowserPanel(QWidget):
         self.source_label = QLabel("-")
         self.available_label = QLabel("-")
         self.status_label = QLabel("Refresh: -")
+        self.insert_status_label = QLabel("Insert: -")
         self.error_label = QLabel("Error: ")
         details_form.addRow("ID", self.id_label)
         details_form.addRow("Name", self.name_label)
@@ -51,10 +56,12 @@ class BrowserPanel(QWidget):
         details_form.addRow("Source", self.source_label)
         details_form.addRow("Available", self.available_label)
         details_form.addRow(self.status_label)
+        details_form.addRow(self.insert_status_label)
         details_form.addRow(self.error_label)
         layout.addWidget(details_box)
 
         self.refresh_button.clicked.connect(self._on_refresh_registry)
+        self.insert_button.clicked.connect(self._on_insert_plugin)
         self.plugin_list.currentTextChanged.connect(self._emit_selection)
 
     def _emit_selection(self, value: str) -> None:
@@ -82,4 +89,5 @@ class BrowserPanel(QWidget):
         self.source_label.setText(vm.selected_source or "-")
         self.available_label.setText("yes" if vm.selected_available else "no")
         self.status_label.setText(f"Refresh: {vm.last_refresh_status or '-'}")
+        self.insert_status_label.setText(f"Insert: {vm.last_insert_status or '-'}")
         self.error_label.setText(f"Error: {vm.last_error}")
