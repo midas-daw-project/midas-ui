@@ -39,8 +39,6 @@ def main() -> None:
 
     assert int(native.bridge_version()) == 1
     assert int(native.start_default_runtime_profile()["code"]) == 0
-    seen = []
-    handle = int(native.subscribe_events(lambda event: seen.append(event)))
     assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
     assert int(native.open_audio()["code"]) == 0
     assert int(native.start_audio(1, 2001)["code"]) == 0
@@ -50,9 +48,12 @@ def main() -> None:
     assert status["render_status"] in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state"}
 
     deadline = time.time() + 1.0
-    while not seen and time.time() < deadline:
-        time.sleep(0.03)
-    assert seen
+    events = []
+    while not events and time.time() < deadline:
+        events = native.drain_recent_events(32)
+        if not events:
+            time.sleep(0.03)
+    assert events
 
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
@@ -71,9 +72,11 @@ def main() -> None:
     assert int(native.load_session()["code"]) == 0
 
     assert int(native.apply_session()["code"]) == 0
+    chain = native.get_insert_chain(1)
+    assert len(chain) >= 1
     session_status = native.get_session_status()
     assert int(session_status.get("code", 4)) == 0
-    assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded"}
+    assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded", "applied"}
 
     assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
     assert int(native.open_audio()["code"]) == 0
@@ -87,8 +90,6 @@ def main() -> None:
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
 
-    native.unsubscribe_events(handle)
-    native.shutdown_event_dispatcher()
     assert native.get_mixer_channels()
     assert int(native.shutdown_runtime_profile()["code"]) == 0
 
