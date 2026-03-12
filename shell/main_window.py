@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QDockWidget, QMainWindow, QMessageBox
+from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMessageBox
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
@@ -86,6 +86,7 @@ class MainWindow(QMainWindow):
             on_refresh_all=self._manual_refresh_all,
             on_new_session=self._new_session,
             on_open_session=self._open_session,
+            on_open_existing_session=self._open_existing_session,
             on_open_recent=self._open_recent_session,
             on_save_session=self._save_session,
             on_load_session=self._load_session,
@@ -446,6 +447,23 @@ class MainWindow(QMainWindow):
         self._workspace_controller.mark_action(f"Open session {session_ref.strip() or '-'}")
         self._refresh_session()
         self._refresh_mixer()
+        self._refresh_workspace()
+
+    def _open_existing_session(self) -> None:
+        storage_root = self._bridge.get_session_storage_root()
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Existing Session",
+            storage_root,
+            "MIDAS Sessions (*.session)",
+        )
+        if not selected_path:
+            self._workspace_controller.mark_action("Open existing session cancelled")
+            self._refresh_workspace()
+            return
+        session_ref = Path(selected_path).stem
+        self._debug_panel.append_result("open_existing_session_pick", 0, selected_path)
+        self._open_session(session_ref)
 
     def _open_recent_session(self, session_ref: str) -> None:
         if not session_ref:
@@ -575,6 +593,7 @@ class MainWindow(QMainWindow):
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.
+from pathlib import Path  # noqa: E402
 from PySide6.QtCore import Qt  # noqa: E402
 
 

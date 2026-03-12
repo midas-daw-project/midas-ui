@@ -60,16 +60,20 @@ class SessionPanel(QWidget):
         self.status_label = QLabel("Status: idle")
         self.identity_label = QLabel("Phase: none | Dirty: no")
         self.storage_label = QLabel("Storage: -")
+        self.storage_root_label = QLabel("Storage Root: -")
         self.last_ops_label = QLabel("Last op: none")
         self.last_actions_label = QLabel("Save=- Load=- Apply=-")
         self.recent_label = QLabel("Recent: -")
+        self.discoverable_label = QLabel("Discoverable: 0")
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.identity_label)
         status_layout.addWidget(self.storage_label)
+        status_layout.addWidget(self.storage_root_label)
         status_layout.addWidget(self.last_ops_label)
         status_layout.addWidget(self.last_actions_label)
         status_layout.addWidget(self.recent_label)
+        status_layout.addWidget(self.discoverable_label)
         status_layout.addWidget(self.error_label)
         layout.addWidget(status_box)
 
@@ -87,6 +91,7 @@ class SessionPanel(QWidget):
         storage = vm.storage_path if vm.storage_path else "-"
         source = vm.storage_source if vm.storage_source else "-"
         self.storage_label.setText(f"Storage: {storage} | Source: {source}")
+        self.storage_root_label.setText(f"Storage Root: {vm.storage_root or '-'}")
         self.last_ops_label.setText(
             f"Last op: {vm.last_operation} | "
             f"save={self._fmt_epoch(vm.last_save_epoch)} "
@@ -103,6 +108,7 @@ class SessionPanel(QWidget):
         else:
             summary = "-"
         self.recent_label.setText(f"Recent: {summary}")
+        self.discoverable_label.setText(f"Discoverable: {len(vm.discoverable_sessions)}")
         self.error_label.setText(f"Error: {vm.last_error}")
 
     @staticmethod

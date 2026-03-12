@@ -15,6 +15,7 @@ from bridge.protocol import (
     MixerChannelStatus,
     RuntimeStatus,
     ReconcileStatus,
+    DiscoverableSessionEntry,
     RecentSessionEntry,
     SessionStatus,
     TransportStatus,
@@ -38,6 +39,7 @@ class FallbackBridgeClient(BridgeClient):
         self._session.storage_source = "fallback-memory"
         self._session.storage_path = "fallback://local-session"
         self._session.last_operation = "none"
+        self._session.last_error_message = ""
         self._recent_sessions: List[RecentSessionEntry] = []
         self._saved_sessions: Dict[str, Dict[int, List[InsertedPluginSlot]]] = {}
         self._transport = TransportStatus(play_state="stopped")
@@ -242,6 +244,7 @@ class FallbackBridgeClient(BridgeClient):
         self._session.storage_path = self._session_path(self._session.session_ref)
         self._saved_sessions[self._session.session_ref] = self._intent_snapshot(self._insert_chains)
         self._touch_recent_session("save", promote_to_front=True)
+        self._session.last_error_message = ""
         self._publish(
             BridgeEvent(
                 category="session",
@@ -254,6 +257,7 @@ class FallbackBridgeClient(BridgeClient):
     def new_session(self, session_ref: str) -> BridgeResult:
         normalized = self._normalize_session_ref(session_ref)
         if not normalized:
+            self._session.last_error_message = "session_ref cannot be empty"
             return BridgeResult(code=3, message="session_ref cannot be empty")
         self._session.session_ref = normalized
         self._session.status = "idle"
@@ -262,6 +266,7 @@ class FallbackBridgeClient(BridgeClient):
         self._session.storage_source = "fallback-memory"
         self._session.storage_path = self._session_path(normalized)
         self._session.last_operation = "new"
+        self._session.last_error_message = ""
         self._insert_chains = {}
         self._reconcile_status = ReconcileStatus()
         self._publish(
@@ -276,6 +281,7 @@ class FallbackBridgeClient(BridgeClient):
     def open_session(self, session_ref: str) -> BridgeResult:
         normalized = self._normalize_session_ref(session_ref)
         if not normalized:
+            self._session.last_error_message = "session_ref cannot be empty"
             return BridgeResult(code=3, message="session_ref cannot be empty")
         self._session.session_ref = normalized
         self._session.storage_path = self._session_path(normalized)
@@ -286,6 +292,7 @@ class FallbackBridgeClient(BridgeClient):
 
     def load_session(self) -> BridgeResult:
         if self._session.session_ref not in self._saved_sessions:
+            self._session.last_error_message = "session not found"
             return BridgeResult(code=2, message="session not found")
         self._session.status = "loaded"
         self._session.phase = "loaded"
@@ -300,6 +307,7 @@ class FallbackBridgeClient(BridgeClient):
         self._reconcile_status.policy_action = "session_load"
         self.reconcile_all_inserts()
         self._touch_recent_session("load", promote_to_front=True)
+        self._session.last_error_message = ""
         self._publish(
             BridgeEvent(
                 category="session",
@@ -311,6 +319,7 @@ class FallbackBridgeClient(BridgeClient):
 
     def apply_session(self) -> BridgeResult:
         if self._session.session_ref not in self._saved_sessions:
+            self._session.last_error_message = "session not found"
             return BridgeResult(code=2, message="session not found")
         self._session.status = "applied"
         self._session.phase = "applied"
@@ -326,6 +335,7 @@ class FallbackBridgeClient(BridgeClient):
         self.reconcile_all_inserts()
         if not self._recent_sessions or self._recent_sessions[0].session_ref != self._session.session_ref:
             self._touch_recent_session("apply", promote_to_front=True)
+        self._session.last_error_message = ""
         self._publish(
             BridgeEvent(
                 category="session",
@@ -347,10 +357,26 @@ class FallbackBridgeClient(BridgeClient):
             last_save_epoch=self._session.last_save_epoch,
             last_load_epoch=self._session.last_load_epoch,
             last_apply_epoch=self._session.last_apply_epoch,
+            last_error_message=self._session.last_error_message,
         )
 
     def get_recent_sessions(self) -> List[RecentSessionEntry]:
         return [deepcopy(entry) for entry in self._recent_sessions]
+
+    def get_session_storage_root(self) -> str:
+        return "fallback://sessions"
+
+    def get_discoverable_sessions(self) -> List[DiscoverableSessionEntry]:
+        entries: List[DiscoverableSessionEntry] = []
+        for session_ref in sorted(self._saved_sessions.keys()):
+            entries.append(
+                DiscoverableSessionEntry(
+                    session_ref=session_ref,
+                    storage_path=self._session_path(session_ref),
+                    last_modified_epoch=0,
+                )
+            )
+        return entries
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:
         return self.start_audio(track_channel, mixer_subsystem)

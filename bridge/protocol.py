@@ -49,6 +49,7 @@ class SessionStatus:
     last_save_epoch: int = 0
     last_load_epoch: int = 0
     last_apply_epoch: int = 0
+    last_error_message: str = ""
 
 
 @dataclass(slots=True)
@@ -58,6 +59,13 @@ class RecentSessionEntry:
     storage_source: str = ""
     last_operation: str = "none"
     last_touched_epoch: int = 0
+
+
+@dataclass(slots=True)
+class DiscoverableSessionEntry:
+    session_ref: str = ""
+    storage_path: str = ""
+    last_modified_epoch: int = 0
 
 
 @dataclass(slots=True)
@@ -192,6 +200,12 @@ class BridgeClient(Protocol):
         ...
 
     def get_recent_sessions(self) -> List[RecentSessionEntry]:
+        ...
+
+    def get_session_storage_root(self) -> str:
+        ...
+
+    def get_discoverable_sessions(self) -> List[DiscoverableSessionEntry]:
         ...
 
     def play_transport(self, track_channel: int, mixer_subsystem: int) -> BridgeResult:

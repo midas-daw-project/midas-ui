@@ -65,11 +65,15 @@ def main() -> None:
     assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
     assert int(native.new_session("smoke-session")["code"]) == 0
     assert native.get_session_status().get("values", {}).get("session_ref", "") == "smoke-session"
+    assert isinstance(native.get_session_storage_root(), str)
     assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
     assert int(native.save_session()["code"]) == 0
     recent = native.get_recent_sessions()
     assert isinstance(recent, list)
     assert str(recent[0].get("values", {}).get("session_ref", "")) == "smoke-session"
+    discoverable = native.get_discoverable_sessions()
+    assert isinstance(discoverable, list)
+    assert str(discoverable[0].get("values", {}).get("session_ref", "")) == "smoke-session"
     assert int(native.open_session("smoke-session")["code"]) == 0
     assert int(native.insert_plugin(1, "midas.eq.basic", 0)["code"]) == 0
     policy = native.get_reconcile_status().get("values", {})
@@ -129,6 +133,7 @@ def main() -> None:
     session_status = native.get_session_status()
     assert int(session_status.get("code", 4)) == 0
     assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded", "applied"}
+    assert "last_error_message" in session_status.get("values", {})
 
     assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
     assert int(native.open_audio()["code"]) == 0

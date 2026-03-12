@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from bridge.protocol import RecentSessionEntry
+from bridge.protocol import DiscoverableSessionEntry, RecentSessionEntry
 
 
 @dataclass(slots=True)
@@ -41,4 +41,9 @@ class WorkspaceViewModel:
     recent_sessions: list[RecentSessionEntry] = field(default_factory=list)
     recent_session_count: int = 0
     recent_session_summary: str = ""
+    discoverable_sessions: list[DiscoverableSessionEntry] = field(default_factory=list)
+    discoverable_session_count: int = 0
+    current_project_summary: str = ""
+    startup_hint: str = "Create a new session or open an existing one."
+    session_error_summary: str = ""
     last_action: str = "Ready"

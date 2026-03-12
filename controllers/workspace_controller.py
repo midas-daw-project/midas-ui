@@ -25,6 +25,7 @@ class WorkspaceController:
     def refresh_overview(self) -> None:
         session = self._bridge.get_session_status()
         recents = self._bridge.get_recent_sessions()
+        discoverable = self._bridge.get_discoverable_sessions()
         transport = self._bridge.get_transport_status()
         runtime = self._bridge.get_runtime_status()
         reconcile = self._bridge.get_reconcile_status()
@@ -42,6 +43,19 @@ class WorkspaceController:
         self._vm.recent_session_summary = (
             f"{recents[0].session_ref} ({recents[0].last_operation})" if recents else "none"
         )
+        self._vm.discoverable_sessions = discoverable
+        self._vm.discoverable_session_count = len(discoverable)
+        self._vm.current_project_summary = (
+            f"{session.session_ref} | {session.phase} | {'dirty' if session.dirty else 'clean'}"
+            if session.session_ref
+            else "No active session"
+        )
+        self._vm.startup_hint = (
+            "Resume a recent session or open an existing .session file."
+            if recents or discoverable
+            else "Create a new session or save one to start building a recent list."
+        )
+        self._vm.session_error_summary = session.last_error_message
         self._vm.transport_state = transport.play_state
         self._vm.audio_state = runtime.audio.state
         self._vm.runtime_active = transport.runtime_active or runtime.runtime_started

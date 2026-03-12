@@ -27,6 +27,9 @@ def test_session_save_load_apply_flow():
     assert vm.last_save_status == "ok"
     assert vm.recent_sessions
     assert vm.recent_sessions[0].session_ref == "local-session"
+    assert vm.storage_root == "fallback://sessions"
+    assert vm.discoverable_sessions
+    assert vm.discoverable_sessions[0].session_ref == "local-session"
 
     assert controller.load_session().ok
     assert vm.status == "loaded"
@@ -66,6 +69,7 @@ def test_session_new_open_and_recent_flow():
     assert vm.status == "applied"
     assert vm.recent_sessions[0].session_ref == "mix-b"
     assert any(entry.session_ref == "mix-c" for entry in vm.recent_sessions)
+    assert any(entry.session_ref == "mix-b" for entry in vm.discoverable_sessions)
 
 
 def test_session_dirty_transition_after_mutation_and_save():

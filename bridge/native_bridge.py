@@ -13,6 +13,7 @@ from bridge.protocol import (
     MixerChannelStatus,
     RuntimeStatus,
     ReconcileStatus,
+    DiscoverableSessionEntry,
     RecentSessionEntry,
     SessionStatus,
     TransportStatus,
@@ -197,6 +198,7 @@ class NativeBridgeClient(BridgeClient):
             last_save_epoch=_as_int("last_save_epoch", 0),
             last_load_epoch=_as_int("last_load_epoch", 0),
             last_apply_epoch=_as_int("last_apply_epoch", 0),
+            last_error_message=str(values.get("last_error_message", "")),
         )
 
     def get_recent_sessions(self) -> list[RecentSessionEntry]:
@@ -211,6 +213,23 @@ class NativeBridgeClient(BridgeClient):
                     storage_source=str(values.get("storage_source", "")),
                     last_operation=str(values.get("last_operation", "none")),
                     last_touched_epoch=int(values.get("last_touched_epoch", 0) or 0),
+                )
+            )
+        return entries
+
+    def get_session_storage_root(self) -> str:
+        return str(self._native.get_session_storage_root())
+
+    def get_discoverable_sessions(self) -> list[DiscoverableSessionEntry]:
+        raw_entries = self._native.get_discoverable_sessions()
+        entries: list[DiscoverableSessionEntry] = []
+        for item in raw_entries:
+            values = dict(item.get("values", {}))
+            entries.append(
+                DiscoverableSessionEntry(
+                    session_ref=str(values.get("session_ref", "")),
+                    storage_path=str(values.get("storage_path", "")),
+                    last_modified_epoch=int(values.get("last_modified_epoch", 0) or 0),
                 )
             )
         return entries

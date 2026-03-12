@@ -62,3 +62,6 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.recent_session_count >= 1
     assert workspace_vm.recent_sessions[0].session_ref == "workspace-home"
     assert workspace_vm.recent_session_summary.startswith("workspace-home")
+    assert workspace_vm.discoverable_session_count >= 1
+    assert workspace_vm.current_project_summary.startswith("workspace-home")
+    assert "Resume" in workspace_vm.startup_hint

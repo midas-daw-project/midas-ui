@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from bridge.protocol import RecentSessionEntry
+from bridge.protocol import DiscoverableSessionEntry, RecentSessionEntry
 
 
 @dataclass(slots=True)
@@ -22,3 +22,5 @@ class SessionViewModel:
     last_apply_status: str = ""
     last_error: str = ""
     recent_sessions: list[RecentSessionEntry] = field(default_factory=list)
+    discoverable_sessions: list[DiscoverableSessionEntry] = field(default_factory=list)
+    storage_root: str = ""

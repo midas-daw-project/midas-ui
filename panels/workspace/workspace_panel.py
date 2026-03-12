@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QLabel,
+    QListWidgetItem,
     QLineEdit,
     QListWidget,
     QPushButton,
@@ -22,6 +23,7 @@ class WorkspacePanel(QWidget):
         on_refresh_all: Callable[[], None],
         on_new_session: Callable[[str], None],
         on_open_session: Callable[[str], None],
+        on_open_existing_session: Callable[[], None],
         on_open_recent: Callable[[str], None],
         on_save_session: Callable[[], None],
         on_load_session: Callable[[], None],
@@ -37,20 +39,28 @@ class WorkspacePanel(QWidget):
         layout.addWidget(self.title_label)
         layout.addWidget(self.mode_label)
 
-        overview_box = QGroupBox("Project Context")
+        overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
         self.session_label = QLabel("Session: default-session")
         self.session_status_label = QLabel("Session Status: idle")
         self.session_identity_label = QLabel("Phase: none | Dirty: no")
         self.session_storage_label = QLabel("Storage: -")
         self.bridge_label = QLabel("Bridge: unknown v0")
+        self.project_summary_label = QLabel("Project Summary: No active session")
+        self.startup_hint_label = QLabel("Create a new session or open an existing one.")
+        self.session_error_label = QLabel("Session Error: -")
         overview_form.addRow(self.session_label)
         overview_form.addRow(self.session_status_label)
         overview_form.addRow(self.session_identity_label)
         overview_form.addRow(self.session_storage_label)
+        overview_form.addRow(self.project_summary_label)
+        overview_form.addRow(self.startup_hint_label)
+        overview_form.addRow(self.session_error_label)
         overview_form.addRow(self.bridge_label)
         self.recent_summary_label = QLabel("Recent: none")
+        self.discoverable_summary_label = QLabel("Discoverable Sessions: 0")
         overview_form.addRow(self.recent_summary_label)
+        overview_form.addRow(self.discoverable_summary_label)
         layout.addWidget(overview_box)
 
         runtime_box = QGroupBox("Runtime Snapshot")
@@ -79,34 +89,41 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.reconcile_policy_label)
         layout.addWidget(runtime_box)
 
-        actions_box = QGroupBox("Quick Actions")
-        actions_layout = QVBoxLayout(actions_box)
+        home_box = QGroupBox("Workspace Home")
+        home_layout = QVBoxLayout(home_box)
         self.session_ref_input = QLineEdit("default-session")
         self.new_session_button = QPushButton("New Session")
-        self.open_session_button = QPushButton("Open Session")
+        self.open_session_button = QPushButton("Open By Ref")
+        self.open_existing_button = QPushButton("Open Existing Session")
+        self.recent_list = QListWidget()
+        self.open_recent_button = QPushButton("Open Selected Recent")
+        home_layout.addWidget(self.session_ref_input)
+        home_layout.addWidget(self.new_session_button)
+        home_layout.addWidget(self.open_session_button)
+        home_layout.addWidget(self.open_existing_button)
+        home_layout.addWidget(self.recent_list)
+        home_layout.addWidget(self.open_recent_button)
+        layout.addWidget(home_box)
+
+        actions_box = QGroupBox("Quick Actions")
+        actions_layout = QVBoxLayout(actions_box)
         self.refresh_button = QPushButton("Refresh All")
         self.save_button = QPushButton("Save Session")
         self.load_button = QPushButton("Load Session")
         self.apply_button = QPushButton("Apply Session")
         self.reconcile_button = QPushButton("Reconcile Inserts")
-        self.recent_list = QListWidget()
-        self.open_recent_button = QPushButton("Open Selected Recent")
         self.last_action_label = QLabel("Last Action: Ready")
-        actions_layout.addWidget(self.session_ref_input)
-        actions_layout.addWidget(self.new_session_button)
-        actions_layout.addWidget(self.open_session_button)
         actions_layout.addWidget(self.refresh_button)
         actions_layout.addWidget(self.save_button)
         actions_layout.addWidget(self.load_button)
         actions_layout.addWidget(self.apply_button)
         actions_layout.addWidget(self.reconcile_button)
-        actions_layout.addWidget(self.recent_list)
-        actions_layout.addWidget(self.open_recent_button)
         actions_layout.addWidget(self.last_action_label)
         layout.addWidget(actions_box)
 
         self.new_session_button.clicked.connect(lambda: on_new_session(self.session_ref_input.text()))
         self.open_session_button.clicked.connect(lambda: on_open_session(self.session_ref_input.text()))
+        self.open_existing_button.clicked.connect(on_open_existing_session)
         self.refresh_button.clicked.connect(on_refresh_all)
         self.save_button.clicked.connect(on_save_session)
         self.load_button.clicked.connect(on_load_session)
@@ -126,9 +143,15 @@ class WorkspacePanel(QWidget):
         self.session_storage_label.setText(
             f"Storage: {(vm.session_storage_path or '-')} | Source: {(vm.session_storage_source or '-')}"
         )
+        self.project_summary_label.setText(f"Project Summary: {vm.current_project_summary or 'No active session'}")
+        self.startup_hint_label.setText(vm.startup_hint)
+        self.session_error_label.setText(f"Session Error: {vm.session_error_summary or '-'}")
         self.bridge_label.setText(f"Bridge: {vm.bridge_mode} v{vm.bridge_version}")
         self.recent_summary_label.setText(
             f"Recent: {vm.recent_session_count} | Latest: {vm.recent_session_summary or 'none'}"
+        )
+        self.discoverable_summary_label.setText(
+            f"Discoverable Sessions: {vm.discoverable_session_count}"
         )
         self.audio_label.setText(f"Audio: {vm.audio_state}")
         self.transport_label.setText(f"Transport: {vm.transport_state}")
@@ -159,11 +182,14 @@ class WorkspacePanel(QWidget):
         self.recent_list.clear()
         for entry in vm.recent_sessions:
             label = f"{entry.session_ref} | {entry.last_operation} | {entry.storage_path or '-'}"
-            self.recent_list.addItem(label)
+            item = QListWidgetItem(label)
+            if entry.session_ref == vm.session_ref:
+                item.setText(f"* {label}")
+            self.recent_list.addItem(item)
         self.last_action_label.setText(f"Last Action: {vm.last_action}")
 
     def selected_recent_session_ref(self) -> str:
         item = self.recent_list.currentItem()
         if item is None:
             return ""
-        return item.text().split(" | ", 1)[0].strip()
+        return item.text().split(" | ", 1)[0].lstrip("* ").strip()
