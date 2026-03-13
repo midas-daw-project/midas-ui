@@ -16,6 +16,7 @@ from panels.debug.debug_panel import DebugPanel
 from panels.mixer.mixer_panel import MixerPanel
 from panels.session.session_panel import SessionPanel
 from panels.transport.transport_panel import TransportPanel
+from panels.workspace.open_existing_session_dialog import OpenExistingSessionDialog
 from panels.workspace.workspace_panel import WorkspacePanel
 from shell.settings_store import ShellSettingsStore
 from viewmodels.audio_viewmodel import AudioViewModel
@@ -450,19 +451,43 @@ class MainWindow(QMainWindow):
         self._refresh_workspace()
 
     def _open_existing_session(self) -> None:
+        self._session_controller.refresh_status()
+        dialog = OpenExistingSessionDialog(
+            sessions=list(self._session_vm.discoverable_sessions),
+            active_session_ref=self._session_vm.session_ref,
+            recent_session_refs=[entry.session_ref for entry in self._session_vm.recent_sessions],
+            parent=self,
+        )
+        if dialog.exec() != dialog.Accepted:
+            self._workspace_controller.mark_action("Open existing session cancelled")
+            self._refresh_workspace()
+            return
+        if dialog.browse_requested():
+            self._browse_existing_session_file()
+            return
+        session_ref = dialog.selected_session_ref().strip()
+        if not session_ref:
+            self._debug_panel.append_result("open_existing_session", 3, "No discoverable session selected")
+            self._workspace_controller.mark_action("Open existing session failed")
+            self._refresh_workspace()
+            return
+        self._debug_panel.append_result("open_existing_session_pick", 0, session_ref)
+        self._open_session(session_ref)
+
+    def _browse_existing_session_file(self) -> None:
         storage_root = self._bridge.get_session_storage_root()
         selected_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open Existing Session",
+            "Browse Existing Session",
             storage_root,
             "MIDAS Sessions (*.session)",
         )
         if not selected_path:
-            self._workspace_controller.mark_action("Open existing session cancelled")
+            self._workspace_controller.mark_action("Browse existing session cancelled")
             self._refresh_workspace()
             return
         session_ref = Path(selected_path).stem
-        self._debug_panel.append_result("open_existing_session_pick", 0, selected_path)
+        self._debug_panel.append_result("browse_existing_session_pick", 0, selected_path)
         self._open_session(session_ref)
 
     def _open_recent_session(self, session_ref: str) -> None:
