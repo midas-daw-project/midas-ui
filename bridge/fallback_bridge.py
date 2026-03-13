@@ -716,10 +716,10 @@ class FallbackBridgeClient(BridgeClient):
             if not slot.managed_instance_id:
                 seq = self._next_managed_instance_sequence
                 self._next_managed_instance_sequence += 1
-                slot.managed_instance_id = f"mi-{seq}"
+                slot.managed_instance_id = f"stub-{seq}"
                 slot.managed_instance_created_sequence = seq
             slot.managed_instance_state = "created"
-            slot.managed_instance_message = "managed instance created"
+            slot.managed_instance_message = "adapter stub created"
             slot.loader_outcome = "ok"
             slot.loader_reason_code = "resolved"
             slot.loader_message = "plugin resolved and placeholder created"

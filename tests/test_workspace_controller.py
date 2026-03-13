@@ -53,7 +53,7 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.available_plugin_count >= 1
     assert workspace_vm.inserted_plugin_count >= 1
     assert workspace_vm.managed_instance_count >= 1
-    assert "mi-" in workspace_vm.selected_insert_summary
+    assert "stub-" in workspace_vm.selected_insert_summary
     assert "created" in workspace_vm.selected_managed_instance_summary
     assert workspace.reconcile_all_inserts() is True
     workspace.refresh_overview()
