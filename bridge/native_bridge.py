@@ -8,6 +8,7 @@ from bridge.protocol import (
     BridgeClient,
     BridgeEvent,
     InsertedPluginSlot,
+    ManagedInstanceRecord,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -351,6 +352,26 @@ class NativeBridgeClient(BridgeClient):
                 )
             self._insert_chain_cache[int(channel_id)] = slots
         return list(self._insert_chain_cache.get(int(channel_id), []))
+
+    def get_managed_instances(self) -> list[ManagedInstanceRecord]:
+        if not hasattr(self._native, "get_managed_instances"):
+            return []
+        records: list[ManagedInstanceRecord] = []
+        for item in self._native.get_managed_instances():
+            values = dict(item.get("values", {}))
+            records.append(
+                ManagedInstanceRecord(
+                    managed_instance_id=str(values.get("managed_instance_id", "")),
+                    plugin_id=str(values.get("plugin_id", "")),
+                    channel_id=int(values.get("channel", 0) or 0),
+                    slot_index=int(values.get("slot_index", 0) or 0),
+                    placeholder_instance_id=str(values.get("placeholder_instance_id", "")),
+                    managed_instance_state=str(values.get("managed_instance_state", "unloaded")),
+                    managed_instance_message=str(values.get("managed_instance_message", "")),
+                    managed_instance_created_sequence=int(values.get("managed_instance_created_seq", 0) or 0),
+                )
+            )
+        return records
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "insert_plugin"):

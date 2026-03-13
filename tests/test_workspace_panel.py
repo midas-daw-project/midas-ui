@@ -46,6 +46,9 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
         recent_session_count=2,
         recent_session_summary="mix-a (save)",
         discoverable_session_count=3,
+        managed_instance_count=1,
+        failed_instance_count=0,
+        selected_managed_instance_summary="mi-1:created:managed instance created",
         recent_sessions=[
             RecentSessionEntry(
                 session_ref="mix-a",
@@ -63,6 +66,8 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert "Dirty: dirty" in panel.session_identity_label.text()
     assert "Recent: 2" in panel.recent_summary_card_label.text()
     assert "Discoverable: 3" in panel.recent_summary_card_label.text()
+    assert "active=1 failed=0" in panel.instance_label.text()
+    assert "mi-1:created" in panel.selected_instance_label.text()
     assert panel.selected_recent_session_ref() == "mix-a"
 
 

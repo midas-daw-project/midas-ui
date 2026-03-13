@@ -30,6 +30,14 @@ class WorkspaceController:
         runtime = self._bridge.get_runtime_status()
         reconcile = self._bridge.get_reconcile_status()
         channels = self._bridge.get_mixer_channels()
+        managed_instances = self._bridge.get_managed_instances()
+        failed_instances = 0
+        for channel in channels:
+            failed_instances += sum(
+                1
+                for slot in self._bridge.get_insert_chain(channel.channel_id)
+                if slot.host_lifecycle_state == "load_failed"
+            )
 
         self._vm.session_ref = session.session_ref or self._vm.session_ref
         self._vm.session_status = session.status
@@ -62,6 +70,8 @@ class WorkspaceController:
         self._vm.render_status = runtime.audio.render_status
         self._vm.mixer_channel_count = len(channels)
         self._vm.muted_channel_count = sum(1 for channel in channels if channel.muted)
+        self._vm.managed_instance_count = len(managed_instances)
+        self._vm.failed_instance_count = failed_instances
         self._vm.reconcile_attempted = reconcile.attempted
         self._vm.reconcile_resolved = reconcile.resolved
         self._vm.reconcile_failed = reconcile.failed
@@ -89,8 +99,13 @@ class WorkspaceController:
                 f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}:{bypass}:"
                 f"{first.load_state}:{first.host_lifecycle_state}:ph={placeholder}:mi={managed}:loader={loader}"
             )
+            self._vm.selected_managed_instance_summary = (
+                f"{first.managed_instance_id or 'none'}:{first.managed_instance_state}:"
+                f"{first.managed_instance_message or '-'}"
+            )
         else:
             self._vm.selected_insert_summary = ""
+            self._vm.selected_managed_instance_summary = ""
 
     def reconcile_channel_inserts(self, channel_id: int) -> bool:
         result = self._bridge.reconcile_channel_inserts(channel_id)

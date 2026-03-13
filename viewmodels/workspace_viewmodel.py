@@ -29,6 +29,9 @@ class WorkspaceViewModel:
     selected_plugin_name: str = ""
     inserted_plugin_count: int = 0
     selected_insert_summary: str = ""
+    managed_instance_count: int = 0
+    failed_instance_count: int = 0
+    selected_managed_instance_summary: str = ""
     reconcile_attempted: int = 0
     reconcile_resolved: int = 0
     reconcile_failed: int = 0

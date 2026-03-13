@@ -36,6 +36,8 @@ def test_workspace_overview_reflects_runtime_and_session():
     browser.load_registry()
     workspace.ingest_browser_state(browser_vm)
     assert mixer.insert_plugin(1, "midas.eq.basic", 0).ok
+    assert mixer.request_insert_load(1, 0).ok
+    workspace.refresh_overview()
     workspace.ingest_mixer_state(mixer_vm)
     assert workspace_vm.bridge_mode == "fallback"
     assert workspace_vm.bridge_version == 1
@@ -50,6 +52,9 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert workspace_vm.plugin_count >= 1
     assert workspace_vm.available_plugin_count >= 1
     assert workspace_vm.inserted_plugin_count >= 1
+    assert workspace_vm.managed_instance_count >= 1
+    assert "mi-" in workspace_vm.selected_insert_summary
+    assert "created" in workspace_vm.selected_managed_instance_summary
     assert workspace.reconcile_all_inserts() is True
     workspace.refresh_overview()
     assert workspace_vm.reconcile_attempted >= 1

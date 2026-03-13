@@ -184,6 +184,9 @@ class MixerPanel(QWidget):
                 f"host={slot.host_lifecycle_state} note={slot.runtime_message or '-'} "
                 f"host_note={slot.host_message or '-'} "
                 f"placeholder={slot.placeholder_instance_id or '-'} "
+                f"managed={slot.managed_instance_id or '-'} "
+                f"managed_state={slot.managed_instance_state or '-'} "
+                f"managed_note={slot.managed_instance_message or '-'} "
                 f"loader={slot.loader_outcome or '-'} reason={slot.loader_reason_code or '-'}"
             )
             if slot.slot_index == self.selected_slot_index():

@@ -106,6 +106,8 @@ def main() -> None:
         assert loader_reason == "resolved"
         assert initial_managed_id != ""
         assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
+        managed_instances = native.get_managed_instances()
+        assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
     else:
         assert placeholder_id == ""
         assert int(placeholder_seq) == 0

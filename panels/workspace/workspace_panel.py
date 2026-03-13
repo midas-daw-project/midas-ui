@@ -80,6 +80,8 @@ class WorkspacePanel(QWidget):
         self.selected_plugin_label = QLabel("Selected Plugin: -")
         self.inserted_plugin_label = QLabel("Inserted Plugins: 0")
         self.selected_insert_label = QLabel("Selected Insert: -")
+        self.instance_label = QLabel("Managed Instances: active=0 failed=0")
+        self.selected_instance_label = QLabel("Selected Managed Instance: -")
         self.reconcile_label = QLabel("Reconcile: attempted=0 resolved=0 failed=0 created=0 cleared=0")
         self.reconcile_policy_label = QLabel("Reconcile Policy: mode=none action=none pending_manual=no")
         runtime_form.addRow(self.audio_label)
@@ -91,6 +93,8 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.selected_plugin_label)
         runtime_form.addRow(self.inserted_plugin_label)
         runtime_form.addRow(self.selected_insert_label)
+        runtime_form.addRow(self.instance_label)
+        runtime_form.addRow(self.selected_instance_label)
         runtime_form.addRow(self.reconcile_label)
         runtime_form.addRow(self.reconcile_policy_label)
         layout.addWidget(runtime_box)
@@ -191,6 +195,12 @@ class WorkspacePanel(QWidget):
         self.selected_plugin_label.setText(f"Selected Plugin: {vm.selected_plugin_name or '-'}")
         self.inserted_plugin_label.setText(f"Inserted Plugins: {vm.inserted_plugin_count}")
         self.selected_insert_label.setText(f"Selected Insert: {vm.selected_insert_summary or '-'}")
+        self.instance_label.setText(
+            f"Managed Instances: active={vm.managed_instance_count} failed={vm.failed_instance_count}"
+        )
+        self.selected_instance_label.setText(
+            f"Selected Managed Instance: {vm.selected_managed_instance_summary or '-'}"
+        )
         self.reconcile_label.setText(
             "Reconcile: "
             f"attempted={vm.reconcile_attempted} "

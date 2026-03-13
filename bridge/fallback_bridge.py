@@ -10,6 +10,7 @@ from bridge.protocol import (
     BridgeClient,
     BridgeEvent,
     InsertedPluginSlot,
+    ManagedInstanceRecord,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -449,6 +450,27 @@ class FallbackBridgeClient(BridgeClient):
             )
             for slot in self._insert_chains.get(int(channel_id), [])
         ]
+
+    def get_managed_instances(self) -> List[ManagedInstanceRecord]:
+        instances: List[ManagedInstanceRecord] = []
+        for channel_id, slots in self._insert_chains.items():
+            for slot in slots:
+                if not slot.managed_instance_id:
+                    continue
+                instances.append(
+                    ManagedInstanceRecord(
+                        managed_instance_id=slot.managed_instance_id,
+                        plugin_id=slot.plugin_id,
+                        channel_id=channel_id,
+                        slot_index=slot.slot_index,
+                        placeholder_instance_id=slot.placeholder_instance_id,
+                        managed_instance_state=slot.managed_instance_state,
+                        managed_instance_message=slot.managed_instance_message,
+                        managed_instance_created_sequence=slot.managed_instance_created_sequence,
+                    )
+                )
+        instances.sort(key=lambda item: (item.channel_id, item.slot_index))
+        return instances
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         plugin = next((p for p in self._plugin_registry if p.plugin_id == plugin_id), None)

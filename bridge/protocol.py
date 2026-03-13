@@ -133,6 +133,18 @@ class InsertedPluginSlot:
 
 
 @dataclass(slots=True)
+class ManagedInstanceRecord:
+    managed_instance_id: str = ""
+    plugin_id: str = ""
+    channel_id: int = 0
+    slot_index: int = 0
+    placeholder_instance_id: str = ""
+    managed_instance_state: str = "unloaded"
+    managed_instance_message: str = ""
+    managed_instance_created_sequence: int = 0
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -231,6 +243,9 @@ class BridgeClient(Protocol):
         ...
 
     def get_insert_chain(self, channel_id: int) -> List[InsertedPluginSlot]:
+        ...
+
+    def get_managed_instances(self) -> List[ManagedInstanceRecord]:
         ...
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:

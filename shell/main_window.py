@@ -585,6 +585,27 @@ class MainWindow(QMainWindow):
 
     def _refresh_debug_summary(self) -> None:
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
+        managed_instances = self._bridge.get_managed_instances()
+        managed_rows = [
+            (
+                f"{item.managed_instance_id} | {item.plugin_id or '-'} | "
+                f"ch{item.channel_id}:slot{item.slot_index} | "
+                f"placeholder={item.placeholder_instance_id or '-'} | "
+                f"state={item.managed_instance_state or '-'} | "
+                f"seq={item.managed_instance_created_sequence} | "
+                f"msg={item.managed_instance_message or '-'}"
+            )
+            for item in managed_instances
+        ]
+        selected_slot = next(
+            (slot for slot in self._mixer_vm.insert_chain if slot.slot_index == self._mixer_vm.selected_slot_index),
+            None,
+        )
+        selected_summary = (
+            f"{selected_slot.managed_instance_id or '-'} / {selected_slot.managed_instance_state or '-'}"
+            if selected_slot is not None
+            else "-"
+        )
         self._debug_panel.set_domain_statuses(
             audio=(
                 f"runtime={'on' if self._audio_vm.runtime_started else 'off'}, "
@@ -600,6 +621,10 @@ class MainWindow(QMainWindow):
                 f"audio={self._transport_vm.audio_lifecycle_state}, "
                 f"render={self._transport_vm.render_status}"
             ),
+        )
+        self._debug_panel.set_managed_instance_status(
+            summary=f"active={len(managed_instances)} selected={selected_summary}",
+            rows=managed_rows or ["No managed instances"],
         )
 
     def _restore_shell_state(self) -> None:

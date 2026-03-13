@@ -51,6 +51,14 @@ class DebugPanel(QWidget):
         summary_form.addRow(self.session_label)
         summary_form.addRow(self.transport_label)
 
+        instance_box = QGroupBox("Managed Instances")
+        instance_layout = QVBoxLayout(instance_box)
+        self.instance_summary_label = QLabel("Managed Instances: active=0 selected=-")
+        self.instance_log = QTextEdit()
+        self.instance_log.setReadOnly(True)
+        instance_layout.addWidget(self.instance_summary_label)
+        instance_layout.addWidget(self.instance_log)
+
         event_box = QGroupBox("Events")
         event_layout = QVBoxLayout(event_box)
         self.event_filter = QComboBox()
@@ -65,6 +73,7 @@ class DebugPanel(QWidget):
 
         root.addWidget(bridge_box)
         root.addWidget(summary_box)
+        root.addWidget(instance_box)
         root.addWidget(event_box)
 
     def set_bridge_info(self, *, mode: str, version: int, subscription_active: bool, fallback_polling: bool) -> None:
@@ -98,6 +107,10 @@ class DebugPanel(QWidget):
         self.mixer_label.setText(f"Mixer: {mixer}")
         self.session_label.setText(f"Session: {session}")
         self.transport_label.setText(f"Transport: {transport}")
+
+    def set_managed_instance_status(self, *, summary: str, rows: list[str]) -> None:
+        self.instance_summary_label.setText(f"Managed Instances: {summary}")
+        self.instance_log.setPlainText("\n".join(rows))
 
     def append_event(self, event: BridgeEvent) -> None:
         self._events.append(event)
