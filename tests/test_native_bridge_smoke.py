@@ -106,6 +106,8 @@ def main() -> None:
         assert loader_reason == "resolved"
         assert initial_managed_id != ""
         assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
+        assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "created"
+        assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "created"
         managed_instances = native.get_managed_instances()
         assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
     else:
@@ -119,6 +121,8 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("placeholder_created_seq", "0")) == "0"
     assert str(chain[0].get("values", {}).get("managed_instance_id", "")) == ""
     assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "unloaded"
+    assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "destroyed"
+    assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "destroyed"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     assert int(native.reconcile_channel_inserts(1)["code"]) == 0
@@ -142,6 +146,7 @@ def main() -> None:
     if str(first_values.get("host_lifecycle_state", "")) == "loaded_placeholder":
         assert str(first_values.get("managed_instance_id", "")) != ""
         assert str(first_values.get("managed_instance_state", "")) == "created"
+        assert str(first_values.get("managed_instance_adapter_state", "")) == "created"
         if initial_managed_id:
             assert str(first_values.get("managed_instance_id", "")) != initial_managed_id
     session_status = native.get_session_status()

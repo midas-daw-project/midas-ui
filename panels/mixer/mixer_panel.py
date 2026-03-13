@@ -186,6 +186,8 @@ class MixerPanel(QWidget):
                 f"placeholder={slot.placeholder_instance_id or '-'} "
                 f"managed={slot.managed_instance_id or '-'} "
                 f"managed_state={slot.managed_instance_state or '-'} "
+                f"adapter={slot.managed_instance_adapter_state or '-'} "
+                f"adapter_reason={slot.managed_instance_adapter_reason_code or '-'} "
                 f"managed_note={slot.managed_instance_message or '-'} "
                 f"loader={slot.loader_outcome or '-'} reason={slot.loader_reason_code or '-'}"
             )

@@ -101,6 +101,7 @@ class WorkspaceController:
             )
             self._vm.selected_managed_instance_summary = (
                 f"{first.managed_instance_id or 'none'}:{first.managed_instance_state}:"
+                f"{first.managed_instance_adapter_state}:{first.managed_instance_adapter_reason_code or '-'}:"
                 f"{first.managed_instance_message or '-'}"
             )
         else:

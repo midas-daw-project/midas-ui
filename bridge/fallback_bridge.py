@@ -442,6 +442,8 @@ class FallbackBridgeClient(BridgeClient):
                 placeholder_created_sequence=slot.placeholder_created_sequence,
                 managed_instance_id=slot.managed_instance_id,
                 managed_instance_state=slot.managed_instance_state,
+                managed_instance_adapter_state=slot.managed_instance_adapter_state,
+                managed_instance_adapter_reason_code=slot.managed_instance_adapter_reason_code,
                 managed_instance_message=slot.managed_instance_message,
                 managed_instance_created_sequence=slot.managed_instance_created_sequence,
                 loader_outcome=slot.loader_outcome,
@@ -465,6 +467,8 @@ class FallbackBridgeClient(BridgeClient):
                         slot_index=slot.slot_index,
                         placeholder_instance_id=slot.placeholder_instance_id,
                         managed_instance_state=slot.managed_instance_state,
+                        managed_instance_adapter_state=slot.managed_instance_adapter_state,
+                        managed_instance_adapter_reason_code=slot.managed_instance_adapter_reason_code,
                         managed_instance_message=slot.managed_instance_message,
                         managed_instance_created_sequence=slot.managed_instance_created_sequence,
                     )
@@ -500,6 +504,8 @@ class FallbackBridgeClient(BridgeClient):
                     placeholder_created_sequence=0,
                     managed_instance_id="",
                     managed_instance_state="unloaded",
+                    managed_instance_adapter_state="unavailable",
+                    managed_instance_adapter_reason_code="",
                     managed_instance_message="",
                     managed_instance_created_sequence=0,
                     loader_outcome="",
@@ -524,6 +530,8 @@ class FallbackBridgeClient(BridgeClient):
                     placeholder_created_sequence=0,
                     managed_instance_id="",
                     managed_instance_state="unloaded",
+                    managed_instance_adapter_state="unavailable",
+                    managed_instance_adapter_reason_code="",
                     managed_instance_message="",
                     managed_instance_created_sequence=0,
                     loader_outcome="",
@@ -719,6 +727,8 @@ class FallbackBridgeClient(BridgeClient):
                 slot.managed_instance_id = f"stub-{seq}"
                 slot.managed_instance_created_sequence = seq
             slot.managed_instance_state = "created"
+            slot.managed_instance_adapter_state = "created"
+            slot.managed_instance_adapter_reason_code = "created"
             slot.managed_instance_message = "adapter stub created"
             slot.loader_outcome = "ok"
             slot.loader_reason_code = "resolved"
@@ -729,8 +739,10 @@ class FallbackBridgeClient(BridgeClient):
             slot.placeholder_instance_id = ""
             slot.placeholder_created_sequence = 0
             slot.managed_instance_id = ""
-            slot.managed_instance_state = "unloaded"
-            slot.managed_instance_message = ""
+            slot.managed_instance_state = "create_failed"
+            slot.managed_instance_adapter_state = "unavailable"
+            slot.managed_instance_adapter_reason_code = "runtime_not_loadable"
+            slot.managed_instance_message = slot.host_message
             slot.managed_instance_created_sequence = 0
             slot.loader_outcome = "unavailable"
             slot.loader_reason_code = "runtime_not_loadable"
@@ -762,7 +774,9 @@ class FallbackBridgeClient(BridgeClient):
         slot.placeholder_created_sequence = 0
         slot.managed_instance_id = ""
         slot.managed_instance_state = "unloaded"
-        slot.managed_instance_message = ""
+        slot.managed_instance_adapter_state = "destroyed"
+        slot.managed_instance_adapter_reason_code = "destroyed"
+        slot.managed_instance_message = "adapter stub destroyed"
         slot.managed_instance_created_sequence = 0
         slot.loader_outcome = "ok"
         slot.loader_reason_code = "unloaded"
@@ -834,6 +848,8 @@ class FallbackBridgeClient(BridgeClient):
                         placeholder_created_sequence=0,
                         managed_instance_id="",
                         managed_instance_state="unloaded",
+                        managed_instance_adapter_state="unavailable",
+                        managed_instance_adapter_reason_code="",
                         managed_instance_message="",
                         managed_instance_created_sequence=0,
                         loader_outcome="",

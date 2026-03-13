@@ -592,6 +592,8 @@ class MainWindow(QMainWindow):
                 f"ch{item.channel_id}:slot{item.slot_index} | "
                 f"placeholder={item.placeholder_instance_id or '-'} | "
                 f"state={item.managed_instance_state or '-'} | "
+                f"adapter={item.managed_instance_adapter_state or '-'} | "
+                f"reason={item.managed_instance_adapter_reason_code or '-'} | "
                 f"seq={item.managed_instance_created_sequence} | "
                 f"msg={item.managed_instance_message or '-'}"
             )
@@ -602,7 +604,9 @@ class MainWindow(QMainWindow):
             None,
         )
         selected_summary = (
-            f"{selected_slot.managed_instance_id or '-'} / {selected_slot.managed_instance_state or '-'}"
+            f"{selected_slot.managed_instance_id or '-'} / "
+            f"{selected_slot.managed_instance_state or '-'} / "
+            f"{selected_slot.managed_instance_adapter_state or '-'}"
             if selected_slot is not None
             else "-"
         )

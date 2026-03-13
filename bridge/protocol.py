@@ -125,6 +125,8 @@ class InsertedPluginSlot:
     placeholder_created_sequence: int = 0
     managed_instance_id: str = ""
     managed_instance_state: str = "unloaded"
+    managed_instance_adapter_state: str = "unavailable"
+    managed_instance_adapter_reason_code: str = ""
     managed_instance_message: str = ""
     managed_instance_created_sequence: int = 0
     loader_outcome: str = ""
@@ -140,6 +142,8 @@ class ManagedInstanceRecord:
     slot_index: int = 0
     placeholder_instance_id: str = ""
     managed_instance_state: str = "unloaded"
+    managed_instance_adapter_state: str = "unavailable"
+    managed_instance_adapter_reason_code: str = ""
     managed_instance_message: str = ""
     managed_instance_created_sequence: int = 0
 

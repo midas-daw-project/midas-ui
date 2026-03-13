@@ -343,6 +343,12 @@ class NativeBridgeClient(BridgeClient):
                         placeholder_created_sequence=int(values.get("placeholder_created_seq", 0) or 0),
                         managed_instance_id=str(values.get("managed_instance_id", "")),
                         managed_instance_state=str(values.get("managed_instance_state", "unloaded")),
+                        managed_instance_adapter_state=str(
+                            values.get("managed_instance_adapter_state", "unavailable")
+                        ),
+                        managed_instance_adapter_reason_code=str(
+                            values.get("managed_instance_adapter_reason_code", "")
+                        ),
                         managed_instance_message=str(values.get("managed_instance_message", "")),
                         managed_instance_created_sequence=int(values.get("managed_instance_created_seq", 0) or 0),
                         loader_outcome=str(values.get("loader_outcome", "")),
@@ -367,6 +373,10 @@ class NativeBridgeClient(BridgeClient):
                     slot_index=int(values.get("slot_index", 0) or 0),
                     placeholder_instance_id=str(values.get("placeholder_instance_id", "")),
                     managed_instance_state=str(values.get("managed_instance_state", "unloaded")),
+                    managed_instance_adapter_state=str(values.get("managed_instance_adapter_state", "unavailable")),
+                    managed_instance_adapter_reason_code=str(
+                        values.get("managed_instance_adapter_reason_code", "")
+                    ),
                     managed_instance_message=str(values.get("managed_instance_message", "")),
                     managed_instance_created_sequence=int(values.get("managed_instance_created_seq", 0) or 0),
                 )

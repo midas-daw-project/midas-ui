@@ -30,6 +30,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
         assert chain[0].placeholder_created_sequence > 0
         assert chain[0].managed_instance_id
         assert chain[0].managed_instance_state == "created"
+        assert chain[0].managed_instance_adapter_state == "created"
+        assert chain[0].managed_instance_adapter_reason_code == "created"
     else:
         assert chain[0].loader_outcome != ""
         assert chain[0].placeholder_instance_id == ""
@@ -62,6 +64,7 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
         assert loaded[0].loader_outcome == "ok"
         assert loaded[0].managed_instance_id != ""
         assert loaded[0].managed_instance_state == "created"
+        assert loaded[0].managed_instance_adapter_state == "created"
     else:
         assert loaded[0].placeholder_instance_id == ""
         assert loaded[0].loader_outcome != ""
@@ -82,6 +85,8 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
     assert applied[0].placeholder_created_sequence == 0
     assert applied[0].managed_instance_id == ""
     assert applied[0].managed_instance_state == "unloaded"
+    assert applied[0].managed_instance_adapter_state == "destroyed"
+    assert applied[0].managed_instance_adapter_reason_code == "destroyed"
     assert applied[0].loader_outcome == "ok"
     assert applied[0].loader_reason_code == "unloaded"
     assert bridge.clear_insert_chain(1).ok
