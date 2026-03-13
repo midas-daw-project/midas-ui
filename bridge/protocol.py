@@ -149,6 +149,20 @@ class ManagedInstanceRecord:
 
 
 @dataclass(slots=True)
+class ManagedInstanceTransitionRecord:
+    channel_id: int = 0
+    slot_index: int = 0
+    managed_instance_id: str = ""
+    from_adapter_state: str = "none"
+    to_adapter_state: str = "none"
+    reason_code: str = ""
+    message: str = ""
+    sequence: int = 0
+    applied: bool = True
+    retry_allowed: bool = True
+
+
+@dataclass(slots=True)
 class BridgeEvent:
     category: str
     emitter: int
@@ -250,6 +264,9 @@ class BridgeClient(Protocol):
         ...
 
     def get_managed_instances(self) -> List[ManagedInstanceRecord]:
+        ...
+
+    def get_managed_instance_history(self) -> List[ManagedInstanceTransitionRecord]:
         ...
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:

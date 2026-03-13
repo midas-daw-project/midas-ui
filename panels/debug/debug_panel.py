@@ -59,6 +59,14 @@ class DebugPanel(QWidget):
         instance_layout.addWidget(self.instance_summary_label)
         instance_layout.addWidget(self.instance_log)
 
+        transition_box = QGroupBox("Adapter Transition History")
+        transition_layout = QVBoxLayout(transition_box)
+        self.transition_summary_label = QLabel("Transitions: 0")
+        self.transition_log = QTextEdit()
+        self.transition_log.setReadOnly(True)
+        transition_layout.addWidget(self.transition_summary_label)
+        transition_layout.addWidget(self.transition_log)
+
         event_box = QGroupBox("Events")
         event_layout = QVBoxLayout(event_box)
         self.event_filter = QComboBox()
@@ -74,6 +82,7 @@ class DebugPanel(QWidget):
         root.addWidget(bridge_box)
         root.addWidget(summary_box)
         root.addWidget(instance_box)
+        root.addWidget(transition_box)
         root.addWidget(event_box)
 
     def set_bridge_info(self, *, mode: str, version: int, subscription_active: bool, fallback_polling: bool) -> None:
@@ -111,6 +120,10 @@ class DebugPanel(QWidget):
     def set_managed_instance_status(self, *, summary: str, rows: list[str]) -> None:
         self.instance_summary_label.setText(f"Managed Instances: {summary}")
         self.instance_log.setPlainText("\n".join(rows))
+
+    def set_transition_history(self, *, summary: str, rows: list[str]) -> None:
+        self.transition_summary_label.setText(f"Transitions: {summary}")
+        self.transition_log.setPlainText("\n".join(rows))
 
     def append_event(self, event: BridgeEvent) -> None:
         self._events.append(event)

@@ -110,6 +110,8 @@ def main() -> None:
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "created"
         managed_instances = native.get_managed_instances()
         assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
+        history = native.get_managed_instance_history()
+        assert any(str(item.get("values", {}).get("to_adapter_state", "")) == "created" for item in history)
     else:
         assert placeholder_id == ""
         assert int(placeholder_seq) == 0
@@ -125,6 +127,8 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "destroyed"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
+    history = native.get_managed_instance_history()
+    assert any(str(item.get("values", {}).get("to_adapter_state", "")) == "destroyed" for item in history)
     assert int(native.reconcile_channel_inserts(1)["code"]) == 0
     reconcile = native.get_reconcile_status()
     assert int(reconcile.get("code", 4)) == 0

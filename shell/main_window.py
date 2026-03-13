@@ -586,6 +586,7 @@ class MainWindow(QMainWindow):
     def _refresh_debug_summary(self) -> None:
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
         managed_instances = self._bridge.get_managed_instances()
+        transition_history = self._bridge.get_managed_instance_history()
         managed_rows = [
             (
                 f"{item.managed_instance_id} | {item.plugin_id or '-'} | "
@@ -598,6 +599,17 @@ class MainWindow(QMainWindow):
                 f"msg={item.managed_instance_message or '-'}"
             )
             for item in managed_instances
+        ]
+        transition_rows = [
+            (
+                f"seq={item.sequence} | ch{item.channel_id}:slot{item.slot_index} | "
+                f"{item.from_adapter_state}->{item.to_adapter_state} | "
+                f"reason={item.reason_code or '-'} | "
+                f"applied={'yes' if item.applied else 'no'} | "
+                f"retry_allowed={'yes' if item.retry_allowed else 'no'} | "
+                f"msg={item.message or '-'}"
+            )
+            for item in transition_history
         ]
         selected_slot = next(
             (slot for slot in self._mixer_vm.insert_chain if slot.slot_index == self._mixer_vm.selected_slot_index),
@@ -629,6 +641,10 @@ class MainWindow(QMainWindow):
         self._debug_panel.set_managed_instance_status(
             summary=f"active={len(managed_instances)} selected={selected_summary}",
             rows=managed_rows or ["No managed instances"],
+        )
+        self._debug_panel.set_transition_history(
+            summary=f"count={len(transition_history)}",
+            rows=transition_rows or ["No adapter transitions"],
         )
 
     def _restore_shell_state(self) -> None:

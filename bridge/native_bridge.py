@@ -9,6 +9,7 @@ from bridge.protocol import (
     BridgeEvent,
     InsertedPluginSlot,
     ManagedInstanceRecord,
+    ManagedInstanceTransitionRecord,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -382,6 +383,28 @@ class NativeBridgeClient(BridgeClient):
                 )
             )
         return records
+
+    def get_managed_instance_history(self) -> list[ManagedInstanceTransitionRecord]:
+        if not hasattr(self._native, "get_managed_instance_history"):
+            return []
+        history: list[ManagedInstanceTransitionRecord] = []
+        for item in self._native.get_managed_instance_history():
+            values = dict(item.get("values", {}))
+            history.append(
+                ManagedInstanceTransitionRecord(
+                    channel_id=int(values.get("channel", 0) or 0),
+                    slot_index=int(values.get("slot_index", 0) or 0),
+                    managed_instance_id=str(values.get("managed_instance_id", "")),
+                    from_adapter_state=str(values.get("from_adapter_state", "none")),
+                    to_adapter_state=str(values.get("to_adapter_state", "none")),
+                    reason_code=str(values.get("reason_code", "")),
+                    message=str(values.get("message", "")),
+                    sequence=int(values.get("sequence", 0) or 0),
+                    applied=str(values.get("applied", "true")).lower() == "true",
+                    retry_allowed=str(values.get("retry_allowed", "true")).lower() == "true",
+                )
+            )
+        return history
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         if hasattr(self._native, "insert_plugin"):

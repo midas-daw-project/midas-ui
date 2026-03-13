@@ -11,6 +11,7 @@ from bridge.protocol import (
     BridgeEvent,
     InsertedPluginSlot,
     ManagedInstanceRecord,
+    ManagedInstanceTransitionRecord,
     PluginRegistryEntry,
     BridgeResult,
     MixerChannelStatus,
@@ -475,6 +476,9 @@ class FallbackBridgeClient(BridgeClient):
                 )
         instances.sort(key=lambda item: (item.channel_id, item.slot_index))
         return instances
+
+    def get_managed_instance_history(self) -> List[ManagedInstanceTransitionRecord]:
+        return []
 
     def insert_plugin(self, channel_id: int, plugin_id: str, slot_index: int) -> BridgeResult:
         plugin = next((p for p in self._plugin_registry if p.plugin_id == plugin_id), None)
