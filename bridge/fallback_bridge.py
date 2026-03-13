@@ -72,6 +72,7 @@ class FallbackBridgeClient(BridgeClient):
         ]
         self._insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
+        self._next_managed_instance_sequence = 1
         self._reconcile_status = ReconcileStatus()
         self._in_reconcile = False
 
@@ -438,6 +439,10 @@ class FallbackBridgeClient(BridgeClient):
                 host_message=slot.host_message,
                 placeholder_instance_id=slot.placeholder_instance_id,
                 placeholder_created_sequence=slot.placeholder_created_sequence,
+                managed_instance_id=slot.managed_instance_id,
+                managed_instance_state=slot.managed_instance_state,
+                managed_instance_message=slot.managed_instance_message,
+                managed_instance_created_sequence=slot.managed_instance_created_sequence,
                 loader_outcome=slot.loader_outcome,
                 loader_reason_code=slot.loader_reason_code,
                 loader_message=slot.loader_message,
@@ -471,6 +476,10 @@ class FallbackBridgeClient(BridgeClient):
                     host_message="",
                     placeholder_instance_id="",
                     placeholder_created_sequence=0,
+                    managed_instance_id="",
+                    managed_instance_state="unloaded",
+                    managed_instance_message="",
+                    managed_instance_created_sequence=0,
                     loader_outcome="",
                     loader_reason_code="",
                     loader_message="",
@@ -491,6 +500,10 @@ class FallbackBridgeClient(BridgeClient):
                     host_message="",
                     placeholder_instance_id="",
                     placeholder_created_sequence=0,
+                    managed_instance_id="",
+                    managed_instance_state="unloaded",
+                    managed_instance_message="",
+                    managed_instance_created_sequence=0,
                     loader_outcome="",
                     loader_reason_code="",
                     loader_message="",
@@ -678,6 +691,13 @@ class FallbackBridgeClient(BridgeClient):
                 self._next_placeholder_sequence += 1
                 slot.placeholder_instance_id = f"ph-{seq}"
                 slot.placeholder_created_sequence = seq
+            if not slot.managed_instance_id:
+                seq = self._next_managed_instance_sequence
+                self._next_managed_instance_sequence += 1
+                slot.managed_instance_id = f"mi-{seq}"
+                slot.managed_instance_created_sequence = seq
+            slot.managed_instance_state = "created"
+            slot.managed_instance_message = "managed instance created"
             slot.loader_outcome = "ok"
             slot.loader_reason_code = "resolved"
             slot.loader_message = "plugin resolved and placeholder created"
@@ -686,6 +706,10 @@ class FallbackBridgeClient(BridgeClient):
             slot.host_message = slot.runtime_message or "runtime not loadable"
             slot.placeholder_instance_id = ""
             slot.placeholder_created_sequence = 0
+            slot.managed_instance_id = ""
+            slot.managed_instance_state = "unloaded"
+            slot.managed_instance_message = ""
+            slot.managed_instance_created_sequence = 0
             slot.loader_outcome = "unavailable"
             slot.loader_reason_code = "runtime_not_loadable"
             slot.loader_message = slot.host_message
@@ -714,6 +738,10 @@ class FallbackBridgeClient(BridgeClient):
         slot.host_message = "placeholder unloaded"
         slot.placeholder_instance_id = ""
         slot.placeholder_created_sequence = 0
+        slot.managed_instance_id = ""
+        slot.managed_instance_state = "unloaded"
+        slot.managed_instance_message = ""
+        slot.managed_instance_created_sequence = 0
         slot.loader_outcome = "ok"
         slot.loader_reason_code = "unloaded"
         slot.loader_message = "placeholder unloaded"
@@ -782,6 +810,10 @@ class FallbackBridgeClient(BridgeClient):
                         host_message="",
                         placeholder_instance_id="",
                         placeholder_created_sequence=0,
+                        managed_instance_id="",
+                        managed_instance_state="unloaded",
+                        managed_instance_message="",
+                        managed_instance_created_sequence=0,
                         loader_outcome="",
                         loader_reason_code="",
                         loader_message="",

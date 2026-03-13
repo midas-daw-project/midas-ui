@@ -98,19 +98,25 @@ def main() -> None:
     placeholder_seq = str(chain[0].get("values", {}).get("placeholder_created_seq", "0"))
     loader_outcome = str(chain[0].get("values", {}).get("loader_outcome", ""))
     loader_reason = str(chain[0].get("values", {}).get("loader_reason_code", ""))
+    initial_managed_id = str(chain[0].get("values", {}).get("managed_instance_id", ""))
     if host_state == "loaded_placeholder":
         assert placeholder_id
         assert int(placeholder_seq) > 0
         assert loader_outcome == "ok"
         assert loader_reason == "resolved"
+        assert initial_managed_id != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
     else:
         assert placeholder_id == ""
         assert int(placeholder_seq) == 0
         assert loader_outcome in {"not_found", "unavailable", "incompatible", "load_not_supported_yet", "internal_error"}
+        assert initial_managed_id == ""
     assert int(native.request_insert_unload(1, 0)["code"]) == 0
     chain = native.get_insert_chain(1)
     assert str(chain[0].get("values", {}).get("placeholder_instance_id", "")) == ""
     assert str(chain[0].get("values", {}).get("placeholder_created_seq", "0")) == "0"
+    assert str(chain[0].get("values", {}).get("managed_instance_id", "")) == ""
+    assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "unloaded"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     assert int(native.reconcile_channel_inserts(1)["code"]) == 0
@@ -130,6 +136,12 @@ def main() -> None:
     assert int(native.apply_session()["code"]) == 0
     chain = native.get_insert_chain(1)
     assert len(chain) >= 1
+    first_values = chain[0].get("values", {})
+    if str(first_values.get("host_lifecycle_state", "")) == "loaded_placeholder":
+        assert str(first_values.get("managed_instance_id", "")) != ""
+        assert str(first_values.get("managed_instance_state", "")) == "created"
+        if initial_managed_id:
+            assert str(first_values.get("managed_instance_id", "")) != initial_managed_id
     session_status = native.get_session_status()
     assert int(session_status.get("code", 4)) == 0
     assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded", "applied"}

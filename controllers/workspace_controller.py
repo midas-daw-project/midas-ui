@@ -83,10 +83,11 @@ class WorkspaceController:
             first = mixer_vm.insert_chain[0]
             bypass = "bypassed" if first.bypassed else "active"
             placeholder = first.placeholder_instance_id or "none"
+            managed = first.managed_instance_id or "none"
             loader = first.loader_outcome or "none"
             self._vm.selected_insert_summary = (
                 f"ch{first.channel_id}:slot{first.slot_index}:{first.plugin_name}:{bypass}:"
-                f"{first.load_state}:{first.host_lifecycle_state}:ph={placeholder}:loader={loader}"
+                f"{first.load_state}:{first.host_lifecycle_state}:ph={placeholder}:mi={managed}:loader={loader}"
             )
         else:
             self._vm.selected_insert_summary = ""

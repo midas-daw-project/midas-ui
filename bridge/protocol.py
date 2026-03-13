@@ -123,6 +123,10 @@ class InsertedPluginSlot:
     host_message: str = ""
     placeholder_instance_id: str = ""
     placeholder_created_sequence: int = 0
+    managed_instance_id: str = ""
+    managed_instance_state: str = "unloaded"
+    managed_instance_message: str = ""
+    managed_instance_created_sequence: int = 0
     loader_outcome: str = ""
     loader_reason_code: str = ""
     loader_message: str = ""
