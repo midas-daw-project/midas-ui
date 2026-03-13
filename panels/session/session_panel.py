@@ -57,15 +57,19 @@ class SessionPanel(QWidget):
 
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
+        self.session_heading_label = QLabel("No active session")
+        self.session_heading_label.setStyleSheet("font-weight: 600; font-size: 15px;")
         self.status_label = QLabel("Status: idle")
-        self.identity_label = QLabel("Phase: none | Dirty: no")
+        self.identity_label = QLabel("Phase: none | Dirty: clean")
         self.storage_label = QLabel("Storage: -")
         self.storage_root_label = QLabel("Storage Root: -")
         self.last_ops_label = QLabel("Last op: none")
         self.last_actions_label = QLabel("Save=- Load=- Apply=-")
-        self.recent_label = QLabel("Recent: -")
-        self.discoverable_label = QLabel("Discoverable: 0")
-        self.error_label = QLabel("Error: ")
+        self.recent_label = QLabel("Recent Sessions: -")
+        self.discoverable_label = QLabel("Discoverable Sessions: 0")
+        self.error_label = QLabel("Error: -")
+        self.error_label.setWordWrap(True)
+        status_layout.addWidget(self.session_heading_label)
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.identity_label)
         status_layout.addWidget(self.storage_label)
@@ -86,11 +90,12 @@ class SessionPanel(QWidget):
 
     def render(self, vm: SessionViewModel) -> None:
         self.session_ref_input.setText(vm.session_ref)
-        self.status_label.setText(f"Status: {vm.status} | Session: {vm.session_ref}")
-        self.identity_label.setText(f"Phase: {vm.phase} | Dirty: {'yes' if vm.dirty else 'no'}")
+        self.session_heading_label.setText(vm.session_ref or "No active session")
+        self.status_label.setText(f"Status: {vm.status}")
+        self.identity_label.setText(f"Phase: {vm.phase} | Dirty: {'dirty' if vm.dirty else 'clean'}")
         storage = vm.storage_path if vm.storage_path else "-"
         source = vm.storage_source if vm.storage_source else "-"
-        self.storage_label.setText(f"Storage: {storage} | Source: {source}")
+        self.storage_label.setText(f"{storage} | Source: {source}")
         self.storage_root_label.setText(f"Storage Root: {vm.storage_root or '-'}")
         self.last_ops_label.setText(
             f"Last op: {vm.last_operation} | "
@@ -104,12 +109,15 @@ class SessionPanel(QWidget):
             f"Apply={vm.last_apply_status or '-'}"
         )
         if vm.recent_sessions:
-            summary = ", ".join(entry.session_ref for entry in vm.recent_sessions[:3])
+            summary = ", ".join(
+                f"{entry.session_ref} ({self._fmt_epoch(entry.last_touched_epoch)})"
+                for entry in vm.recent_sessions[:3]
+            )
         else:
             summary = "-"
-        self.recent_label.setText(f"Recent: {summary}")
-        self.discoverable_label.setText(f"Discoverable: {len(vm.discoverable_sessions)}")
-        self.error_label.setText(f"Error: {vm.last_error}")
+        self.recent_label.setText(f"Recent Sessions: {summary}")
+        self.discoverable_label.setText(f"Discoverable Sessions: {len(vm.discoverable_sessions)}")
+        self.error_label.setText(f"{vm.last_error or '-'}")
 
     @staticmethod
     def _fmt_epoch(value: int) -> str:

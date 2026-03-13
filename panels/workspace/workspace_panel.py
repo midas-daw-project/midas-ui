@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Callable
 
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidgetItem,
     QLineEdit,
@@ -41,26 +43,30 @@ class WorkspacePanel(QWidget):
 
         overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
-        self.session_label = QLabel("Session: default-session")
-        self.session_status_label = QLabel("Session Status: idle")
-        self.session_identity_label = QLabel("Phase: none | Dirty: no")
+        self.project_heading_label = QLabel("No active session")
+        self.project_heading_label.setStyleSheet("font-weight: 600; font-size: 16px;")
+        self.project_summary_label = QLabel("Open or create a session to begin.")
+        self.project_summary_label.setWordWrap(True)
+        self.session_status_label = QLabel("Status: idle")
+        self.session_identity_label = QLabel("Phase: none | Dirty: clean | Last: none")
         self.session_storage_label = QLabel("Storage: -")
-        self.bridge_label = QLabel("Bridge: unknown v0")
-        self.project_summary_label = QLabel("Project Summary: No active session")
-        self.startup_hint_label = QLabel("Create a new session or open an existing one.")
         self.session_error_label = QLabel("Session Error: -")
-        overview_form.addRow(self.session_label)
-        overview_form.addRow(self.session_status_label)
-        overview_form.addRow(self.session_identity_label)
-        overview_form.addRow(self.session_storage_label)
-        overview_form.addRow(self.project_summary_label)
-        overview_form.addRow(self.startup_hint_label)
-        overview_form.addRow(self.session_error_label)
-        overview_form.addRow(self.bridge_label)
-        self.recent_summary_label = QLabel("Recent: none")
+        self.session_error_label.setWordWrap(True)
+        self.startup_hint_label = QLabel("Create a new session or open an existing one.")
+        self.startup_hint_label.setWordWrap(True)
+        self.bridge_label = QLabel("Bridge: unknown v0")
+        self.recent_summary_label = QLabel("Recent Sessions: none")
         self.discoverable_summary_label = QLabel("Discoverable Sessions: 0")
-        overview_form.addRow(self.recent_summary_label)
-        overview_form.addRow(self.discoverable_summary_label)
+        overview_form.addRow(self.project_heading_label)
+        overview_form.addRow(self.project_summary_label)
+        overview_form.addRow("Session", self.session_status_label)
+        overview_form.addRow("Identity", self.session_identity_label)
+        overview_form.addRow("Storage", self.session_storage_label)
+        overview_form.addRow("Recent", self.recent_summary_label)
+        overview_form.addRow("Discoverable", self.discoverable_summary_label)
+        overview_form.addRow("Next", self.startup_hint_label)
+        overview_form.addRow("Error", self.session_error_label)
+        overview_form.addRow("Bridge", self.bridge_label)
         layout.addWidget(overview_box)
 
         runtime_box = QGroupBox("Runtime Snapshot")
@@ -91,16 +97,34 @@ class WorkspacePanel(QWidget):
 
         home_box = QGroupBox("Workspace Home")
         home_layout = QVBoxLayout(home_box)
+        self.home_intro_label = QLabel("Start a new session, open a known session ref, or resume from recent work.")
+        self.home_intro_label.setWordWrap(True)
+        self.new_section_label = QLabel("New Session")
         self.session_ref_input = QLineEdit("default-session")
+        self.session_ref_input.setPlaceholderText("session-ref")
         self.new_session_button = QPushButton("New Session")
+        self.open_section_label = QLabel("Open Existing Session")
         self.open_session_button = QPushButton("Open By Ref")
         self.open_existing_button = QPushButton("Open Existing Session")
+        self.recent_section_label = QLabel("Recent Sessions")
+        self.recent_hint_label = QLabel("Open the selected recent session or use Open Existing Session for discovered entries.")
+        self.recent_hint_label.setWordWrap(True)
         self.recent_list = QListWidget()
         self.open_recent_button = QPushButton("Open Selected Recent")
+        self.recent_summary_card_label = QLabel("No recent session history yet.")
+        self.recent_summary_card_label.setWordWrap(True)
+        action_row = QHBoxLayout()
+        action_row.addWidget(self.new_session_button)
+        action_row.addWidget(self.open_session_button)
+        action_row.addWidget(self.open_existing_button)
+        home_layout.addWidget(self.home_intro_label)
+        home_layout.addWidget(self.new_section_label)
         home_layout.addWidget(self.session_ref_input)
-        home_layout.addWidget(self.new_session_button)
-        home_layout.addWidget(self.open_session_button)
-        home_layout.addWidget(self.open_existing_button)
+        home_layout.addLayout(action_row)
+        home_layout.addWidget(self.open_section_label)
+        home_layout.addWidget(self.recent_summary_card_label)
+        home_layout.addWidget(self.recent_section_label)
+        home_layout.addWidget(self.recent_hint_label)
         home_layout.addWidget(self.recent_list)
         home_layout.addWidget(self.open_recent_button)
         layout.addWidget(home_box)
@@ -135,23 +159,26 @@ class WorkspacePanel(QWidget):
         self.title_label.setText(vm.workspace_title)
         self.mode_label.setText(vm.workspace_mode)
         self.session_ref_input.setText(vm.session_ref)
-        self.session_label.setText(f"Session: {vm.session_ref}")
-        self.session_status_label.setText(f"Session Status: {vm.session_status}")
+        self.project_heading_label.setText(vm.session_ref or "No active session")
+        self.session_status_label.setText(vm.session_status)
         self.session_identity_label.setText(
-            f"Phase: {vm.session_phase} | Dirty: {'yes' if vm.session_dirty else 'no'} | Last: {vm.session_last_operation}"
+            f"Phase: {vm.session_phase} | Dirty: {'dirty' if vm.session_dirty else 'clean'} | Last: {vm.session_last_operation}"
         )
         self.session_storage_label.setText(
-            f"Storage: {(vm.session_storage_path or '-')} | Source: {(vm.session_storage_source or '-')}"
+            f"{(vm.session_storage_path or '-')} | Source: {(vm.session_storage_source or '-')}"
         )
-        self.project_summary_label.setText(f"Project Summary: {vm.current_project_summary or 'No active session'}")
+        self.project_summary_label.setText(vm.current_project_summary or "No active session")
         self.startup_hint_label.setText(vm.startup_hint)
-        self.session_error_label.setText(f"Session Error: {vm.session_error_summary or '-'}")
+        self.session_error_label.setText(vm.session_error_summary or "-")
         self.bridge_label.setText(f"Bridge: {vm.bridge_mode} v{vm.bridge_version}")
         self.recent_summary_label.setText(
-            f"Recent: {vm.recent_session_count} | Latest: {vm.recent_session_summary or 'none'}"
+            f"{vm.recent_session_count} total | Latest: {vm.recent_session_summary or 'none'}"
         )
         self.discoverable_summary_label.setText(
-            f"Discoverable Sessions: {vm.discoverable_session_count}"
+            f"{vm.discoverable_session_count} available from storage root"
+        )
+        self.recent_summary_card_label.setText(
+            f"Current: {vm.session_ref or '-'} | Recent: {vm.recent_session_count} | Discoverable: {vm.discoverable_session_count}"
         )
         self.audio_label.setText(f"Audio: {vm.audio_state}")
         self.transport_label.setText(f"Transport: {vm.transport_state}")
@@ -181,15 +208,28 @@ class WorkspacePanel(QWidget):
         )
         self.recent_list.clear()
         for entry in vm.recent_sessions:
-            label = f"{entry.session_ref} | {entry.last_operation} | {entry.storage_path or '-'}"
+            current_marker = " [current]" if entry.session_ref == vm.session_ref else ""
+            touched = self._fmt_epoch(entry.last_touched_epoch)
+            label = (
+                f"{entry.session_ref}{current_marker}\n"
+                f"{entry.last_operation} | {touched}\n"
+                f"{entry.storage_path or '-'}"
+            )
             item = QListWidgetItem(label)
-            if entry.session_ref == vm.session_ref:
-                item.setText(f"* {label}")
+            item.setData(0x0100, entry.session_ref)
             self.recent_list.addItem(item)
+        if self.recent_list.count() > 0 and self.recent_list.currentItem() is None:
+            self.recent_list.setCurrentRow(0)
         self.last_action_label.setText(f"Last Action: {vm.last_action}")
 
     def selected_recent_session_ref(self) -> str:
         item = self.recent_list.currentItem()
         if item is None:
             return ""
-        return item.text().split(" | ", 1)[0].lstrip("* ").strip()
+        return str(item.data(0x0100) or "")
+
+    @staticmethod
+    def _fmt_epoch(value: int) -> str:
+        if value <= 0:
+            return "-"
+        return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
