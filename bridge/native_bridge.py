@@ -289,6 +289,17 @@ class NativeBridgeClient(BridgeClient):
         return RuntimeStatus(
             runtime_started=_as_bool("runtime_started", False),
             bridge_version=_as_int("bridge_version", self.bridge_version()),
+            backend_name=str(values.get("backend_name", "")),
+            supports_create=_as_bool("supports_create", False),
+            supports_destroy=_as_bool("supports_destroy", False),
+            supports_query=_as_bool("supports_query", False),
+            support_scope_summary=str(values.get("support_scope_summary", "")),
+            selected_slot_plugin_id=str(values.get("selected_slot_plugin_id", "")),
+            selected_slot_index=_as_int("selected_slot_index", 0),
+            selected_slot_adapter_reason_code=str(values.get("selected_slot_adapter_reason_code", "")),
+            selected_slot_adapter_message=str(values.get("selected_slot_adapter_message", "")),
+            selected_slot_loader_reason_code=str(values.get("selected_slot_loader_reason_code", "")),
+            selected_slot_loader_message=str(values.get("selected_slot_loader_message", "")),
             audio=audio,
         )
 

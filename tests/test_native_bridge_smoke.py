@@ -167,8 +167,24 @@ def main() -> None:
     assert str(values.get("state", "")) in {"started", "opened", "initialized", "idle"}
     assert str(values.get("runtime_started", "")) in {"true", "false"}
     assert str(values.get("render_status", "")) in {"ok", "no_callback", "partial", "failed", "invalid_runtime_state", "stopped"}
+    assert str(values.get("backend_name", "")) != ""
+    assert str(values.get("supports_create", "")).lower() in {"true", "false"}
+    assert str(values.get("supports_destroy", "")).lower() in {"true", "false"}
+    assert str(values.get("supports_query", "")).lower() in {"true", "false"}
+    assert str(values.get("support_scope_summary", "")) != ""
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
+
+    assert int(native.insert_plugin(1, "thirdparty.reverb.demo", 3)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 3)["code"]) == 0
+    unsupported_chain = native.get_insert_chain(1)
+    unsupported = next(
+        (slot.get("values", {}) for slot in unsupported_chain if str(slot.get("values", {}).get("slot_index", "")) == "3"),
+        {},
+    )
+    assert str(unsupported.get("loader_outcome", "")) == "unavailable"
+    assert str(unsupported.get("loader_reason_code", "")) in {"plugin_unavailable", "plugin_not_supported"}
 
     assert native.get_mixer_channels()
     assert int(native.shutdown_runtime_profile()["code"]) == 0

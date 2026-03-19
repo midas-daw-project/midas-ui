@@ -32,10 +32,18 @@ class DebugPanel(QWidget):
         self.mode_label = QLabel("Mode: unknown")
         self.version_label = QLabel("Version: unknown")
         self.subscription_label = QLabel("Subscription: inactive")
+        self.backend_label = QLabel("Backend: -")
+        self.capabilities_label = QLabel("Capabilities: -")
+        self.scope_label = QLabel("Support Scope: -")
+        self.slot_adapter_label = QLabel("Selected Slot Adapter: -")
         self.manual_refresh_button = QPushButton("Manual Refresh")
         bridge_form.addRow(self.mode_label)
         bridge_form.addRow(self.version_label)
         bridge_form.addRow(self.subscription_label)
+        bridge_form.addRow(self.backend_label)
+        bridge_form.addRow(self.capabilities_label)
+        bridge_form.addRow(self.scope_label)
+        bridge_form.addRow(self.slot_adapter_label)
         bridge_form.addRow(self.manual_refresh_button)
 
         summary_box = QGroupBox("Summary")
@@ -100,6 +108,32 @@ class DebugPanel(QWidget):
         if fallback:
             label += " (polling fallback)"
         self.subscription_label.setText(f"Subscription: {label}")
+
+    def set_backend_summary(
+        self,
+        *,
+        backend_name: str,
+        supports_create: bool,
+        supports_destroy: bool,
+        supports_query: bool,
+        support_scope: str,
+        selected_slot_reason: str,
+        selected_slot_message: str,
+    ) -> None:
+        self.backend_label.setText(f"Backend: {backend_name or '-'}")
+        self.capabilities_label.setText(
+            "Capabilities: "
+            f"create={'yes' if supports_create else 'no'}, "
+            f"destroy={'yes' if supports_destroy else 'no'}, "
+            f"query={'yes' if supports_query else 'no'}"
+        )
+        self.scope_label.setText(f"Support Scope: {support_scope or '-'}")
+        if selected_slot_reason or selected_slot_message:
+            self.slot_adapter_label.setText(
+                f"Selected Slot Adapter: reason={selected_slot_reason or '-'} msg={selected_slot_message or '-'}"
+            )
+        else:
+            self.slot_adapter_label.setText("Selected Slot Adapter: -")
 
     def set_event_filter(self, value: str) -> None:
         index = self.event_filter.findText(value)

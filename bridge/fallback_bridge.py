@@ -397,9 +397,31 @@ class FallbackBridgeClient(BridgeClient):
         )
 
     def get_runtime_status(self) -> RuntimeStatus:
+        selected_slot = None
+        for chain in self._insert_chains.values():
+            selected_slot = next((slot for slot in chain if slot.plugin_id), None)
+            if selected_slot is not None:
+                break
         return RuntimeStatus(
             runtime_started=self._runtime_started,
             bridge_version=self.bridge_version(),
+            backend_name="fallback_stub",
+            supports_create=True,
+            supports_destroy=True,
+            supports_query=True,
+            support_scope_summary="midas.*",
+            selected_slot_plugin_id=selected_slot.plugin_id if selected_slot is not None else "",
+            selected_slot_index=selected_slot.slot_index if selected_slot is not None else 0,
+            selected_slot_adapter_reason_code=(
+                selected_slot.managed_instance_adapter_reason_code if selected_slot is not None else ""
+            ),
+            selected_slot_adapter_message=(
+                selected_slot.managed_instance_message if selected_slot is not None else ""
+            ),
+            selected_slot_loader_reason_code=(
+                selected_slot.loader_reason_code if selected_slot is not None else ""
+            ),
+            selected_slot_loader_message=selected_slot.loader_message if selected_slot is not None else "",
             audio=self.get_audio_status(),
         )
 

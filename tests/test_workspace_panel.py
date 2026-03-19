@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtWidgets import QApplication
 
 from bridge.protocol import RecentSessionEntry
+from panels.debug.debug_panel import DebugPanel
 from panels.session.session_panel import SessionPanel
 from panels.workspace.workspace_panel import WorkspacePanel
 from viewmodels.session_viewmodel import SessionViewModel
@@ -111,3 +112,22 @@ def test_session_panel_renders_consistent_identity_and_error_state():
     assert "Dirty: dirty" in panel.identity_label.text()
     assert "C:/sessions/mix-b.session" in panel.storage_label.text()
     assert panel.error_label.text() == "session warning"
+
+
+def test_debug_panel_renders_adapter_backend_summary():
+    _app()
+    panel = DebugPanel(on_manual_refresh=lambda: None)
+    panel.set_backend_summary(
+        backend_name="local_runtime",
+        supports_create=True,
+        supports_destroy=True,
+        supports_query=True,
+        support_scope="midas.*",
+        selected_slot_reason="plugin_unavailable",
+        selected_slot_message="plugin is not supported by local runtime backend",
+    )
+
+    assert panel.backend_label.text() == "Backend: local_runtime"
+    assert "create=yes" in panel.capabilities_label.text()
+    assert panel.scope_label.text() == "Support Scope: midas.*"
+    assert "plugin_unavailable" in panel.slot_adapter_label.text()

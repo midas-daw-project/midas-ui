@@ -584,6 +584,7 @@ class MainWindow(QMainWindow):
         self._session_controller.mark_dirty()
 
     def _refresh_debug_summary(self) -> None:
+        runtime_status = self._bridge.get_runtime_status()
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
         managed_instances = self._bridge.get_managed_instances()
         transition_history = self._bridge.get_managed_instance_history()
@@ -637,6 +638,17 @@ class MainWindow(QMainWindow):
                 f"audio={self._transport_vm.audio_lifecycle_state}, "
                 f"render={self._transport_vm.render_status}"
             ),
+        )
+        self._debug_panel.set_backend_summary(
+            backend_name=runtime_status.backend_name,
+            supports_create=runtime_status.supports_create,
+            supports_destroy=runtime_status.supports_destroy,
+            supports_query=runtime_status.supports_query,
+            support_scope=runtime_status.support_scope_summary,
+            selected_slot_reason=runtime_status.selected_slot_adapter_reason_code
+            or runtime_status.selected_slot_loader_reason_code,
+            selected_slot_message=runtime_status.selected_slot_adapter_message
+            or runtime_status.selected_slot_loader_message,
         )
         self._debug_panel.set_managed_instance_status(
             summary=f"active={len(managed_instances)} selected={selected_summary}",

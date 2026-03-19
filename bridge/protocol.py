@@ -81,6 +81,17 @@ class TransportStatus:
 class RuntimeStatus:
     runtime_started: bool = False
     bridge_version: int = 0
+    backend_name: str = ""
+    supports_create: bool = False
+    supports_destroy: bool = False
+    supports_query: bool = False
+    support_scope_summary: str = ""
+    selected_slot_plugin_id: str = ""
+    selected_slot_index: int = 0
+    selected_slot_adapter_reason_code: str = ""
+    selected_slot_adapter_message: str = ""
+    selected_slot_loader_reason_code: str = ""
+    selected_slot_loader_message: str = ""
     audio: AudioStatus = field(default_factory=AudioStatus)
 
 
