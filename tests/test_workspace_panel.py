@@ -50,6 +50,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
         managed_instance_count=1,
         failed_instance_count=0,
         selected_managed_instance_summary="stub-1:created:created:created:adapter stub created",
+        selected_runtime_handle_summary="local_runtime:lrh-1:builtin_graph:builtin://midas/eq/basic",
         recent_sessions=[
             RecentSessionEntry(
                 session_ref="mix-a",
@@ -69,6 +70,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert "Discoverable: 3" in panel.recent_summary_card_label.text()
     assert "active=1 failed=0" in panel.instance_label.text()
     assert "stub-1:created:created" in panel.selected_instance_label.text()
+    assert "lrh-1" in panel.selected_runtime_handle_label.text()
     assert panel.selected_recent_session_ref() == "mix-a"
 
 
@@ -125,9 +127,27 @@ def test_debug_panel_renders_adapter_backend_summary():
         support_scope="midas.*",
         selected_slot_reason="plugin_unavailable",
         selected_slot_message="plugin is not supported by local runtime backend",
+        selected_backend_name="local_runtime",
+        selected_backend_handle="lrh-42",
+        selected_handle_state="active",
+        selected_terminal=False,
+        selected_retryable=True,
+        selected_reason_source="adapter",
+        selected_descriptor_id="midas.eq.basic",
+        selected_descriptor_kind="builtin_graph",
+        selected_descriptor_ref="builtin://midas/eq/basic",
+        catalog_source_label="local_manifest",
+        catalog_source_version="1",
+        catalog_descriptor_count=4,
+        catalog_valid_descriptor_count=3,
+        catalog_policy_supported_descriptor_count=3,
     )
 
     assert panel.backend_label.text() == "Backend: local_runtime"
     assert "create=yes" in panel.capabilities_label.text()
     assert panel.scope_label.text() == "Support Scope: midas.*"
+    assert "source=local_manifest@1" in panel.catalog_label.text()
     assert "plugin_unavailable" in panel.slot_adapter_label.text()
+    assert "lrh-42" in panel.slot_runtime_label.text()
+    assert "handle_state=active" in panel.slot_runtime_label.text()
+    assert "source=adapter" in panel.slot_runtime_label.text()

@@ -82,6 +82,7 @@ class WorkspacePanel(QWidget):
         self.selected_insert_label = QLabel("Selected Insert: -")
         self.instance_label = QLabel("Managed Instances: active=0 failed=0")
         self.selected_instance_label = QLabel("Selected Managed Instance: -")
+        self.selected_runtime_handle_label = QLabel("Selected Runtime Handle: -")
         self.reconcile_label = QLabel("Reconcile: attempted=0 resolved=0 failed=0 created=0 cleared=0")
         self.reconcile_policy_label = QLabel("Reconcile Policy: mode=none action=none pending_manual=no")
         runtime_form.addRow(self.audio_label)
@@ -95,6 +96,7 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.selected_insert_label)
         runtime_form.addRow(self.instance_label)
         runtime_form.addRow(self.selected_instance_label)
+        runtime_form.addRow(self.selected_runtime_handle_label)
         runtime_form.addRow(self.reconcile_label)
         runtime_form.addRow(self.reconcile_policy_label)
         layout.addWidget(runtime_box)
@@ -200,6 +202,9 @@ class WorkspacePanel(QWidget):
         )
         self.selected_instance_label.setText(
             f"Selected Managed Instance: {vm.selected_managed_instance_summary or '-'}"
+        )
+        self.selected_runtime_handle_label.setText(
+            f"Selected Runtime Handle: {vm.selected_runtime_handle_summary or '-'}"
         )
         self.reconcile_label.setText(
             "Reconcile: "

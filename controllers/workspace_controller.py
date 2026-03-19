@@ -104,9 +104,21 @@ class WorkspaceController:
                 f"{first.managed_instance_adapter_state}:{first.managed_instance_adapter_reason_code or '-'}:"
                 f"{first.managed_instance_message or '-'}"
             )
+            self._vm.selected_runtime_handle_summary = (
+                f"{first.managed_instance_backend_name or 'none'}:"
+                f"{first.managed_instance_backend_handle or 'none'}:"
+                f"{first.managed_instance_handle_state or 'unavailable'}:"
+                f"{'terminal' if first.managed_instance_terminal else 'nonterminal'}:"
+                f"{'retryable' if first.managed_instance_retryable else 'not-retryable'}:"
+                f"{first.managed_instance_reason_source or 'none'}:"
+                f"{first.managed_instance_descriptor_id or '-'}:"
+                f"{first.managed_instance_descriptor_kind or '-'}:"
+                f"{first.managed_instance_descriptor_ref or '-'}"
+            )
         else:
             self._vm.selected_insert_summary = ""
             self._vm.selected_managed_instance_summary = ""
+            self._vm.selected_runtime_handle_summary = ""
 
     def reconcile_channel_inserts(self, channel_id: int) -> bool:
         result = self._bridge.reconcile_channel_inserts(channel_id)

@@ -32,6 +32,7 @@ class WorkspaceViewModel:
     managed_instance_count: int = 0
     failed_instance_count: int = 0
     selected_managed_instance_summary: str = ""
+    selected_runtime_handle_summary: str = ""
     reconcile_attempted: int = 0
     reconcile_resolved: int = 0
     reconcile_failed: int = 0

@@ -105,6 +105,15 @@ def main() -> None:
         assert loader_outcome == "ok"
         assert loader_reason == "resolved"
         assert initial_managed_id != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_backend_name", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_backend_handle", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_descriptor_id", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_descriptor_kind", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_descriptor_ref", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_handle_state", "")) == "active"
+        assert str(chain[0].get("values", {}).get("managed_instance_terminal", "")).lower() == "false"
+        assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
+        assert str(chain[0].get("values", {}).get("managed_instance_reason_source", "")) == "adapter"
         assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "created"
@@ -125,6 +134,10 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "unloaded"
     assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "destroyed"
     assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "destroyed"
+    assert str(chain[0].get("values", {}).get("managed_instance_handle_state", "")) == "destroyed"
+    assert str(chain[0].get("values", {}).get("managed_instance_terminal", "")).lower() == "true"
+    assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
+    assert str(chain[0].get("values", {}).get("managed_instance_reason_source", "")) == "adapter"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     history = native.get_managed_instance_history()
@@ -185,6 +198,9 @@ def main() -> None:
     )
     assert str(unsupported.get("loader_outcome", "")) == "unavailable"
     assert str(unsupported.get("loader_reason_code", "")) in {"plugin_unavailable", "plugin_not_supported"}
+    assert str(unsupported.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(unsupported.get("managed_instance_reason_source", "")) in {"loader", "policy"}
+    assert str(unsupported.get("managed_instance_retryable", "")).lower() == "true"
 
     assert native.get_mixer_channels()
     assert int(native.shutdown_runtime_profile()["code"]) == 0

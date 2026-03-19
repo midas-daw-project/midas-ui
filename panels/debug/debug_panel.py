@@ -35,7 +35,9 @@ class DebugPanel(QWidget):
         self.backend_label = QLabel("Backend: -")
         self.capabilities_label = QLabel("Capabilities: -")
         self.scope_label = QLabel("Support Scope: -")
+        self.catalog_label = QLabel("Catalog: -")
         self.slot_adapter_label = QLabel("Selected Slot Adapter: -")
+        self.slot_runtime_label = QLabel("Selected Slot Runtime: -")
         self.manual_refresh_button = QPushButton("Manual Refresh")
         bridge_form.addRow(self.mode_label)
         bridge_form.addRow(self.version_label)
@@ -43,7 +45,9 @@ class DebugPanel(QWidget):
         bridge_form.addRow(self.backend_label)
         bridge_form.addRow(self.capabilities_label)
         bridge_form.addRow(self.scope_label)
+        bridge_form.addRow(self.catalog_label)
         bridge_form.addRow(self.slot_adapter_label)
+        bridge_form.addRow(self.slot_runtime_label)
         bridge_form.addRow(self.manual_refresh_button)
 
         summary_box = QGroupBox("Summary")
@@ -119,6 +123,20 @@ class DebugPanel(QWidget):
         support_scope: str,
         selected_slot_reason: str,
         selected_slot_message: str,
+        selected_backend_name: str,
+        selected_backend_handle: str,
+        selected_handle_state: str,
+        selected_terminal: bool,
+        selected_retryable: bool,
+        selected_reason_source: str,
+        selected_descriptor_id: str,
+        selected_descriptor_kind: str,
+        selected_descriptor_ref: str,
+        catalog_source_label: str,
+        catalog_source_version: str,
+        catalog_descriptor_count: int,
+        catalog_valid_descriptor_count: int,
+        catalog_policy_supported_descriptor_count: int,
     ) -> None:
         self.backend_label.setText(f"Backend: {backend_name or '-'}")
         self.capabilities_label.setText(
@@ -128,12 +146,42 @@ class DebugPanel(QWidget):
             f"query={'yes' if supports_query else 'no'}"
         )
         self.scope_label.setText(f"Support Scope: {support_scope or '-'}")
+        self.catalog_label.setText(
+            "Catalog: "
+            f"source={catalog_source_label or '-'}"
+            f"@{catalog_source_version or '-'} "
+            f"descriptors={catalog_descriptor_count} "
+            f"valid={catalog_valid_descriptor_count} "
+            f"policy_supported={catalog_policy_supported_descriptor_count}"
+        )
         if selected_slot_reason or selected_slot_message:
             self.slot_adapter_label.setText(
                 f"Selected Slot Adapter: reason={selected_slot_reason or '-'} msg={selected_slot_message or '-'}"
             )
         else:
             self.slot_adapter_label.setText("Selected Slot Adapter: -")
+        if (
+            selected_backend_name
+            or selected_backend_handle
+            or selected_handle_state
+            or selected_reason_source
+            or selected_descriptor_id
+            or selected_descriptor_kind
+            or selected_descriptor_ref
+        ):
+            self.slot_runtime_label.setText(
+                "Selected Slot Runtime: "
+                f"backend={selected_backend_name or '-'} "
+                f"handle={selected_backend_handle or '-'} "
+                f"handle_state={selected_handle_state or '-'} "
+                f"terminal={'yes' if selected_terminal else 'no'} "
+                f"retryable={'yes' if selected_retryable else 'no'} "
+                f"source={selected_reason_source or '-'} "
+                f"descriptor={selected_descriptor_id or '-'} "
+                f"({selected_descriptor_kind or '-'}:{selected_descriptor_ref or '-'})"
+            )
+        else:
+            self.slot_runtime_label.setText("Selected Slot Runtime: -")
 
     def set_event_filter(self, value: str) -> None:
         index = self.event_filter.findText(value)

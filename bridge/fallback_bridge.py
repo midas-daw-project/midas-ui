@@ -410,6 +410,15 @@ class FallbackBridgeClient(BridgeClient):
             supports_destroy=True,
             supports_query=True,
             support_scope_summary="midas.*",
+            catalog_source_label="fallback",
+            catalog_source_version="1",
+            catalog_descriptor_count=len(self._plugin_registry),
+            catalog_valid_descriptor_count=sum(1 for entry in self._plugin_registry if entry.available),
+            catalog_policy_supported_descriptor_count=sum(
+                1
+                for entry in self._plugin_registry
+                if entry.plugin_id.startswith("midas.")
+            ),
             selected_slot_plugin_id=selected_slot.plugin_id if selected_slot is not None else "",
             selected_slot_index=selected_slot.slot_index if selected_slot is not None else 0,
             selected_slot_adapter_reason_code=(
@@ -469,6 +478,15 @@ class FallbackBridgeClient(BridgeClient):
                 managed_instance_adapter_reason_code=slot.managed_instance_adapter_reason_code,
                 managed_instance_message=slot.managed_instance_message,
                 managed_instance_created_sequence=slot.managed_instance_created_sequence,
+                managed_instance_backend_name=slot.managed_instance_backend_name,
+                managed_instance_backend_handle=slot.managed_instance_backend_handle,
+                managed_instance_handle_state=slot.managed_instance_handle_state,
+                managed_instance_terminal=slot.managed_instance_terminal,
+                managed_instance_retryable=slot.managed_instance_retryable,
+                managed_instance_reason_source=slot.managed_instance_reason_source,
+                managed_instance_descriptor_id=slot.managed_instance_descriptor_id,
+                managed_instance_descriptor_kind=slot.managed_instance_descriptor_kind,
+                managed_instance_descriptor_ref=slot.managed_instance_descriptor_ref,
                 loader_outcome=slot.loader_outcome,
                 loader_reason_code=slot.loader_reason_code,
                 loader_message=slot.loader_message,
@@ -494,6 +512,15 @@ class FallbackBridgeClient(BridgeClient):
                         managed_instance_adapter_reason_code=slot.managed_instance_adapter_reason_code,
                         managed_instance_message=slot.managed_instance_message,
                         managed_instance_created_sequence=slot.managed_instance_created_sequence,
+                        managed_instance_backend_name=slot.managed_instance_backend_name,
+                        managed_instance_backend_handle=slot.managed_instance_backend_handle,
+                        managed_instance_handle_state=slot.managed_instance_handle_state,
+                        managed_instance_terminal=slot.managed_instance_terminal,
+                        managed_instance_retryable=slot.managed_instance_retryable,
+                        managed_instance_reason_source=slot.managed_instance_reason_source,
+                        managed_instance_descriptor_id=slot.managed_instance_descriptor_id,
+                        managed_instance_descriptor_kind=slot.managed_instance_descriptor_kind,
+                        managed_instance_descriptor_ref=slot.managed_instance_descriptor_ref,
                     )
                 )
         instances.sort(key=lambda item: (item.channel_id, item.slot_index))
@@ -534,6 +561,15 @@ class FallbackBridgeClient(BridgeClient):
                     managed_instance_adapter_reason_code="",
                     managed_instance_message="",
                     managed_instance_created_sequence=0,
+                    managed_instance_backend_name="",
+                    managed_instance_backend_handle="",
+                    managed_instance_handle_state="unavailable",
+                    managed_instance_terminal=False,
+                    managed_instance_retryable=True,
+                    managed_instance_reason_source="none",
+                    managed_instance_descriptor_id="",
+                    managed_instance_descriptor_kind="",
+                    managed_instance_descriptor_ref="",
                     loader_outcome="",
                     loader_reason_code="",
                     loader_message="",
@@ -560,6 +596,15 @@ class FallbackBridgeClient(BridgeClient):
                     managed_instance_adapter_reason_code="",
                     managed_instance_message="",
                     managed_instance_created_sequence=0,
+                    managed_instance_backend_name="",
+                    managed_instance_backend_handle="",
+                    managed_instance_handle_state="unavailable",
+                    managed_instance_terminal=False,
+                    managed_instance_retryable=True,
+                    managed_instance_reason_source="none",
+                    managed_instance_descriptor_id="",
+                    managed_instance_descriptor_kind="",
+                    managed_instance_descriptor_ref="",
                     loader_outcome="",
                     loader_reason_code="",
                     loader_message="",
@@ -756,6 +801,15 @@ class FallbackBridgeClient(BridgeClient):
             slot.managed_instance_adapter_state = "created"
             slot.managed_instance_adapter_reason_code = "created"
             slot.managed_instance_message = "adapter stub created"
+            slot.managed_instance_backend_name = "fallback_stub"
+            slot.managed_instance_backend_handle = f"fallback-handle-{slot.managed_instance_id}"
+            slot.managed_instance_handle_state = "active"
+            slot.managed_instance_terminal = False
+            slot.managed_instance_retryable = True
+            slot.managed_instance_reason_source = "adapter"
+            slot.managed_instance_descriptor_id = f"fallback.{slot.plugin_id}"
+            slot.managed_instance_descriptor_kind = "fallback_builtin"
+            slot.managed_instance_descriptor_ref = f"fallback://{slot.plugin_id}"
             slot.loader_outcome = "ok"
             slot.loader_reason_code = "resolved"
             slot.loader_message = "plugin resolved and placeholder created"
@@ -770,6 +824,15 @@ class FallbackBridgeClient(BridgeClient):
             slot.managed_instance_adapter_reason_code = "runtime_not_loadable"
             slot.managed_instance_message = slot.host_message
             slot.managed_instance_created_sequence = 0
+            slot.managed_instance_backend_name = ""
+            slot.managed_instance_backend_handle = ""
+            slot.managed_instance_handle_state = "unavailable"
+            slot.managed_instance_terminal = False
+            slot.managed_instance_retryable = True
+            slot.managed_instance_reason_source = "loader"
+            slot.managed_instance_descriptor_id = ""
+            slot.managed_instance_descriptor_kind = ""
+            slot.managed_instance_descriptor_ref = ""
             slot.loader_outcome = "unavailable"
             slot.loader_reason_code = "runtime_not_loadable"
             slot.loader_message = slot.host_message
@@ -804,6 +867,15 @@ class FallbackBridgeClient(BridgeClient):
         slot.managed_instance_adapter_reason_code = "destroyed"
         slot.managed_instance_message = "adapter stub destroyed"
         slot.managed_instance_created_sequence = 0
+        slot.managed_instance_backend_name = ""
+        slot.managed_instance_backend_handle = ""
+        slot.managed_instance_handle_state = "destroyed"
+        slot.managed_instance_terminal = True
+        slot.managed_instance_retryable = True
+        slot.managed_instance_reason_source = "adapter"
+        slot.managed_instance_descriptor_id = ""
+        slot.managed_instance_descriptor_kind = ""
+        slot.managed_instance_descriptor_ref = ""
         slot.loader_outcome = "ok"
         slot.loader_reason_code = "unloaded"
         slot.loader_message = "placeholder unloaded"
@@ -878,6 +950,15 @@ class FallbackBridgeClient(BridgeClient):
                         managed_instance_adapter_reason_code="",
                         managed_instance_message="",
                         managed_instance_created_sequence=0,
+                        managed_instance_backend_name="",
+                        managed_instance_backend_handle="",
+                        managed_instance_handle_state="unavailable",
+                        managed_instance_terminal=False,
+                        managed_instance_retryable=True,
+                        managed_instance_reason_source="none",
+                        managed_instance_descriptor_id="",
+                        managed_instance_descriptor_kind="",
+                        managed_instance_descriptor_ref="",
                         loader_outcome="",
                         loader_reason_code="",
                         loader_message="",

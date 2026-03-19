@@ -86,6 +86,11 @@ class RuntimeStatus:
     supports_destroy: bool = False
     supports_query: bool = False
     support_scope_summary: str = ""
+    catalog_source_label: str = ""
+    catalog_source_version: str = ""
+    catalog_descriptor_count: int = 0
+    catalog_valid_descriptor_count: int = 0
+    catalog_policy_supported_descriptor_count: int = 0
     selected_slot_plugin_id: str = ""
     selected_slot_index: int = 0
     selected_slot_adapter_reason_code: str = ""
@@ -140,6 +145,15 @@ class InsertedPluginSlot:
     managed_instance_adapter_reason_code: str = ""
     managed_instance_message: str = ""
     managed_instance_created_sequence: int = 0
+    managed_instance_backend_name: str = ""
+    managed_instance_backend_handle: str = ""
+    managed_instance_handle_state: str = "unavailable"
+    managed_instance_terminal: bool = False
+    managed_instance_retryable: bool = True
+    managed_instance_reason_source: str = "none"
+    managed_instance_descriptor_id: str = ""
+    managed_instance_descriptor_kind: str = ""
+    managed_instance_descriptor_ref: str = ""
     loader_outcome: str = ""
     loader_reason_code: str = ""
     loader_message: str = ""
@@ -157,6 +171,15 @@ class ManagedInstanceRecord:
     managed_instance_adapter_reason_code: str = ""
     managed_instance_message: str = ""
     managed_instance_created_sequence: int = 0
+    managed_instance_backend_name: str = ""
+    managed_instance_backend_handle: str = ""
+    managed_instance_handle_state: str = "unavailable"
+    managed_instance_terminal: bool = False
+    managed_instance_retryable: bool = True
+    managed_instance_reason_source: str = "none"
+    managed_instance_descriptor_id: str = ""
+    managed_instance_descriptor_kind: str = ""
+    managed_instance_descriptor_ref: str = ""
 
 
 @dataclass(slots=True)

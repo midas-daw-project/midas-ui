@@ -56,6 +56,8 @@ def test_workspace_overview_reflects_runtime_and_session():
     assert "stub-" in workspace_vm.selected_insert_summary
     assert "created" in workspace_vm.selected_managed_instance_summary
     assert "created:created" in workspace_vm.selected_managed_instance_summary
+    assert "fallback_stub" in workspace_vm.selected_runtime_handle_summary
+    assert "fallback-handle-" in workspace_vm.selected_runtime_handle_summary
     assert workspace.reconcile_all_inserts() is True
     workspace.refresh_overview()
     assert workspace_vm.reconcile_attempted >= 1

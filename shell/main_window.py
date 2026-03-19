@@ -596,6 +596,14 @@ class MainWindow(QMainWindow):
                 f"state={item.managed_instance_state or '-'} | "
                 f"adapter={item.managed_instance_adapter_state or '-'} | "
                 f"reason={item.managed_instance_adapter_reason_code or '-'} | "
+                f"backend={item.managed_instance_backend_name or '-'} | "
+                f"handle={item.managed_instance_backend_handle or '-'} | "
+                f"handle_state={item.managed_instance_handle_state or '-'} | "
+                f"terminal={'yes' if item.managed_instance_terminal else 'no'} | "
+                f"retryable={'yes' if item.managed_instance_retryable else 'no'} | "
+                f"reason_source={item.managed_instance_reason_source or '-'} | "
+                f"descriptor_id={item.managed_instance_descriptor_id or '-'} | "
+                f"descriptor={item.managed_instance_descriptor_kind or '-'}:{item.managed_instance_descriptor_ref or '-'} | "
                 f"seq={item.managed_instance_created_sequence} | "
                 f"msg={item.managed_instance_message or '-'}"
             )
@@ -619,10 +627,22 @@ class MainWindow(QMainWindow):
         selected_summary = (
             f"{selected_slot.managed_instance_id or '-'} / "
             f"{selected_slot.managed_instance_state or '-'} / "
-            f"{selected_slot.managed_instance_adapter_state or '-'}"
+            f"{selected_slot.managed_instance_adapter_state or '-'} / "
+            f"{selected_slot.managed_instance_handle_state or '-'} / "
+            f"{selected_slot.managed_instance_reason_source or '-'} / "
+            f"{'retryable' if selected_slot.managed_instance_retryable else 'terminal'}"
             if selected_slot is not None
             else "-"
         )
+        selected_backend_name = selected_slot.managed_instance_backend_name if selected_slot is not None else ""
+        selected_backend_handle = selected_slot.managed_instance_backend_handle if selected_slot is not None else ""
+        selected_handle_state = selected_slot.managed_instance_handle_state if selected_slot is not None else ""
+        selected_terminal = selected_slot.managed_instance_terminal if selected_slot is not None else False
+        selected_retryable = selected_slot.managed_instance_retryable if selected_slot is not None else False
+        selected_reason_source = selected_slot.managed_instance_reason_source if selected_slot is not None else ""
+        selected_descriptor_id = selected_slot.managed_instance_descriptor_id if selected_slot is not None else ""
+        selected_descriptor_kind = selected_slot.managed_instance_descriptor_kind if selected_slot is not None else ""
+        selected_descriptor_ref = selected_slot.managed_instance_descriptor_ref if selected_slot is not None else ""
         self._debug_panel.set_domain_statuses(
             audio=(
                 f"runtime={'on' if self._audio_vm.runtime_started else 'off'}, "
@@ -649,6 +669,20 @@ class MainWindow(QMainWindow):
             or runtime_status.selected_slot_loader_reason_code,
             selected_slot_message=runtime_status.selected_slot_adapter_message
             or runtime_status.selected_slot_loader_message,
+            selected_backend_name=selected_backend_name,
+            selected_backend_handle=selected_backend_handle,
+            selected_handle_state=selected_handle_state,
+            selected_terminal=selected_terminal,
+            selected_retryable=selected_retryable,
+            selected_reason_source=selected_reason_source,
+            selected_descriptor_id=selected_descriptor_id,
+            selected_descriptor_kind=selected_descriptor_kind,
+            selected_descriptor_ref=selected_descriptor_ref,
+            catalog_source_label=runtime_status.catalog_source_label,
+            catalog_source_version=runtime_status.catalog_source_version,
+            catalog_descriptor_count=runtime_status.catalog_descriptor_count,
+            catalog_valid_descriptor_count=runtime_status.catalog_valid_descriptor_count,
+            catalog_policy_supported_descriptor_count=runtime_status.catalog_policy_supported_descriptor_count,
         )
         self._debug_panel.set_managed_instance_status(
             summary=f"active={len(managed_instances)} selected={selected_summary}",
