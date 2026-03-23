@@ -602,6 +602,9 @@ class MainWindow(QMainWindow):
                 f"terminal={'yes' if item.managed_instance_terminal else 'no'} | "
                 f"retryable={'yes' if item.managed_instance_retryable else 'no'} | "
                 f"reason_source={item.managed_instance_reason_source or '-'} | "
+                f"loader_strategy={item.managed_instance_loader_strategy or '-'} | "
+                f"validator={item.managed_instance_validator_path or '-'} | "
+                f"attribution={item.managed_instance_failure_attribution or '-'} | "
                 f"descriptor_id={item.managed_instance_descriptor_id or '-'} | "
                 f"descriptor={item.managed_instance_descriptor_kind or '-'}:{item.managed_instance_descriptor_ref or '-'} | "
                 f"seq={item.managed_instance_created_sequence} | "
@@ -630,6 +633,9 @@ class MainWindow(QMainWindow):
             f"{selected_slot.managed_instance_adapter_state or '-'} / "
             f"{selected_slot.managed_instance_handle_state or '-'} / "
             f"{selected_slot.managed_instance_reason_source or '-'} / "
+            f"{selected_slot.managed_instance_loader_strategy or '-'} / "
+            f"{selected_slot.managed_instance_validator_path or '-'} / "
+            f"{selected_slot.managed_instance_failure_attribution or '-'} / "
             f"{'retryable' if selected_slot.managed_instance_retryable else 'terminal'}"
             if selected_slot is not None
             else "-"
@@ -643,6 +649,15 @@ class MainWindow(QMainWindow):
         selected_descriptor_id = selected_slot.managed_instance_descriptor_id if selected_slot is not None else ""
         selected_descriptor_kind = selected_slot.managed_instance_descriptor_kind if selected_slot is not None else ""
         selected_descriptor_ref = selected_slot.managed_instance_descriptor_ref if selected_slot is not None else ""
+        selected_reason = runtime_status.selected_slot_adapter_reason_code or runtime_status.selected_slot_loader_reason_code
+        selected_message = runtime_status.selected_slot_adapter_message or runtime_status.selected_slot_loader_message
+        if selected_slot is not None:
+            selected_message = (
+                f"{selected_message or '-'} | "
+                f"strategy={selected_slot.managed_instance_loader_strategy or '-'} | "
+                f"validator={selected_slot.managed_instance_validator_path or '-'} | "
+                f"attribution={selected_slot.managed_instance_failure_attribution or '-'}"
+            )
         self._debug_panel.set_domain_statuses(
             audio=(
                 f"runtime={'on' if self._audio_vm.runtime_started else 'off'}, "
@@ -665,10 +680,8 @@ class MainWindow(QMainWindow):
             supports_destroy=runtime_status.supports_destroy,
             supports_query=runtime_status.supports_query,
             support_scope=runtime_status.support_scope_summary,
-            selected_slot_reason=runtime_status.selected_slot_adapter_reason_code
-            or runtime_status.selected_slot_loader_reason_code,
-            selected_slot_message=runtime_status.selected_slot_adapter_message
-            or runtime_status.selected_slot_loader_message,
+            selected_slot_reason=selected_reason,
+            selected_slot_message=selected_message,
             selected_backend_name=selected_backend_name,
             selected_backend_handle=selected_backend_handle,
             selected_handle_state=selected_handle_state,

@@ -484,6 +484,9 @@ class FallbackBridgeClient(BridgeClient):
                 managed_instance_terminal=slot.managed_instance_terminal,
                 managed_instance_retryable=slot.managed_instance_retryable,
                 managed_instance_reason_source=slot.managed_instance_reason_source,
+                managed_instance_loader_strategy=slot.managed_instance_loader_strategy,
+                managed_instance_validator_path=slot.managed_instance_validator_path,
+                managed_instance_failure_attribution=slot.managed_instance_failure_attribution,
                 managed_instance_descriptor_id=slot.managed_instance_descriptor_id,
                 managed_instance_descriptor_kind=slot.managed_instance_descriptor_kind,
                 managed_instance_descriptor_ref=slot.managed_instance_descriptor_ref,
@@ -518,6 +521,9 @@ class FallbackBridgeClient(BridgeClient):
                         managed_instance_terminal=slot.managed_instance_terminal,
                         managed_instance_retryable=slot.managed_instance_retryable,
                         managed_instance_reason_source=slot.managed_instance_reason_source,
+                        managed_instance_loader_strategy=slot.managed_instance_loader_strategy,
+                        managed_instance_validator_path=slot.managed_instance_validator_path,
+                        managed_instance_failure_attribution=slot.managed_instance_failure_attribution,
                         managed_instance_descriptor_id=slot.managed_instance_descriptor_id,
                         managed_instance_descriptor_kind=slot.managed_instance_descriptor_kind,
                         managed_instance_descriptor_ref=slot.managed_instance_descriptor_ref,
@@ -567,6 +573,9 @@ class FallbackBridgeClient(BridgeClient):
                     managed_instance_terminal=False,
                     managed_instance_retryable=True,
                     managed_instance_reason_source="none",
+                    managed_instance_loader_strategy="default_loader",
+                    managed_instance_validator_path="default_validator",
+                    managed_instance_failure_attribution="none",
                     managed_instance_descriptor_id="",
                     managed_instance_descriptor_kind="",
                     managed_instance_descriptor_ref="",
@@ -602,6 +611,9 @@ class FallbackBridgeClient(BridgeClient):
                     managed_instance_terminal=False,
                     managed_instance_retryable=True,
                     managed_instance_reason_source="none",
+                    managed_instance_loader_strategy="default_loader",
+                    managed_instance_validator_path="default_validator",
+                    managed_instance_failure_attribution="none",
                     managed_instance_descriptor_id="",
                     managed_instance_descriptor_kind="",
                     managed_instance_descriptor_ref="",
@@ -807,6 +819,17 @@ class FallbackBridgeClient(BridgeClient):
             slot.managed_instance_terminal = False
             slot.managed_instance_retryable = True
             slot.managed_instance_reason_source = "adapter"
+            slot.managed_instance_loader_strategy = (
+                "builtin_graph_loader"
+                if slot.plugin_id.startswith("midas.")
+                else "partner_bundle_loader" if slot.plugin_id.startswith("partnerlabs.") else "default_loader"
+            )
+            slot.managed_instance_validator_path = (
+                "builtin_graph_validator"
+                if slot.plugin_id.startswith("midas.")
+                else "partner_bundle_validator" if slot.plugin_id.startswith("partnerlabs.") else "default_validator"
+            )
+            slot.managed_instance_failure_attribution = "adapter_runtime"
             slot.managed_instance_descriptor_id = f"fallback.{slot.plugin_id}"
             slot.managed_instance_descriptor_kind = "fallback_builtin"
             slot.managed_instance_descriptor_ref = f"fallback://{slot.plugin_id}"
@@ -830,6 +853,9 @@ class FallbackBridgeClient(BridgeClient):
             slot.managed_instance_terminal = False
             slot.managed_instance_retryable = True
             slot.managed_instance_reason_source = "loader"
+            slot.managed_instance_loader_strategy = "default_loader"
+            slot.managed_instance_validator_path = "default_validator"
+            slot.managed_instance_failure_attribution = "loader"
             slot.managed_instance_descriptor_id = ""
             slot.managed_instance_descriptor_kind = ""
             slot.managed_instance_descriptor_ref = ""
@@ -873,6 +899,9 @@ class FallbackBridgeClient(BridgeClient):
         slot.managed_instance_terminal = True
         slot.managed_instance_retryable = True
         slot.managed_instance_reason_source = "adapter"
+        slot.managed_instance_loader_strategy = "default_loader"
+        slot.managed_instance_validator_path = "default_validator"
+        slot.managed_instance_failure_attribution = "adapter_runtime"
         slot.managed_instance_descriptor_id = ""
         slot.managed_instance_descriptor_kind = ""
         slot.managed_instance_descriptor_ref = ""
@@ -956,6 +985,9 @@ class FallbackBridgeClient(BridgeClient):
                         managed_instance_terminal=False,
                         managed_instance_retryable=True,
                         managed_instance_reason_source="none",
+                        managed_instance_loader_strategy="default_loader",
+                        managed_instance_validator_path="default_validator",
+                        managed_instance_failure_attribution="none",
                         managed_instance_descriptor_id="",
                         managed_instance_descriptor_kind="",
                         managed_instance_descriptor_ref="",

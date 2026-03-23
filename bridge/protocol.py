@@ -151,6 +151,9 @@ class InsertedPluginSlot:
     managed_instance_terminal: bool = False
     managed_instance_retryable: bool = True
     managed_instance_reason_source: str = "none"
+    managed_instance_loader_strategy: str = "default_loader"
+    managed_instance_validator_path: str = "default_validator"
+    managed_instance_failure_attribution: str = "none"
     managed_instance_descriptor_id: str = ""
     managed_instance_descriptor_kind: str = ""
     managed_instance_descriptor_ref: str = ""
@@ -177,6 +180,9 @@ class ManagedInstanceRecord:
     managed_instance_terminal: bool = False
     managed_instance_retryable: bool = True
     managed_instance_reason_source: str = "none"
+    managed_instance_loader_strategy: str = "default_loader"
+    managed_instance_validator_path: str = "default_validator"
+    managed_instance_failure_attribution: str = "none"
     managed_instance_descriptor_id: str = ""
     managed_instance_descriptor_kind: str = ""
     managed_instance_descriptor_ref: str = ""

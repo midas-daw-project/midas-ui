@@ -114,6 +114,9 @@ def main() -> None:
         assert str(chain[0].get("values", {}).get("managed_instance_terminal", "")).lower() == "false"
         assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
         assert str(chain[0].get("values", {}).get("managed_instance_reason_source", "")) == "adapter"
+        assert str(chain[0].get("values", {}).get("managed_instance_loader_strategy", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_validator_path", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_failure_attribution", "")) == "adapter_runtime"
         assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "created"
@@ -138,6 +141,7 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("managed_instance_terminal", "")).lower() == "true"
     assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
     assert str(chain[0].get("values", {}).get("managed_instance_reason_source", "")) == "adapter"
+    assert str(chain[0].get("values", {}).get("managed_instance_failure_attribution", "")) == "adapter_runtime"
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     history = native.get_managed_instance_history()
@@ -200,6 +204,7 @@ def main() -> None:
     assert str(unsupported.get("loader_reason_code", "")) in {"plugin_unavailable", "plugin_not_supported"}
     assert str(unsupported.get("managed_instance_handle_state", "")) == "unavailable"
     assert str(unsupported.get("managed_instance_reason_source", "")) in {"loader", "policy"}
+    assert str(unsupported.get("managed_instance_failure_attribution", "")) in {"policy", "loader"}
     assert str(unsupported.get("managed_instance_retryable", "")).lower() == "true"
 
     assert native.get_mixer_channels()
