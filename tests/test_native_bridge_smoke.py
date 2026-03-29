@@ -120,6 +120,11 @@ def main() -> None:
         assert str(chain[0].get("values", {}).get("managed_instance_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_state", "")) == "created"
         assert str(chain[0].get("values", {}).get("managed_instance_adapter_reason_code", "")) == "created"
+        managed_message = str(chain[0].get("values", {}).get("managed_instance_message", ""))
+        assert "builtin graph runtime object" in managed_message
+        assert "[resource:" in managed_message
+        assert "[runtime_snapshot:" in managed_message
+        assert "[loader:" in managed_message
         managed_instances = native.get_managed_instances()
         assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
         history = native.get_managed_instance_history()
@@ -142,6 +147,9 @@ def main() -> None:
     assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
     assert str(chain[0].get("values", {}).get("managed_instance_reason_source", "")) == "adapter"
     assert str(chain[0].get("values", {}).get("managed_instance_failure_attribution", "")) == "adapter_runtime"
+    terminal_message = str(chain[0].get("values", {}).get("managed_instance_message", ""))
+    assert "[last_load_state: unloaded]" in terminal_message
+    assert "[last_runtime_snapshot: graph_released]" in terminal_message
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     history = native.get_managed_instance_history()
