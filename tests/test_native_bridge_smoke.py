@@ -160,6 +160,30 @@ def main() -> None:
     rv = reconcile.get("values", {})
     assert int(rv.get("channels_scanned", "0")) >= 1
     assert int(rv.get("attempted", "0")) >= 1
+    assert int(native.insert_plugin(1, "partnerlabs.delay.basic", 1)["code"]) == 0
+    assert int(native.insert_plugin(1, "curated.delay.reference", 2)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 1)["code"]) == 0
+    assert int(native.request_insert_load(1, 2)["code"]) == 0
+    specialized_chain = native.get_insert_chain(1)
+    partner = next(
+        (slot.get("values", {}) for slot in specialized_chain if str(slot.get("values", {}).get("slot_index", "")) == "1"),
+        {},
+    )
+    curated = next(
+        (slot.get("values", {}) for slot in specialized_chain if str(slot.get("values", {}).get("slot_index", "")) == "2"),
+        {},
+    )
+    partner_message = str(partner.get("managed_instance_message", ""))
+    assert "partner bundle runtime object" in partner_message
+    assert "[trust:" in partner_message
+    assert "[health_monitor:" in partner_message
+    assert "[loader:" in partner_message
+    curated_message = str(curated.get("managed_instance_message", ""))
+    assert "curated bundle runtime object" in curated_message
+    assert "[manifest:" in curated_message
+    assert "[policy_state:" in curated_message
+    assert "[loader:" in curated_message
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
     assert len(native.get_insert_chain(1)) == 0
