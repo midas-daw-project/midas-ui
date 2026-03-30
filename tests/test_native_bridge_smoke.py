@@ -124,6 +124,9 @@ def main() -> None:
         assert "builtin graph runtime object" in managed_message
         assert "[resource:" in managed_message
         assert "[runtime_snapshot:" in managed_message
+        assert "[load_ticket:" in managed_message
+        assert "[sync_state:" in managed_message
+        assert "[mount_state:" in managed_message
         assert "[loader:" in managed_message
         managed_instances = native.get_managed_instances()
         assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
@@ -150,6 +153,9 @@ def main() -> None:
     terminal_message = str(chain[0].get("values", {}).get("managed_instance_message", ""))
     assert "[last_load_state: unloaded]" in terminal_message
     assert "[last_runtime_snapshot: graph_released]" in terminal_message
+    assert "[last_load_ticket:" in terminal_message
+    assert "[last_sync_state:" in terminal_message
+    assert "[last_mount_state:" in terminal_message
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     history = native.get_managed_instance_history()
@@ -178,11 +184,17 @@ def main() -> None:
     assert "partner bundle runtime object" in partner_message
     assert "[trust:" in partner_message
     assert "[health_monitor:" in partner_message
+    assert "[trust_anchor:" in partner_message
+    assert "[guard_state:" in partner_message
+    assert "[health_lease:" in partner_message
     assert "[loader:" in partner_message
     curated_message = str(curated.get("managed_instance_message", ""))
     assert "curated bundle runtime object" in curated_message
     assert "[manifest:" in curated_message
     assert "[policy_state:" in curated_message
+    assert "[lane_state:" in curated_message
+    assert "[anchor_state:" in curated_message
+    assert "[review_snapshot:" in curated_message
     assert "[loader:" in curated_message
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
