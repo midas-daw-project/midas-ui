@@ -157,6 +157,8 @@ class InsertedPluginSlot:
     managed_instance_descriptor_id: str = ""
     managed_instance_descriptor_kind: str = ""
     managed_instance_descriptor_ref: str = ""
+    managed_instance_descriptor_version: str = ""
+    managed_instance_descriptor_lineage: str = ""
     loader_outcome: str = ""
     loader_reason_code: str = ""
     loader_message: str = ""
@@ -186,6 +188,8 @@ class ManagedInstanceRecord:
     managed_instance_descriptor_id: str = ""
     managed_instance_descriptor_kind: str = ""
     managed_instance_descriptor_ref: str = ""
+    managed_instance_descriptor_version: str = ""
+    managed_instance_descriptor_lineage: str = ""
 
 
 @dataclass(slots=True)

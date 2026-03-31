@@ -382,6 +382,8 @@ class NativeBridgeClient(BridgeClient):
                         managed_instance_descriptor_id=str(values.get("managed_instance_descriptor_id", "")),
                         managed_instance_descriptor_kind=str(values.get("managed_instance_descriptor_kind", "")),
                         managed_instance_descriptor_ref=str(values.get("managed_instance_descriptor_ref", "")),
+                        managed_instance_descriptor_version=str(values.get("managed_instance_descriptor_version", "")),
+                        managed_instance_descriptor_lineage=str(values.get("managed_instance_descriptor_lineage", "")),
                         loader_outcome=str(values.get("loader_outcome", "")),
                         loader_reason_code=str(values.get("loader_reason_code", "")),
                         loader_message=str(values.get("loader_message", "")),
@@ -422,6 +424,8 @@ class NativeBridgeClient(BridgeClient):
                     managed_instance_descriptor_id=str(values.get("managed_instance_descriptor_id", "")),
                     managed_instance_descriptor_kind=str(values.get("managed_instance_descriptor_kind", "")),
                     managed_instance_descriptor_ref=str(values.get("managed_instance_descriptor_ref", "")),
+                    managed_instance_descriptor_version=str(values.get("managed_instance_descriptor_version", "")),
+                    managed_instance_descriptor_lineage=str(values.get("managed_instance_descriptor_lineage", "")),
                 )
             )
         return records

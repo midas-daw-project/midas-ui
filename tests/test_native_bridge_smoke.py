@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import importlib.util
 import os
 import sys
@@ -110,6 +110,8 @@ def main() -> None:
         assert str(chain[0].get("values", {}).get("managed_instance_descriptor_id", "")) != ""
         assert str(chain[0].get("values", {}).get("managed_instance_descriptor_kind", "")) != ""
         assert str(chain[0].get("values", {}).get("managed_instance_descriptor_ref", "")) != ""
+        assert str(chain[0].get("values", {}).get("managed_instance_descriptor_version", "")) == "1.0"
+        assert str(chain[0].get("values", {}).get("managed_instance_descriptor_lineage", "")) == "builtin.midas.comp.basic@1.0"
         assert str(chain[0].get("values", {}).get("managed_instance_handle_state", "")) == "active"
         assert str(chain[0].get("values", {}).get("managed_instance_terminal", "")).lower() == "false"
         assert str(chain[0].get("values", {}).get("managed_instance_retryable", "")).lower() == "true"
@@ -127,6 +129,9 @@ def main() -> None:
         assert "[load_ticket:" in managed_message
         assert "[sync_state:" in managed_message
         assert "[mount_state:" in managed_message
+        assert "[catalog_epoch:" in managed_message
+        assert "[load_guard:" in managed_message
+        assert "[resource_lease:" in managed_message
         assert "[loader:" in managed_message
         managed_instances = native.get_managed_instances()
         assert any(str(item.get("values", {}).get("managed_instance_id", "")) == initial_managed_id for item in managed_instances)
@@ -156,6 +161,9 @@ def main() -> None:
     assert "[last_load_ticket:" in terminal_message
     assert "[last_sync_state:" in terminal_message
     assert "[last_mount_state:" in terminal_message
+    assert "[last_catalog_epoch:" in terminal_message
+    assert "[last_load_guard:" in terminal_message
+    assert "[last_resource_lease:" in terminal_message
     assert str(chain[0].get("values", {}).get("loader_outcome", "")) == "ok"
     assert str(chain[0].get("values", {}).get("loader_reason_code", "")) == "unloaded"
     history = native.get_managed_instance_history()
@@ -181,20 +189,34 @@ def main() -> None:
         {},
     )
     partner_message = str(partner.get("managed_instance_message", ""))
+    assert str(partner.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(partner.get("managed_instance_descriptor_lineage", "")) == "partner.partnerlabs.delay.basic@1.0"
     assert "partner bundle runtime object" in partner_message
     assert "[trust:" in partner_message
     assert "[health_monitor:" in partner_message
     assert "[trust_anchor:" in partner_message
     assert "[guard_state:" in partner_message
     assert "[health_lease:" in partner_message
+    assert "[signature_state:" in partner_message
+    assert "[watch_state:" in partner_message
+    assert "[trust_window:" in partner_message
+    assert "[materialization_ticket:" in partner_message
+    assert "[materialization_lifecycle:" in partner_message
     assert "[loader:" in partner_message
     curated_message = str(curated.get("managed_instance_message", ""))
+    assert str(curated.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(curated.get("managed_instance_descriptor_lineage", "")) == "curated.delay.reference@1.0"
     assert "curated bundle runtime object" in curated_message
     assert "[manifest:" in curated_message
     assert "[policy_state:" in curated_message
     assert "[lane_state:" in curated_message
     assert "[anchor_state:" in curated_message
     assert "[review_snapshot:" in curated_message
+    assert "[curation_stream:" in curated_message
+    assert "[provenance_lease:" in curated_message
+    assert "[review_envelope:" in curated_message
+    assert "[materialization_ticket:" in curated_message
+    assert "[materialization_lifecycle:" in curated_message
     assert "[loader:" in curated_message
     assert int(native.move_plugin_to_bottom(1, 0)["code"]) == 0
     assert int(native.clear_insert_chain(1)["code"]) == 0
@@ -236,6 +258,92 @@ def main() -> None:
     assert int(native.stop_audio()["code"]) == 0
     assert int(native.close_audio()["code"]) == 0
 
+    assert int(native.insert_plugin(1, "partnerlabs.reverb.untrusted", 6)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    trust_gate_chain = native.get_insert_chain(1)
+    trust_gate = next(
+        (slot.get("values", {}) for slot in trust_gate_chain if str(slot.get("values", {}).get("slot_index", "")) == "6"),
+        {},
+    )
+    assert str(trust_gate.get("loader_outcome", "")) == "ok"
+    assert str(trust_gate.get("loader_reason_code", "")) == "resolved"
+    assert str(trust_gate.get("managed_instance_adapter_reason_code", "")) == "partner_trust_failed"
+    assert str(trust_gate.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(trust_gate.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(trust_gate.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(trust_gate.get("managed_instance_loader_strategy", "")) == "partner_bundle_loader"
+    assert str(trust_gate.get("managed_instance_validator_path", "")) == "partner_bundle_validator"
+    assert str(trust_gate.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.reverb.untrusted"
+    assert str(trust_gate.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(trust_gate.get("managed_instance_descriptor_ref", "")) == "partner://labs/reverb/untrusted"
+    assert str(trust_gate.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(trust_gate.get("managed_instance_descriptor_lineage", "")) == "partner.partnerlabs.reverb.untrusted@1.0"
+    assert str(trust_gate.get("managed_instance_retryable", "")).lower() == "false"
+    assert "trust verification failed" in str(trust_gate.get("managed_instance_message", ""))
+
+    assert int(native.request_insert_load(1, 6)["code"]) == 0
+    trust_retry_chain = native.get_insert_chain(1)
+    trust_retry = next(
+        (slot.get("values", {}) for slot in trust_retry_chain if str(slot.get("values", {}).get("slot_index", "")) == "6"),
+        {},
+    )
+    assert str(trust_retry.get("managed_instance_adapter_reason_code", "")) == "retry_blocked"
+    assert str(trust_retry.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(trust_retry.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(trust_retry.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(trust_retry.get("managed_instance_loader_strategy", "")) == "partner_bundle_loader"
+    assert str(trust_retry.get("managed_instance_validator_path", "")) == "partner_bundle_validator"
+    assert str(trust_retry.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.reverb.untrusted"
+    assert str(trust_retry.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(trust_retry.get("managed_instance_descriptor_ref", "")) == "partner://labs/reverb/untrusted"
+    assert str(trust_retry.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(trust_retry.get("managed_instance_descriptor_lineage", "")) == "partner.partnerlabs.reverb.untrusted@1.0"
+    assert str(trust_retry.get("managed_instance_retryable", "")).lower() == "false"
+    assert "explicit retry" in str(trust_retry.get("managed_instance_message", ""))
+
+    assert int(native.insert_plugin(1, "curated.chorus.unreviewed", 7)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    curated_gate_chain = native.get_insert_chain(1)
+    curated_gate = next(
+        (slot.get("values", {}) for slot in curated_gate_chain if str(slot.get("values", {}).get("slot_index", "")) == "7"),
+        {},
+    )
+    assert str(curated_gate.get("loader_outcome", "")) == "ok"
+    assert str(curated_gate.get("loader_reason_code", "")) == "resolved"
+    assert str(curated_gate.get("managed_instance_adapter_reason_code", "")) == "curation_validation_failed"
+    assert str(curated_gate.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(curated_gate.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(curated_gate.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(curated_gate.get("managed_instance_loader_strategy", "")) == "curated_bundle_loader"
+    assert str(curated_gate.get("managed_instance_validator_path", "")) == "curated_bundle_validator"
+    assert str(curated_gate.get("managed_instance_descriptor_id", "")) == "curated.chorus.unreviewed"
+    assert str(curated_gate.get("managed_instance_descriptor_kind", "")) == "curated_bundle"
+    assert str(curated_gate.get("managed_instance_descriptor_ref", "")) == "curated://chorus/unreviewed"
+    assert str(curated_gate.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(curated_gate.get("managed_instance_descriptor_lineage", "")) == "curated.chorus.unreviewed@1.0"
+    assert str(curated_gate.get("managed_instance_retryable", "")).lower() == "false"
+    assert "curation validation failed" in str(curated_gate.get("managed_instance_message", ""))
+
+    assert int(native.request_insert_load(1, 7)["code"]) == 0
+    curated_retry_chain = native.get_insert_chain(1)
+    curated_retry = next(
+        (slot.get("values", {}) for slot in curated_retry_chain if str(slot.get("values", {}).get("slot_index", "")) == "7"),
+        {},
+    )
+    assert str(curated_retry.get("managed_instance_adapter_reason_code", "")) == "retry_blocked"
+    assert str(curated_retry.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(curated_retry.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(curated_retry.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(curated_retry.get("managed_instance_loader_strategy", "")) == "curated_bundle_loader"
+    assert str(curated_retry.get("managed_instance_validator_path", "")) == "curated_bundle_validator"
+    assert str(curated_retry.get("managed_instance_descriptor_id", "")) == "curated.chorus.unreviewed"
+    assert str(curated_retry.get("managed_instance_descriptor_kind", "")) == "curated_bundle"
+    assert str(curated_retry.get("managed_instance_descriptor_ref", "")) == "curated://chorus/unreviewed"
+    assert str(curated_retry.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(curated_retry.get("managed_instance_descriptor_lineage", "")) == "curated.chorus.unreviewed@1.0"
+    assert str(curated_retry.get("managed_instance_retryable", "")).lower() == "false"
+    assert "explicit retry" in str(curated_retry.get("managed_instance_message", ""))
+
     assert int(native.insert_plugin(1, "thirdparty.reverb.demo", 3)["code"]) == 0
     assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
     assert int(native.request_insert_load(1, 3)["code"]) == 0
@@ -251,6 +359,97 @@ def main() -> None:
     assert str(unsupported.get("managed_instance_failure_attribution", "")) in {"policy", "loader"}
     assert str(unsupported.get("managed_instance_retryable", "")).lower() == "true"
 
+    assert int(native.insert_plugin(1, "partnerlabs.delay.badresource", 4)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 4)["code"]) == 0
+    failed_chain = native.get_insert_chain(1)
+    failed = next(
+        (slot.get("values", {}) for slot in failed_chain if str(slot.get("values", {}).get("slot_index", "")) == "4"),
+        {},
+    )
+    assert str(failed.get("loader_outcome", "")) == "unavailable"
+    assert str(failed.get("managed_instance_adapter_reason_code", "")) == "strategy_validation_failed"
+    assert str(failed.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(failed.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(failed.get("managed_instance_loader_strategy", "")) == "partner_bundle_loader"
+    assert str(failed.get("managed_instance_validator_path", "")) == "partner_bundle_validator"
+    assert str(failed.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(failed.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.delay.badresource"
+    assert str(failed.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(failed.get("managed_instance_descriptor_ref", "")) == "partner://labs/delay/badresource"
+    assert str(failed.get("managed_instance_descriptor_version", "")) == "2.1"
+    assert str(failed.get("managed_instance_descriptor_lineage", "")) == "partnerlabs.delay.badresource@2.1"
+    assert str(failed.get("managed_instance_retryable", "")).lower() == "false"
+
+    assert int(native.insert_plugin(1, "partnerlabs.chorus.unknown", 5)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 5)["code"]) == 0
+    missing_chain = native.get_insert_chain(1)
+    missing = next(
+        (slot.get("values", {}) for slot in missing_chain if str(slot.get("values", {}).get("slot_index", "")) == "5"),
+        {},
+    )
+    assert str(missing.get("loader_outcome", "")) == "not_found"
+    assert str(missing.get("loader_reason_code", "")) == "plugin_not_found"
+    assert str(missing.get("managed_instance_adapter_reason_code", "")) == "plugin_not_found"
+    assert str(missing.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(missing.get("managed_instance_reason_source", "")) == "catalog"
+    assert str(missing.get("managed_instance_failure_attribution", "")) == "catalog"
+    assert str(missing.get("managed_instance_loader_strategy", "")) == "partner_bundle_loader"
+    assert str(missing.get("managed_instance_validator_path", "")) == "partner_bundle_validator"
+    assert str(missing.get("managed_instance_descriptor_id", "")) == "missing.partnerlabs.chorus.unknown"
+    assert str(missing.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(missing.get("managed_instance_descriptor_ref", "")) == "catalog://missing/partnerlabs.chorus.unknown"
+    assert str(missing.get("managed_instance_descriptor_version", "")) == "missing"
+    assert str(missing.get("managed_instance_descriptor_lineage", "")) == "partnerlabs.chorus.unknown@missing"
+
+    assert int(native.insert_plugin(1, "midas.eq.invalid_ref", 8)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 8)["code"]) == 0
+    builtin_invalid_chain = native.get_insert_chain(1)
+    builtin_invalid = next(
+        (slot.get("values", {}) for slot in builtin_invalid_chain if str(slot.get("values", {}).get("slot_index", "")) == "8"),
+        {},
+    )
+    assert str(builtin_invalid.get("loader_outcome", "")) == "unavailable"
+    assert str(builtin_invalid.get("managed_instance_adapter_reason_code", "")) == "strategy_validation_failed"
+    assert str(builtin_invalid.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(builtin_invalid.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(builtin_invalid.get("managed_instance_failure_attribution", "")) == "strategy_validation"
+    assert str(builtin_invalid.get("managed_instance_loader_strategy", "")) == "builtin_graph_loader"
+    assert str(builtin_invalid.get("managed_instance_validator_path", "")) == "builtin_graph_validator"
+    assert str(builtin_invalid.get("managed_instance_descriptor_id", "")) == "builtin.midas.eq.invalid_ref"
+    assert str(builtin_invalid.get("managed_instance_descriptor_kind", "")) == "builtin_graph"
+    assert str(builtin_invalid.get("managed_instance_descriptor_ref", "")) == "builtin:/midas/eq/invalid"
+    assert str(builtin_invalid.get("managed_instance_descriptor_version", "")) == "1.0"
+    assert str(builtin_invalid.get("managed_instance_descriptor_lineage", "")) == "builtin.midas.eq.invalid_ref@1.0"
+    assert str(builtin_invalid.get("managed_instance_terminal", "")).lower() == "true"
+    assert str(builtin_invalid.get("managed_instance_retryable", "")).lower() == "false"
+    assert str(builtin_invalid.get("managed_instance_message", "")) == "builtin_graph descriptor must use builtin:// artifact ref"
+    assert int(native.insert_plugin(1, "partnerlabs.invalid.reference", 9)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 9)["code"]) == 0
+    partner_invalid_chain = native.get_insert_chain(1)
+    partner_invalid = next(
+        (slot.get("values", {}) for slot in partner_invalid_chain if str(slot.get("values", {}).get("slot_index", "")) == "9"),
+        {},
+    )
+    assert str(partner_invalid.get("loader_outcome", "")) == "unavailable"
+    assert str(partner_invalid.get("loader_reason_code", "")) == "descriptor_invalid"
+    assert str(partner_invalid.get("managed_instance_adapter_reason_code", "")) == "descriptor_invalid"
+    assert str(partner_invalid.get("managed_instance_handle_state", "")) == "unavailable"
+    assert str(partner_invalid.get("managed_instance_reason_source", "")) == "catalog"
+    assert str(partner_invalid.get("managed_instance_failure_attribution", "")) == "catalog"
+    assert str(partner_invalid.get("managed_instance_loader_strategy", "")) == "default_loader"
+    assert str(partner_invalid.get("managed_instance_validator_path", "")) == "default_validator"
+    assert str(partner_invalid.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.invalid.reference"
+    assert str(partner_invalid.get("managed_instance_descriptor_kind", "")) == ""
+    assert str(partner_invalid.get("managed_instance_descriptor_ref", "")) == ""
+    assert str(partner_invalid.get("managed_instance_descriptor_version", "")) == ""
+    assert str(partner_invalid.get("managed_instance_descriptor_lineage", "")) == ""
+    assert str(partner_invalid.get("managed_instance_terminal", "")).lower() == "true"
+    assert str(partner_invalid.get("managed_instance_retryable", "")).lower() == "false"
+    assert str(partner_invalid.get("managed_instance_message", "")) == "plugin descriptor is invalid for host resolution"
     assert native.get_mixer_channels()
     assert int(native.shutdown_runtime_profile()["code"]) == 0
 
