@@ -20,6 +20,8 @@ def test_session_save_load_apply_flow():
     assert vm.status == "saved"
     assert vm.phase == "saved"
     assert vm.dirty is False
+    assert vm.restore_phase == "ready"
+    assert vm.runtime_hydrated is False
     assert vm.storage_source == "fallback-memory"
     assert vm.storage_path == "fallback://local-session"
     assert vm.last_operation == "save"
@@ -35,6 +37,9 @@ def test_session_save_load_apply_flow():
     assert vm.status == "loaded"
     assert vm.phase == "loaded"
     assert vm.dirty is False
+    assert vm.restore_phase == "intent_restored"
+    assert vm.runtime_hydrated is False
+    assert "apply_session" in vm.restore_guidance
     assert vm.last_operation == "load"
     assert vm.last_load_epoch > 0
     assert vm.last_load_status == "ok"
@@ -44,6 +49,9 @@ def test_session_save_load_apply_flow():
     assert vm.status == "applied"
     assert vm.phase == "applied"
     assert vm.dirty is False
+    assert vm.restore_phase == "runtime_hydrated"
+    assert vm.runtime_hydrated is True
+    assert "follow-up query" in vm.restore_guidance
     assert vm.last_operation == "apply"
     assert vm.last_apply_epoch > 0
     assert vm.last_apply_status == "ok"
@@ -86,6 +94,8 @@ def test_session_dirty_transition_after_mutation_and_save():
     assert vm.status == "modified"
     assert vm.phase == "modified"
     assert vm.dirty is True
+    assert vm.restore_phase == "editing"
+    assert vm.runtime_hydrated is False
     assert vm.last_operation == "modify"
 
     assert controller.save_session().ok

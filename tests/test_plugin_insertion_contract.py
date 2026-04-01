@@ -47,28 +47,27 @@ def test_plugin_insertion_contract_roundtrip_save_load_apply():
 
     assert bridge.load_session().ok
     reconcile_after_load = bridge.get_reconcile_status()
-    assert reconcile_after_load.attempted >= 2
-    assert reconcile_after_load.resolved >= 1
+    assert reconcile_after_load.attempted == 0
+    assert reconcile_after_load.resolved == 0
     assert reconcile_after_load.policy_mode == "auto_after_load_apply"
     assert reconcile_after_load.policy_action == "session_load"
+    assert reconcile_after_load.last_message == "awaiting apply_session"
     loaded = bridge.get_insert_chain(1)
     assert len(loaded) == 2
     assert loaded[0].plugin_id == "midas.comp.basic"
     assert loaded[0].bypassed is True
     assert loaded[1].plugin_id == "midas.eq.basic"
     assert loaded[1].bypassed is True
-    # host/runtime/loader state is re-derived during reconcile after load.
-    assert loaded[0].host_lifecycle_state in {"loaded_placeholder", "load_failed"}
-    if loaded[0].host_lifecycle_state == "loaded_placeholder":
-        assert loaded[0].placeholder_instance_id != ""
-        assert loaded[0].loader_outcome == "ok"
-        assert loaded[0].managed_instance_id != ""
-        assert loaded[0].managed_instance_state == "created"
-        assert loaded[0].managed_instance_adapter_state == "created"
-    else:
-        assert loaded[0].placeholder_instance_id == ""
-        assert loaded[0].loader_outcome != ""
-        assert loaded[0].managed_instance_id == ""
+    # Load restores slot intent only; runtime state remains unhydrated until apply/reconcile.
+    assert loaded[0].load_state == "unloaded"
+    assert loaded[0].host_lifecycle_state == "not_requested"
+    assert loaded[0].placeholder_instance_id == ""
+    assert loaded[0].placeholder_created_sequence == 0
+    assert loaded[0].managed_instance_id == ""
+    assert loaded[0].managed_instance_state == "unloaded"
+    assert loaded[0].managed_instance_adapter_state == "unavailable"
+    assert loaded[0].loader_outcome == ""
+    assert loaded[0].loader_reason_code == ""
 
     assert bridge.remove_plugin(1, 1).ok
     assert bridge.apply_session().ok

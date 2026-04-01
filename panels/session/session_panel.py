@@ -61,6 +61,8 @@ class SessionPanel(QWidget):
         self.session_heading_label.setStyleSheet("font-weight: 600; font-size: 15px;")
         self.status_label = QLabel("Status: idle")
         self.identity_label = QLabel("Phase: none | Dirty: clean")
+        self.restore_label = QLabel("Restore: idle | Runtime: pending")
+        self.restore_label.setWordWrap(True)
         self.storage_label = QLabel("Storage: -")
         self.storage_root_label = QLabel("Storage Root: -")
         self.last_ops_label = QLabel("Last op: none")
@@ -72,6 +74,7 @@ class SessionPanel(QWidget):
         status_layout.addWidget(self.session_heading_label)
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.identity_label)
+        status_layout.addWidget(self.restore_label)
         status_layout.addWidget(self.storage_label)
         status_layout.addWidget(self.storage_root_label)
         status_layout.addWidget(self.last_ops_label)
@@ -93,6 +96,10 @@ class SessionPanel(QWidget):
         self.session_heading_label.setText(vm.session_ref or "No active session")
         self.status_label.setText(f"Status: {vm.status}")
         self.identity_label.setText(f"Phase: {vm.phase} | Dirty: {'dirty' if vm.dirty else 'clean'}")
+        runtime_state = "hydrated" if vm.runtime_hydrated else "pending"
+        self.restore_label.setText(
+            f"Restore: {vm.restore_phase} | Runtime: {runtime_state} | {vm.restore_guidance}"
+        )
         storage = vm.storage_path if vm.storage_path else "-"
         source = vm.storage_source if vm.storage_source else "-"
         self.storage_label.setText(f"{storage} | Source: {source}")

@@ -34,6 +34,72 @@ def _load_native_module():
     return module
 
 
+def _assert_curated_earlyaccess_runtime(values, previous_managed_instance_id: str = "") -> None:
+    managed_message = str(values.get("managed_instance_message", ""))
+    assert str(values.get("plugin_id", "")) == "curated.reverb.earlyaccess"
+    assert str(values.get("host_lifecycle_state", "")) == "loaded_placeholder"
+    assert str(values.get("loader_outcome", "")) == "ok"
+    assert str(values.get("loader_reason_code", "")) == "resolved"
+    assert str(values.get("placeholder_instance_id", "")) != ""
+    assert int(values.get("placeholder_created_seq", "0")) > 0
+    assert str(values.get("managed_instance_id", "")) != ""
+    if previous_managed_instance_id:
+        assert str(values.get("managed_instance_id", "")) != previous_managed_instance_id
+    assert str(values.get("managed_instance_state", "")) == "created"
+    assert str(values.get("managed_instance_adapter_state", "")) == "created"
+    assert str(values.get("managed_instance_adapter_reason_code", "")) == "created"
+    assert str(values.get("managed_instance_handle_state", "")) == "active"
+    assert str(values.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(values.get("managed_instance_failure_attribution", "")) == "adapter_runtime"
+    assert str(values.get("managed_instance_descriptor_id", "")) == "curated.reverb.earlyaccess"
+    assert str(values.get("managed_instance_descriptor_kind", "")) == "curated_bundle"
+    assert str(values.get("managed_instance_descriptor_ref", "")) == "curated://reverb/earlyaccess"
+    assert str(values.get("managed_instance_descriptor_version", "")) == "0.8"
+    assert str(values.get("managed_instance_descriptor_lineage", "")) == "curated.reverb.earlyaccess@0.8"
+    assert "curated bundle runtime object" in managed_message
+    assert "[lane_state: preview_lane]" in managed_message
+    assert "[review_snapshot: pending_snapshot]" in managed_message
+    assert "[curation_stream: preview_stream]" in managed_message
+    assert "[review_envelope: open]" in managed_message
+    assert "[materialization_ticket: queued]" in managed_message
+    assert "[materialization_lifecycle: staging]" in managed_message
+
+
+def _assert_partner_earlyaccess_runtime(values, previous_managed_instance_id: str = "") -> None:
+    managed_message = str(values.get("managed_instance_message", ""))
+    assert str(values.get("plugin_id", "")) == "partnerlabs.chorus.earlyaccess"
+    assert str(values.get("host_lifecycle_state", "")) == "loaded_placeholder"
+    assert str(values.get("loader_outcome", "")) == "ok"
+    assert str(values.get("loader_reason_code", "")) == "resolved"
+    assert str(values.get("placeholder_instance_id", "")) != ""
+    assert int(values.get("placeholder_created_seq", "0")) > 0
+    assert str(values.get("managed_instance_id", "")) != ""
+    if previous_managed_instance_id:
+        assert str(values.get("managed_instance_id", "")) != previous_managed_instance_id
+    assert str(values.get("managed_instance_state", "")) == "created"
+    assert str(values.get("managed_instance_adapter_state", "")) == "created"
+    assert str(values.get("managed_instance_adapter_reason_code", "")) == "created"
+    assert str(values.get("managed_instance_handle_state", "")) == "active"
+    assert str(values.get("managed_instance_reason_source", "")) == "adapter"
+    assert str(values.get("managed_instance_failure_attribution", "")) == "adapter_runtime"
+    assert str(values.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.chorus.earlyaccess"
+    assert str(values.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(values.get("managed_instance_descriptor_ref", "")) == "partner://labs/chorus/earlyaccess"
+    assert str(values.get("managed_instance_descriptor_version", "")) == "0.9"
+    assert str(values.get("managed_instance_descriptor_lineage", "")) == "partner.partnerlabs.chorus.earlyaccess@0.9"
+    assert "partner bundle runtime object" in managed_message
+    assert "[trust: provisional]" in managed_message
+    assert "[health: warming]" in managed_message
+    assert "[trust_anchor: catalog_signed]" in managed_message
+    assert "[guard_state: monitoring]" in managed_message
+    assert "[health_lease: warming]" in managed_message
+    assert "[signature_state: provisional]" in managed_message
+    assert "[watch_state: evaluating]" in managed_message
+    assert "[trust_window: staging]" in managed_message
+    assert "[materialization_ticket: queued]" in managed_message
+    assert "[materialization_lifecycle: staging]" in managed_message
+
+
 def main() -> None:
     native = _load_native_module()
 
@@ -241,6 +307,104 @@ def main() -> None:
     assert str(session_status.get("values", {}).get("status", "")) in {"saved", "loaded", "applied"}
     assert "last_error_message" in session_status.get("values", {})
 
+    assert int(native.clear_insert_chain(1)["code"]) == 0
+    assert int(native.insert_plugin(1, "curated.reverb.earlyaccess", 10)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 10)["code"]) == 0
+    earlyaccess_roundtrip_chain = native.get_insert_chain(1)
+    earlyaccess_roundtrip = next(
+        (slot.get("values", {}) for slot in earlyaccess_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "10"),
+        {},
+    )
+    _assert_curated_earlyaccess_runtime(earlyaccess_roundtrip)
+    initial_curated_managed_id = str(earlyaccess_roundtrip.get("managed_instance_id", ""))
+
+    assert int(native.save_session()["code"]) == 0
+    assert int(native.remove_plugin(1, 10)["code"]) == 0
+    assert int(native.load_session()["code"]) == 0
+    reconcile_after_load = native.get_reconcile_status().get("values", {})
+    assert str(reconcile_after_load.get("policy_mode", "")) == "auto_after_load_apply"
+    assert str(reconcile_after_load.get("policy_action", "")) == "session_load"
+    loaded_roundtrip_chain = native.get_insert_chain(1)
+    assert loaded_roundtrip_chain == []
+
+    assert int(native.apply_session()["code"]) == 0
+    reconcile_after_apply = native.get_reconcile_status().get("values", {})
+    assert str(reconcile_after_apply.get("policy_mode", "")) == "auto_after_load_apply"
+    assert str(reconcile_after_apply.get("policy_action", "")) == "session_apply"
+    applied_roundtrip_chain = native.get_insert_chain(1)
+    applied_roundtrip = next(
+        (slot.get("values", {}) for slot in applied_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "10"),
+        {},
+    )
+    assert str(applied_roundtrip.get("plugin_id", "")) == "curated.reverb.earlyaccess"
+    assert str(applied_roundtrip.get("managed_instance_id", "")) != ""
+    assert str(applied_roundtrip.get("managed_instance_id", "")) != initial_curated_managed_id
+    assert str(applied_roundtrip.get("managed_instance_state", "")) == "created"
+    assert str(applied_roundtrip.get("managed_instance_adapter_state", "")) == "created"
+    assert "[lane_state: slotting]" in str(applied_roundtrip.get("managed_instance_message", ""))
+    assert "[review_snapshot: snapshotting]" in str(applied_roundtrip.get("managed_instance_message", ""))
+    assert "[materialization_lifecycle: materializing]" in str(applied_roundtrip.get("managed_instance_message", ""))
+
+    assert int(native.request_insert_load(1, 10)["code"]) == 0
+    rederived_roundtrip_chain = native.get_insert_chain(1)
+    rederived_roundtrip = next(
+        (slot.get("values", {}) for slot in rederived_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "10"),
+        {},
+    )
+    _assert_curated_earlyaccess_runtime(rederived_roundtrip, initial_curated_managed_id)
+
+    assert int(native.clear_insert_chain(1)["code"]) == 0
+    assert int(native.insert_plugin(1, "partnerlabs.chorus.earlyaccess", 11)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 11)["code"]) == 0
+    partner_roundtrip_chain = native.get_insert_chain(1)
+    partner_roundtrip = next(
+        (slot.get("values", {}) for slot in partner_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "11"),
+        {},
+    )
+    _assert_partner_earlyaccess_runtime(partner_roundtrip)
+    initial_partner_managed_id = str(partner_roundtrip.get("managed_instance_id", ""))
+
+    assert int(native.save_session()["code"]) == 0
+    assert int(native.remove_plugin(1, 11)["code"]) == 0
+    assert int(native.load_session()["code"]) == 0
+    partner_reconcile_after_load = native.get_reconcile_status().get("values", {})
+    assert str(partner_reconcile_after_load.get("policy_mode", "")) == "auto_after_load_apply"
+    assert str(partner_reconcile_after_load.get("policy_action", "")) == "session_load"
+    partner_loaded_roundtrip_chain = native.get_insert_chain(1)
+    assert partner_loaded_roundtrip_chain == []
+
+    assert int(native.apply_session()["code"]) == 0
+    partner_reconcile_after_apply = native.get_reconcile_status().get("values", {})
+    assert str(partner_reconcile_after_apply.get("policy_mode", "")) == "auto_after_load_apply"
+    assert str(partner_reconcile_after_apply.get("policy_action", "")) == "session_apply"
+    partner_applied_roundtrip_chain = native.get_insert_chain(1)
+    partner_applied_roundtrip = next(
+        (slot.get("values", {}) for slot in partner_applied_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "11"),
+        {},
+    )
+    assert str(partner_applied_roundtrip.get("plugin_id", "")) == "partnerlabs.chorus.earlyaccess"
+    assert str(partner_applied_roundtrip.get("managed_instance_id", "")) != ""
+    assert str(partner_applied_roundtrip.get("managed_instance_id", "")) != initial_partner_managed_id
+    assert str(partner_applied_roundtrip.get("managed_instance_state", "")) == "created"
+    assert str(partner_applied_roundtrip.get("managed_instance_adapter_state", "")) == "created"
+    assert "[trust: provisional]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[health: checking]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[guard_state: arming]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[signature_state: attesting]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[watch_state: starting]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[materialization_ticket: issuing]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+    assert "[materialization_lifecycle: materializing]" in str(partner_applied_roundtrip.get("managed_instance_message", ""))
+
+    assert int(native.request_insert_load(1, 11)["code"]) == 0
+    partner_rederived_roundtrip_chain = native.get_insert_chain(1)
+    partner_rederived_roundtrip = next(
+        (slot.get("values", {}) for slot in partner_rederived_roundtrip_chain if str(slot.get("values", {}).get("slot_index", "")) == "11"),
+        {},
+    )
+    _assert_partner_earlyaccess_runtime(partner_rederived_roundtrip, initial_partner_managed_id)
+
     assert int(native.init_audio("native-dev", 48000, 256)["code"]) == 0
     assert int(native.open_audio()["code"]) == 0
     assert int(native.start_audio(1, 2001)["code"]) == 0
@@ -343,6 +507,60 @@ def main() -> None:
     assert str(curated_retry.get("managed_instance_descriptor_lineage", "")) == "curated.chorus.unreviewed@1.0"
     assert str(curated_retry.get("managed_instance_retryable", "")).lower() == "false"
     assert "explicit retry" in str(curated_retry.get("managed_instance_message", ""))
+
+    assert int(native.insert_plugin(1, "curated.reverb.earlyaccess", 10)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 10)["code"]) == 0
+    earlyaccess_chain = native.get_insert_chain(1)
+    earlyaccess = next(
+        (slot.get("values", {}) for slot in earlyaccess_chain if str(slot.get("values", {}).get("slot_index", "")) == "10"),
+        {},
+    )
+    earlyaccess_message = str(earlyaccess.get("managed_instance_message", ""))
+    assert str(earlyaccess.get("loader_outcome", "")) == "ok"
+    assert str(earlyaccess.get("loader_reason_code", "")) == "resolved"
+    assert str(earlyaccess.get("managed_instance_handle_state", "")) == "active"
+    assert str(earlyaccess.get("managed_instance_descriptor_id", "")) == "curated.reverb.earlyaccess"
+    assert str(earlyaccess.get("managed_instance_descriptor_kind", "")) == "curated_bundle"
+    assert str(earlyaccess.get("managed_instance_descriptor_ref", "")) == "curated://reverb/earlyaccess"
+    assert str(earlyaccess.get("managed_instance_descriptor_version", "")) == "0.8"
+    assert str(earlyaccess.get("managed_instance_descriptor_lineage", "")) == "curated.reverb.earlyaccess@0.8"
+    assert "curated bundle runtime object" in earlyaccess_message
+    assert "[lane_state: preview_lane]" in earlyaccess_message
+    assert "[review_snapshot: pending_snapshot]" in earlyaccess_message
+    assert "[curation_stream: preview_stream]" in earlyaccess_message
+    assert "[review_envelope: open]" in earlyaccess_message
+    assert "[materialization_ticket: queued]" in earlyaccess_message
+    assert "[materialization_lifecycle: staging]" in earlyaccess_message
+
+    assert int(native.insert_plugin(1, "partnerlabs.chorus.earlyaccess", 11)["code"]) == 0
+    assert int(native.refresh_insert_runtime_state(1)["code"]) == 0
+    assert int(native.request_insert_load(1, 11)["code"]) == 0
+    partner_earlyaccess_chain = native.get_insert_chain(1)
+    partner_earlyaccess = next(
+        (slot.get("values", {}) for slot in partner_earlyaccess_chain if str(slot.get("values", {}).get("slot_index", "")) == "11"),
+        {},
+    )
+    partner_earlyaccess_message = str(partner_earlyaccess.get("managed_instance_message", ""))
+    assert str(partner_earlyaccess.get("loader_outcome", "")) == "ok"
+    assert str(partner_earlyaccess.get("loader_reason_code", "")) == "resolved"
+    assert str(partner_earlyaccess.get("managed_instance_handle_state", "")) == "active"
+    assert str(partner_earlyaccess.get("managed_instance_descriptor_id", "")) == "partner.partnerlabs.chorus.earlyaccess"
+    assert str(partner_earlyaccess.get("managed_instance_descriptor_kind", "")) == "partner_bundle"
+    assert str(partner_earlyaccess.get("managed_instance_descriptor_ref", "")) == "partner://labs/chorus/earlyaccess"
+    assert str(partner_earlyaccess.get("managed_instance_descriptor_version", "")) == "0.9"
+    assert str(partner_earlyaccess.get("managed_instance_descriptor_lineage", "")) == "partner.partnerlabs.chorus.earlyaccess@0.9"
+    assert "partner bundle runtime object" in partner_earlyaccess_message
+    assert "[trust: provisional]" in partner_earlyaccess_message
+    assert "[health: warming]" in partner_earlyaccess_message
+    assert "[trust_anchor: catalog_signed]" in partner_earlyaccess_message
+    assert "[guard_state: monitoring]" in partner_earlyaccess_message
+    assert "[health_lease: warming]" in partner_earlyaccess_message
+    assert "[signature_state: provisional]" in partner_earlyaccess_message
+    assert "[watch_state: evaluating]" in partner_earlyaccess_message
+    assert "[trust_window: staging]" in partner_earlyaccess_message
+    assert "[materialization_ticket: queued]" in partner_earlyaccess_message
+    assert "[materialization_lifecycle: staging]" in partner_earlyaccess_message
 
     assert int(native.insert_plugin(1, "thirdparty.reverb.demo", 3)["code"]) == 0
     assert int(native.refresh_insert_runtime_state(1)["code"]) == 0

@@ -88,6 +88,9 @@ def test_session_panel_renders_consistent_identity_and_error_state():
         status="loaded",
         phase="modified",
         dirty=True,
+        restore_phase="intent_restored",
+        runtime_hydrated=False,
+        restore_guidance="Apply session before rendering runtime fields.",
         session_ref="mix-b",
         storage_path="C:/sessions/mix-b.session",
         storage_source="file",
@@ -112,6 +115,9 @@ def test_session_panel_renders_consistent_identity_and_error_state():
     assert panel.session_heading_label.text() == "mix-b"
     assert panel.status_label.text() == "Status: loaded"
     assert "Dirty: dirty" in panel.identity_label.text()
+    assert "intent_restored" in panel.restore_label.text()
+    assert "Runtime: pending" in panel.restore_label.text()
+    assert "Apply session before rendering runtime fields." in panel.restore_label.text()
     assert "C:/sessions/mix-b.session" in panel.storage_label.text()
     assert panel.error_label.text() == "session warning"
 

@@ -20,6 +20,10 @@ class SessionController:
         self._vm.status = status.status
         self._vm.phase = status.phase
         self._vm.dirty = status.dirty
+        restore_phase, runtime_hydrated, restore_guidance = self._derive_restore_state(status.phase, status.status)
+        self._vm.restore_phase = restore_phase
+        self._vm.runtime_hydrated = runtime_hydrated
+        self._vm.restore_guidance = restore_guidance
         if status.session_ref:
             self._vm.session_ref = status.session_ref
         self._vm.storage_path = status.storage_path
@@ -72,4 +76,39 @@ class SessionController:
         self._vm.dirty = True
         self._vm.phase = "modified"
         self._vm.status = "modified"
+        self._vm.restore_phase = "editing"
+        self._vm.runtime_hydrated = False
+        self._vm.restore_guidance = "Save to persist slot intent before the next restore cycle."
         self._vm.last_operation = "modify"
+
+    @staticmethod
+    def _derive_restore_state(phase: str, status: str) -> tuple[str, bool, str]:
+        if phase == "loaded":
+            return (
+                "intent_restored",
+                False,
+                "Slot intent is restored. Run apply_session before expecting runtime fields.",
+            )
+        if phase == "applied":
+            return (
+                "runtime_hydrated",
+                True,
+                "Runtime state is hydrated. Use a follow-up query to render runtime-specific fields.",
+            )
+        if phase in {"saved", "new"}:
+            return (
+                "ready",
+                False,
+                "Session state is saved, but restore hydration only happens after a future load/apply cycle.",
+            )
+        if phase == "modified" or status == "modified":
+            return (
+                "editing",
+                False,
+                "Unsaved edits are local only until the next save.",
+            )
+        return (
+            "idle",
+            False,
+            "Create or load a session to begin.",
+        )

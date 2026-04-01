@@ -10,6 +10,9 @@ class SessionViewModel:
     status: str = "idle"
     phase: str = "none"
     dirty: bool = False
+    restore_phase: str = "idle"
+    runtime_hydrated: bool = False
+    restore_guidance: str = "Create or load a session to begin."
     session_ref: str = "default-session"
     storage_path: str = ""
     storage_source: str = ""

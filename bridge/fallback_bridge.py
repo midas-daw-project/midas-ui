@@ -304,11 +304,12 @@ class FallbackBridgeClient(BridgeClient):
         self._session.last_load_epoch = int(time.time())
         self._session.storage_path = self._session_path(self._session.session_ref)
         self._insert_chains = deepcopy(self._saved_sessions[self._session.session_ref])
-        for chain in self._insert_chains.values():
-            self._evaluate_runtime_state(chain)
-        self._reconcile_status.policy_mode = "auto_after_load_apply"
-        self._reconcile_status.policy_action = "session_load"
-        self.reconcile_all_inserts()
+        # Loading restores persisted slot intent only; runtime hydration belongs to apply/reconcile.
+        self._reconcile_status = ReconcileStatus(
+            policy_mode="auto_after_load_apply",
+            policy_action="session_load",
+            last_message="awaiting apply_session",
+        )
         self._touch_recent_session("load", promote_to_front=True)
         self._session.last_error_message = ""
         self._publish(
