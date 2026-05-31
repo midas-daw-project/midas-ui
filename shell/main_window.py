@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMessageBox
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMessageBox, QScrollArea, QWidget
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
@@ -28,12 +29,16 @@ from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
 class MainWindow(QMainWindow):
+    DEFAULT_WIDTH = 1180
+    DEFAULT_HEIGHT = 720
+    SCREEN_MARGIN = 48
+
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
         self._bridge = bridge
         self._settings = ShellSettingsStore()
         self.setWindowTitle("MIDAS - Phase 1 Shell")
-        self.resize(1280, 780)
+        self.resize(*self._default_window_size())
 
         self._audio_vm = AudioViewModel()
         self._mixer_vm = MixerViewModel()
@@ -143,36 +148,36 @@ class MainWindow(QMainWindow):
         self._refresh_debug_summary()
 
     def _mount_docks(self) -> None:
-        self.setCentralWidget(self._workspace_panel)
+        self.setCentralWidget(self._scrollable_panel(self._workspace_panel))
 
         audio_dock = QDockWidget("Audio", self)
         audio_dock.setObjectName("dock.audio")
-        audio_dock.setWidget(self._audio_panel)
+        audio_dock.setWidget(self._scrollable_panel(self._audio_panel))
         self.addDockWidget(Qt.LeftDockWidgetArea, audio_dock)
 
         debug_dock = QDockWidget("Debug / Events", self)
         debug_dock.setObjectName("dock.debug")
-        debug_dock.setWidget(self._debug_panel)
+        debug_dock.setWidget(self._scrollable_panel(self._debug_panel))
         self.addDockWidget(Qt.BottomDockWidgetArea, debug_dock)
 
         mixer_dock = QDockWidget("Mixer", self)
         mixer_dock.setObjectName("dock.mixer")
-        mixer_dock.setWidget(self._mixer_panel)
+        mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
         self.addDockWidget(Qt.RightDockWidgetArea, mixer_dock)
 
         session_dock = QDockWidget("Session", self)
         session_dock.setObjectName("dock.session")
-        session_dock.setWidget(self._session_panel)
+        session_dock.setWidget(self._scrollable_panel(self._session_panel))
         self.addDockWidget(Qt.RightDockWidgetArea, session_dock)
 
         transport_dock = QDockWidget("Transport", self)
         transport_dock.setObjectName("dock.transport")
-        transport_dock.setWidget(self._transport_panel)
+        transport_dock.setWidget(self._scrollable_panel(self._transport_panel))
         self.addDockWidget(Qt.TopDockWidgetArea, transport_dock)
 
         browser_dock = QDockWidget("Browser", self)
         browser_dock.setObjectName("dock.browser")
-        browser_dock.setWidget(self._browser_panel)
+        browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
         self.addDockWidget(Qt.LeftDockWidgetArea, browser_dock)
 
     def _start_runtime(self) -> None:
@@ -713,12 +718,49 @@ class MainWindow(QMainWindow):
         state = self._settings.load_window_state()
         if state is not None:
             self.restoreState(state)
+        self._fit_to_screen()
         self._debug_panel.set_event_filter(self._settings.load_debug_filter())
 
     def _save_shell_state(self) -> None:
         self._settings.save_geometry(self.saveGeometry())
         self._settings.save_window_state(self.saveState())
         self._settings.save_debug_filter(self._debug_panel.event_filter_value())
+
+    def _default_window_size(self) -> tuple[int, int]:
+        available = self._available_screen_geometry()
+        if available is None:
+            return self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT
+        width = min(self.DEFAULT_WIDTH, max(760, available.width() - self.SCREEN_MARGIN))
+        height = min(self.DEFAULT_HEIGHT, max(560, available.height() - self.SCREEN_MARGIN))
+        return width, height
+
+    def _fit_to_screen(self) -> None:
+        available = self._available_screen_geometry()
+        if available is None:
+            return
+        max_width = max(760, available.width() - self.SCREEN_MARGIN)
+        max_height = max(560, available.height() - self.SCREEN_MARGIN)
+        if self.width() > max_width or self.height() > max_height:
+            self.resize(min(self.width(), max_width), min(self.height(), max_height))
+        frame = self.frameGeometry()
+        if not available.contains(frame):
+            frame.moveCenter(available.center())
+            self.move(frame.topLeft())
+
+    @staticmethod
+    def _available_screen_geometry():
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            return None
+        return screen.availableGeometry()
+
+    @staticmethod
+    def _scrollable_panel(widget: QWidget) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidget(widget)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        return scroll
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.
