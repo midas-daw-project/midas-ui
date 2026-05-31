@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QToolBar,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1180
     DEFAULT_HEIGHT = 720
     SCREEN_MARGIN = 48
-    LAYOUT_VERSION = 3
+    LAYOUT_VERSION = 4
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -167,9 +168,11 @@ class MainWindow(QMainWindow):
         self._header_toolbar.setMovable(False)
         self._header_toolbar.setFloatable(False)
         header = QWidget()
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(8, 4, 8, 4)
-        header_layout.setSpacing(8)
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(8, 4, 8, 5)
+        header_layout.setSpacing(4)
+        cockpit_row = QHBoxLayout()
+        cockpit_row.setSpacing(8)
         self._project_title_label = QLabel("Untitled Beat")
         self._project_title_label.setObjectName("headerProjectTitle")
         self._command_search_input = QLineEdit()
@@ -181,14 +184,18 @@ class MainWindow(QMainWindow):
         self._key_label = QLabel("Key C Major")
         self._device_status_label = QLabel("Fallback Bridge - 48kHz / 256")
         self._runtime_status_label = QLabel("Runtime: offline")
-        header_layout.addWidget(self._project_title_label)
-        header_layout.addWidget(self._command_search_input, 1)
-        header_layout.addWidget(self._header_play_button)
-        header_layout.addWidget(self._header_stop_button)
-        header_layout.addWidget(self._tempo_label)
-        header_layout.addWidget(self._key_label)
-        header_layout.addWidget(self._device_status_label)
-        header_layout.addWidget(self._runtime_status_label)
+        self._hint_status_label = QLabel("Hint: Use Browser, Arrangement, Channel Rack, and Mixer like a familiar DAW workspace.")
+        self._hint_status_label.setObjectName("headerHint")
+        cockpit_row.addWidget(self._project_title_label)
+        cockpit_row.addWidget(self._command_search_input, 1)
+        cockpit_row.addWidget(self._header_play_button)
+        cockpit_row.addWidget(self._header_stop_button)
+        cockpit_row.addWidget(self._tempo_label)
+        cockpit_row.addWidget(self._key_label)
+        cockpit_row.addWidget(self._device_status_label)
+        cockpit_row.addWidget(self._runtime_status_label)
+        header_layout.addLayout(cockpit_row)
+        header_layout.addWidget(self._hint_status_label)
         self._header_play_button.clicked.connect(self._play_transport)
         self._header_stop_button.clicked.connect(self._stop_transport)
         self._header_toolbar.addWidget(header)
@@ -477,6 +484,10 @@ class MainWindow(QMainWindow):
         runtime = "active" if self._workspace_vm.runtime_active or self._transport_vm.runtime_active else "offline"
         self._runtime_status_label.setText(
             f"Runtime: {runtime} | Transport: {self._transport_vm.play_state}"
+        )
+        self._hint_status_label.setText(
+            f"Hint: {self._workspace_vm.startup_hint} | "
+            f"Browser -> Arrange/Channel Rack -> Mixer | Last: {self._workspace_vm.last_action}"
         )
 
     def _apply_mixer_mute(self) -> None:
@@ -814,7 +825,7 @@ class MainWindow(QMainWindow):
         self._mixer_dock.raise_()
         self._transport_dock.hide()
         self._debug_dock.hide()
-        self.resizeDocks([self._browser_dock, self._mixer_dock], [240, 330], Qt.Horizontal)
+        self.resizeDocks([self._browser_dock, self._mixer_dock], [250, 320], Qt.Horizontal)
 
     def _default_window_size(self) -> tuple[int, int]:
         available = self._available_screen_geometry()

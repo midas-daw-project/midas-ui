@@ -33,6 +33,14 @@ QToolBar#midasHeader {
     spacing: 8px;
 }
 
+QLabel#headerHint {
+    background-color: rgba(18, 8, 33, 180);
+    border: 1px solid #4f2687;
+    border-radius: 5px;
+    color: #d9c7ff;
+    padding: 4px 8px;
+}
+
 QMenuBar {
     background-color: #180d2f;
     color: #f7edff;
@@ -67,8 +75,8 @@ QGroupBox {
     background-color: rgba(35, 18, 66, 210);
     border: 1px solid #5b2e93;
     border-radius: 7px;
-    margin-top: 12px;
-    padding: 10px;
+    margin-top: 10px;
+    padding: 8px;
 }
 
 QGroupBox::title {
@@ -177,7 +185,13 @@ QFrame#beatCanvas {
     border-radius: 7px;
 }
 
-QLabel[beatLane="true"] {
+QFrame#channelRack {
+    background-color: rgba(19, 10, 36, 210);
+    border: 1px solid #533094;
+    border-radius: 7px;
+}
+
+QLabel[beatLane="true"], QLabel[rackLane="true"] {
     color: #d9c7ff;
     font-weight: 600;
 }
@@ -192,8 +206,8 @@ QLabel[beatCell="true"] {
 
 QLabel[stepCell="true"] {
     border-radius: 3px;
-    min-width: 12px;
-    min-height: 16px;
+    min-width: 10px;
+    min-height: 13px;
 }
 
 QScrollBar:vertical {

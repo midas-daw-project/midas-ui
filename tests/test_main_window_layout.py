@@ -27,5 +27,6 @@ def test_main_window_default_layout_prioritizes_workspace():
     assert window._transport_dock.isHidden()
     assert window._debug_dock.isHidden()
     assert window.centralWidget() is not None
+    assert "Browser -> Arrange/Channel Rack -> Mixer" in window._hint_status_label.text()
 
     window.close()

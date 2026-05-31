@@ -69,11 +69,11 @@ class WorkspacePanel(QWidget):
         status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
         layout.addWidget(status_box)
 
-        canvas_box = QGroupBox("Beat Workspace")
+        canvas_box = QGroupBox("Arrangement")
         canvas_layout = QVBoxLayout(canvas_box)
         self.beat_canvas = QFrame()
         self.beat_canvas.setObjectName("beatCanvas")
-        self.beat_canvas.setMinimumHeight(220)
+        self.beat_canvas.setMinimumHeight(190)
         beat_grid = QGridLayout(self.beat_canvas)
         beat_grid.setHorizontalSpacing(6)
         beat_grid.setVerticalSpacing(6)
@@ -103,20 +103,45 @@ class WorkspacePanel(QWidget):
                     f"background-color: {color};" if color else "background-color: rgba(63, 37, 103, 120);"
                 )
                 beat_grid.addWidget(cell, row, column)
-        step_row = QHBoxLayout()
-        for index in range(32):
-            step = QLabel("")
-            step.setProperty("stepCell", True)
-            step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            color = "#f9733d" if index in {2, 3, 4, 5, 14, 15, 16} else "#804df2" if index % 4 == 0 else "#3b2362"
-            step.setStyleSheet(f"background-color: {color};")
-            step_row.addWidget(step)
+        canvas_layout.addWidget(self.beat_canvas)
+        layout.addWidget(canvas_box)
+
+        rack_box = QGroupBox("Channel Rack / Step Sequencer")
+        rack_layout = QVBoxLayout(rack_box)
+        self.channel_rack = QFrame()
+        self.channel_rack.setObjectName("channelRack")
+        rack_grid = QGridLayout(self.channel_rack)
+        rack_grid.setHorizontalSpacing(5)
+        rack_grid.setVerticalSpacing(5)
+        rack_steps = {
+            "Kick": {0, 4, 8, 12},
+            "Snare": {4, 12},
+            "Hi Hats": {0, 2, 4, 6, 8, 10, 12, 14},
+            "Melody": {1, 2, 5, 6, 9, 10, 13},
+            "Bass": {0, 3, 8, 11},
+        }
+        for row, (name, active_steps) in enumerate(rack_steps.items()):
+            rack_label = QLabel(name)
+            rack_label.setProperty("rackLane", True)
+            rack_label.setFixedWidth(72)
+            rack_grid.addWidget(rack_label, row, 0)
+            for step_index in range(16):
+                step = QLabel("")
+                step.setProperty("stepCell", True)
+                step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                color = "#f9733d" if name in {"Kick", "Snare"} else "#804df2" if name in {"Hi Hats", "Melody"} else "#2bd2c9"
+                step.setStyleSheet(
+                    f"background-color: {color};"
+                    if step_index in active_steps
+                    else "background-color: rgba(63, 37, 103, 150);"
+                )
+                rack_grid.addWidget(step, row, step_index + 1)
+                rack_grid.setColumnStretch(step_index + 1, 1)
         self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Suggest chord progression | Humanize MIDI")
         self.assistant_prompt_label.setWordWrap(True)
-        canvas_layout.addWidget(self.beat_canvas)
-        canvas_layout.addLayout(step_row)
-        canvas_layout.addWidget(self.assistant_prompt_label)
-        layout.addWidget(canvas_box)
+        rack_layout.addWidget(self.channel_rack)
+        rack_layout.addWidget(self.assistant_prompt_label)
+        layout.addWidget(rack_box)
 
         self.summary_tabs = QTabWidget()
         self.summary_tabs.setObjectName("workspaceSummaryTabs")

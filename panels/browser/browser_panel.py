@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -36,7 +37,10 @@ class BrowserPanel(QWidget):
         library_layout = QVBoxLayout(library_box)
         self.browser_heading_label = QLabel("Browser")
         self.browser_heading_label.setObjectName("browserHeading")
+        self.browser_search_input = QLineEdit()
+        self.browser_search_input.setPlaceholderText("Search sounds, plugins, presets")
         library_layout.addWidget(self.browser_heading_label)
+        library_layout.addWidget(self.browser_search_input)
         self.category_list = QListWidget()
         for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
             self.category_list.addItem(category)

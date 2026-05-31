@@ -60,6 +60,7 @@ def test_browser_panel_renders_library_marketplace_and_registry():
 
     panel.render(vm)
 
+    assert panel.browser_search_input.placeholderText() == "Search sounds, plugins, presets"
     assert panel.category_list.count() == 7
     assert panel.category_list.currentItem().text() == "808s"
     assert panel.pack_list.count() == 3

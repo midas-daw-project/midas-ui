@@ -66,6 +66,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
 
     assert panel.project_heading_label.text() == "mix-a"
     assert panel.beat_canvas.objectName() == "beatCanvas"
+    assert panel.channel_rack.objectName() == "channelRack"
     assert "Generate drum pattern" in panel.assistant_prompt_label.text()
     assert "Next:" in panel.next_action_label.text()
     assert "Bridge: unknown v0" in panel.bridge_runtime_label.text()
