@@ -27,6 +27,27 @@ QDockWidget::title {
     border: 1px solid #4f2687;
 }
 
+QToolBar#midasHeader {
+    background-color: rgba(32, 14, 60, 230);
+    border-bottom: 1px solid #6c35ad;
+    spacing: 8px;
+}
+
+QLabel#headerProjectTitle {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 130px;
+}
+
+QLineEdit#headerSearch {
+    background-color: #1b0d35;
+    border: 1px solid #7540bb;
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: #ffffff;
+}
+
 QGroupBox {
     background-color: rgba(35, 18, 66, 210);
     border: 1px solid #5b2e93;

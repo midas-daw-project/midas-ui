@@ -2,7 +2,19 @@ from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMessageBox, QScrollArea, QWidget
+from PySide6.QtWidgets import (
+    QDockWidget,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QToolBar,
+    QWidget,
+)
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
@@ -119,6 +131,7 @@ class MainWindow(QMainWindow):
             on_refresh=self._refresh_audio,
         )
 
+        self._mount_header()
         self._mount_docks()
         self._restore_shell_state()
         self._refresh_audio()
@@ -146,6 +159,39 @@ class MainWindow(QMainWindow):
             fallback_polling=self._using_polling_fallback,
         )
         self._refresh_debug_summary()
+
+    def _mount_header(self) -> None:
+        self._header_toolbar = QToolBar("MIDAS Header", self)
+        self._header_toolbar.setObjectName("midasHeader")
+        self._header_toolbar.setMovable(False)
+        self._header_toolbar.setFloatable(False)
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(8, 4, 8, 4)
+        header_layout.setSpacing(8)
+        self._project_title_label = QLabel("Untitled Beat")
+        self._project_title_label.setObjectName("headerProjectTitle")
+        self._command_search_input = QLineEdit()
+        self._command_search_input.setObjectName("headerSearch")
+        self._command_search_input.setPlaceholderText("Search or type a command")
+        self._header_play_button = QPushButton("Play")
+        self._header_stop_button = QPushButton("Stop")
+        self._tempo_label = QLabel("140 BPM")
+        self._key_label = QLabel("Key C Major")
+        self._device_status_label = QLabel("Fallback Bridge - 48kHz / 256")
+        self._runtime_status_label = QLabel("Runtime: offline")
+        header_layout.addWidget(self._project_title_label)
+        header_layout.addWidget(self._command_search_input, 1)
+        header_layout.addWidget(self._header_play_button)
+        header_layout.addWidget(self._header_stop_button)
+        header_layout.addWidget(self._tempo_label)
+        header_layout.addWidget(self._key_label)
+        header_layout.addWidget(self._device_status_label)
+        header_layout.addWidget(self._runtime_status_label)
+        self._header_play_button.clicked.connect(self._play_transport)
+        self._header_stop_button.clicked.connect(self._stop_transport)
+        self._header_toolbar.addWidget(header)
+        self.addToolBar(Qt.TopToolBarArea, self._header_toolbar)
 
     def _mount_docks(self) -> None:
         self.setCentralWidget(self._scrollable_panel(self._workspace_panel))
@@ -248,6 +294,7 @@ class MainWindow(QMainWindow):
         self._transport_vm.track_channel = self._transport_panel.selected_track_channel()
         self._transport_controller.refresh_status()
         self._transport_panel.render(self._transport_vm)
+        self._refresh_header()
         self._refresh_debug_summary()
         self._refresh_workspace()
 
@@ -413,6 +460,22 @@ class MainWindow(QMainWindow):
         self._workspace_controller.ingest_browser_state(self._browser_vm)
         self._workspace_controller.ingest_mixer_state(self._mixer_vm)
         self._workspace_panel.render(self._workspace_vm)
+        self._refresh_header()
+
+    def _refresh_header(self) -> None:
+        if not hasattr(self, "_runtime_status_label"):
+            return
+        session_ref = self._session_vm.session_ref or self._workspace_vm.session_ref or "Untitled Beat"
+        self._project_title_label.setText(session_ref if session_ref != "default-session" else "Untitled Beat")
+        sample_rate = self._audio_vm.sample_rate or 48000
+        buffer_size = self._audio_vm.buffer_size or 256
+        self._device_status_label.setText(
+            f"{self._workspace_vm.bridge_mode.title()} Bridge - {sample_rate // 1000 if sample_rate else 48}kHz / {buffer_size}"
+        )
+        runtime = "active" if self._workspace_vm.runtime_active or self._transport_vm.runtime_active else "offline"
+        self._runtime_status_label.setText(
+            f"Runtime: {runtime} | Transport: {self._transport_vm.play_state}"
+        )
 
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()
