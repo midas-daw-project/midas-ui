@@ -5,6 +5,7 @@ from typing import Callable
 
 from PySide6.QtWidgets import (
     QFormLayout,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -40,6 +41,20 @@ class WorkspacePanel(QWidget):
         self.mode_label = QLabel("Shell / Runtime Overview")
         layout.addWidget(self.title_label)
         layout.addWidget(self.mode_label)
+
+        status_box = QGroupBox("Operator Status")
+        status_grid = QGridLayout(status_box)
+        self.next_action_label = QLabel("Next: Create a new session or open an existing one.")
+        self.next_action_label.setWordWrap(True)
+        self.bridge_runtime_label = QLabel("Bridge: unknown v0 | Runtime: offline")
+        self.session_flow_label = QLabel("Session: none | Phase: none | clean")
+        self.reconcile_flow_label = QLabel("Reconcile: clear | Plugins: 0 available / 0 inserted")
+        self.reconcile_flow_label.setWordWrap(True)
+        status_grid.addWidget(self.next_action_label, 0, 0, 1, 2)
+        status_grid.addWidget(self.bridge_runtime_label, 1, 0)
+        status_grid.addWidget(self.session_flow_label, 1, 1)
+        status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
+        layout.addWidget(status_box)
 
         overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
@@ -165,6 +180,23 @@ class WorkspacePanel(QWidget):
         self.title_label.setText(vm.workspace_title)
         self.mode_label.setText(vm.workspace_mode)
         self.session_ref_input.setText(vm.session_ref)
+        dirty_text = "dirty" if vm.session_dirty else "clean"
+        runtime_text = "active" if vm.runtime_active else "offline"
+        pending_text = "pending manual" if vm.reconcile_pending_manual else "clear"
+        self.next_action_label.setText(f"Next: {vm.startup_hint}")
+        self.bridge_runtime_label.setText(
+            f"Bridge: {vm.bridge_mode} v{vm.bridge_version} | "
+            f"Runtime: {runtime_text} | Audio: {vm.audio_state} | Transport: {vm.transport_state}"
+        )
+        self.session_flow_label.setText(
+            f"Session: {vm.session_ref or '-'} | Status: {vm.session_status} | "
+            f"Phase: {vm.session_phase} | {dirty_text}"
+        )
+        self.reconcile_flow_label.setText(
+            f"Reconcile: {pending_text} | "
+            f"attempted={vm.reconcile_attempted} resolved={vm.reconcile_resolved} failed={vm.reconcile_failed} | "
+            f"Plugins: {vm.available_plugin_count} available / {vm.inserted_plugin_count} inserted"
+        )
         self.project_heading_label.setText(vm.session_ref or "No active session")
         self.session_status_label.setText(vm.session_status)
         self.session_identity_label.setText(
