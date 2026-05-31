@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QPushButton,
+    QSizePolicy,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -38,6 +40,7 @@ class WorkspacePanel(QWidget):
         super().__init__()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
 
         self.title_label = QLabel("MIDAS Workspace")
         self.title_label.setObjectName("workspaceTitle")
@@ -53,8 +56,10 @@ class WorkspacePanel(QWidget):
         self.next_action_label.setWordWrap(True)
         self.bridge_runtime_label = QLabel("Bridge: unknown v0 | Runtime: offline")
         self.bridge_runtime_label.setObjectName("operatorBridge")
+        self.bridge_runtime_label.setWordWrap(True)
         self.session_flow_label = QLabel("Session: none | Phase: none | clean")
         self.session_flow_label.setObjectName("operatorSession")
+        self.session_flow_label.setWordWrap(True)
         self.reconcile_flow_label = QLabel("Reconcile: clear | Plugins: 0 available / 0 inserted")
         self.reconcile_flow_label.setObjectName("operatorReconcile")
         self.reconcile_flow_label.setWordWrap(True)
@@ -68,13 +73,16 @@ class WorkspacePanel(QWidget):
         canvas_layout = QVBoxLayout(canvas_box)
         self.beat_canvas = QFrame()
         self.beat_canvas.setObjectName("beatCanvas")
+        self.beat_canvas.setMinimumHeight(220)
         beat_grid = QGridLayout(self.beat_canvas)
         beat_grid.setHorizontalSpacing(6)
         beat_grid.setVerticalSpacing(6)
         for column in range(1, 9):
             marker = QLabel(str(column))
             marker.setAlignment(Qt.AlignCenter)
+            marker.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
             beat_grid.addWidget(marker, 0, column)
+            beat_grid.setColumnStretch(column, 1)
         lanes = [
             ("Kick", ["#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "", ""]),
             ("Snare", ["", "#d83a9c", "", "#d83a9c", "", "#d83a9c", "", "#d83a9c"]),
@@ -85,10 +93,12 @@ class WorkspacePanel(QWidget):
         for row, (name, colors) in enumerate(lanes, start=1):
             lane_label = QLabel(name)
             lane_label.setProperty("beatLane", True)
+            lane_label.setFixedWidth(72)
             beat_grid.addWidget(lane_label, row, 0)
             for column, color in enumerate(colors, start=1):
                 cell = QLabel(name if color and column == 1 else "")
                 cell.setProperty("beatCell", True)
+                cell.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
                 cell.setStyleSheet(
                     f"background-color: {color};" if color else "background-color: rgba(63, 37, 103, 120);"
                 )
@@ -97,6 +107,7 @@ class WorkspacePanel(QWidget):
         for index in range(32):
             step = QLabel("")
             step.setProperty("stepCell", True)
+            step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             color = "#f9733d" if index in {2, 3, 4, 5, 14, 15, 16} else "#804df2" if index % 4 == 0 else "#3b2362"
             step.setStyleSheet(f"background-color: {color};")
             step_row.addWidget(step)
@@ -106,6 +117,10 @@ class WorkspacePanel(QWidget):
         canvas_layout.addLayout(step_row)
         canvas_layout.addWidget(self.assistant_prompt_label)
         layout.addWidget(canvas_box)
+
+        self.summary_tabs = QTabWidget()
+        self.summary_tabs.setObjectName("workspaceSummaryTabs")
+        layout.addWidget(self.summary_tabs, 1)
 
         overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
@@ -133,7 +148,7 @@ class WorkspacePanel(QWidget):
         overview_form.addRow("Next", self.startup_hint_label)
         overview_form.addRow("Error", self.session_error_label)
         overview_form.addRow("Bridge", self.bridge_label)
-        layout.addWidget(overview_box)
+        self.summary_tabs.addTab(overview_box, "Project")
 
         runtime_box = QGroupBox("Runtime Snapshot")
         runtime_form = QFormLayout(runtime_box)
@@ -165,7 +180,7 @@ class WorkspacePanel(QWidget):
         runtime_form.addRow(self.selected_runtime_handle_label)
         runtime_form.addRow(self.reconcile_label)
         runtime_form.addRow(self.reconcile_policy_label)
-        layout.addWidget(runtime_box)
+        self.summary_tabs.addTab(runtime_box, "Runtime")
 
         home_box = QGroupBox("Workspace Home")
         home_layout = QVBoxLayout(home_box)
@@ -182,6 +197,7 @@ class WorkspacePanel(QWidget):
         self.recent_hint_label = QLabel("Open the selected recent session or use Open Existing Session for discovered entries.")
         self.recent_hint_label.setWordWrap(True)
         self.recent_list = QListWidget()
+        self.recent_list.setMaximumHeight(130)
         self.open_recent_button = QPushButton("Open Selected Recent")
         self.recent_summary_card_label = QLabel("No recent session history yet.")
         self.recent_summary_card_label.setWordWrap(True)
@@ -199,23 +215,29 @@ class WorkspacePanel(QWidget):
         home_layout.addWidget(self.recent_hint_label)
         home_layout.addWidget(self.recent_list)
         home_layout.addWidget(self.open_recent_button)
-        layout.addWidget(home_box)
 
         actions_box = QGroupBox("Quick Actions")
-        actions_layout = QVBoxLayout(actions_box)
+        actions_layout = QGridLayout(actions_box)
         self.refresh_button = QPushButton("Refresh All")
         self.save_button = QPushButton("Save Session")
         self.load_button = QPushButton("Load Session")
         self.apply_button = QPushButton("Apply Session")
         self.reconcile_button = QPushButton("Reconcile Inserts")
         self.last_action_label = QLabel("Last Action: Ready")
-        actions_layout.addWidget(self.refresh_button)
-        actions_layout.addWidget(self.save_button)
-        actions_layout.addWidget(self.load_button)
-        actions_layout.addWidget(self.apply_button)
-        actions_layout.addWidget(self.reconcile_button)
-        actions_layout.addWidget(self.last_action_label)
-        layout.addWidget(actions_box)
+        self.last_action_label.setWordWrap(True)
+        actions_layout.addWidget(self.refresh_button, 0, 0)
+        actions_layout.addWidget(self.save_button, 0, 1)
+        actions_layout.addWidget(self.load_button, 0, 2)
+        actions_layout.addWidget(self.apply_button, 1, 0)
+        actions_layout.addWidget(self.reconcile_button, 1, 1)
+        actions_layout.addWidget(self.last_action_label, 1, 2)
+
+        start_tab = QWidget()
+        start_layout = QVBoxLayout(start_tab)
+        start_layout.setContentsMargins(0, 0, 0, 0)
+        start_layout.addWidget(home_box)
+        start_layout.addWidget(actions_box)
+        self.summary_tabs.addTab(start_tab, "Start")
 
         self.new_session_button.clicked.connect(lambda: on_new_session(self.session_ref_input.text()))
         self.open_session_button.clicked.connect(lambda: on_open_session(self.session_ref_input.text()))

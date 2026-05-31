@@ -5,8 +5,8 @@ from typing import Callable
 from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
@@ -57,21 +57,24 @@ class MixerPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
         strip_box = QGroupBox("Mixer")
-        strip_layout = QHBoxLayout(strip_box)
+        strip_layout = QGridLayout(strip_box)
         self.channel_strip_labels: list[QLabel] = []
         for name in ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]:
             label = QLabel(f"{name}\n- dB\nidle")
             label.setObjectName("mixerStrip")
             label.setProperty("mixerStrip", True)
             label.setWordWrap(True)
-            strip_layout.addWidget(label)
+            index = len(self.channel_strip_labels)
+            strip_layout.addWidget(label, index // 3, index % 3)
             self.channel_strip_labels.append(label)
         layout.addWidget(strip_box)
 
         control_box = QGroupBox("Mixer Channel")
-        form = QFormLayout(control_box)
+        control_layout = QVBoxLayout(control_box)
+        form = QFormLayout()
         self.channel_input = QSpinBox()
         self.channel_input.setRange(1, 2048)
         self.channel_input.setValue(1)
@@ -86,43 +89,52 @@ class MixerPanel(QWidget):
         self.slot_input = QSpinBox()
         self.slot_input.setRange(0, 32)
         self.slot_input.setValue(0)
-        self.insert_button = QPushButton("Insert Selected Plugin")
-        self.remove_button = QPushButton("Remove Slot Plugin")
-        self.move_up_button = QPushButton("Move Slot Up")
-        self.move_down_button = QPushButton("Move Slot Down")
-        self.move_top_button = QPushButton("Move Slot To Top")
-        self.move_bottom_button = QPushButton("Move Slot To Bottom")
+        self.insert_button = QPushButton("Insert Plugin")
+        self.remove_button = QPushButton("Remove Slot")
+        self.move_up_button = QPushButton("Move Up")
+        self.move_down_button = QPushButton("Move Down")
+        self.move_top_button = QPushButton("Move Top")
+        self.move_bottom_button = QPushButton("Move Bottom")
         self.bypass_input = QCheckBox("Bypassed")
-        self.apply_bypass_button = QPushButton("Apply Slot Bypass")
+        self.apply_bypass_button = QPushButton("Slot Bypass")
         self.channel_bypass_input = QCheckBox("Bypass All Inserts")
-        self.apply_channel_bypass_button = QPushButton("Apply Channel Bypass")
-        self.clear_chain_button = QPushButton("Clear Channel Chain")
-        self.refresh_runtime_button = QPushButton("Refresh Runtime State")
-        self.request_load_button = QPushButton("Request Slot Load")
-        self.request_unload_button = QPushButton("Request Slot Unload")
+        self.apply_channel_bypass_button = QPushButton("Chain Bypass")
+        self.clear_chain_button = QPushButton("Clear Chain")
+        self.refresh_runtime_button = QPushButton("Runtime State")
+        self.request_load_button = QPushButton("Load Slot")
+        self.request_unload_button = QPushButton("Unload Slot")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
         form.addRow("Mute", self.mute_input)
         form.addRow("Gain", self.gain_input)
-        form.addRow(self.apply_mute_button)
-        form.addRow(self.apply_gain_button)
         form.addRow("Insert Slot", self.slot_input)
-        form.addRow(self.insert_button)
-        form.addRow(self.remove_button)
-        form.addRow(self.move_up_button)
-        form.addRow(self.move_down_button)
-        form.addRow(self.move_top_button)
-        form.addRow(self.move_bottom_button)
         form.addRow("Slot Bypass", self.bypass_input)
-        form.addRow(self.apply_bypass_button)
         form.addRow("Channel Bypass", self.channel_bypass_input)
-        form.addRow(self.apply_channel_bypass_button)
-        form.addRow(self.clear_chain_button)
-        form.addRow(self.refresh_runtime_button)
-        form.addRow(self.request_load_button)
-        form.addRow(self.request_unload_button)
-        form.addRow(self.refresh_button)
+        control_layout.addLayout(form)
+
+        action_grid = QGridLayout()
+        for row, button in enumerate(
+            [
+                self.apply_mute_button,
+                self.apply_gain_button,
+                self.insert_button,
+                self.remove_button,
+                self.move_up_button,
+                self.move_down_button,
+                self.move_top_button,
+                self.move_bottom_button,
+                self.apply_bypass_button,
+                self.apply_channel_bypass_button,
+                self.clear_chain_button,
+                self.refresh_runtime_button,
+                self.request_load_button,
+                self.request_unload_button,
+                self.refresh_button,
+            ]
+        ):
+            action_grid.addWidget(button, row, 0)
+        control_layout.addLayout(action_grid)
         layout.addWidget(control_box)
 
         status_box = QGroupBox("Status")
@@ -133,6 +145,7 @@ class MixerPanel(QWidget):
         self.plugin_stack_label = QLabel("Plugin Stack: no inserts")
         self.plugin_stack_label.setWordWrap(True)
         self.chain_list = QListWidget()
+        self.chain_list.setMinimumHeight(130)
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
         status_layout.addWidget(self.selected_strip_label)

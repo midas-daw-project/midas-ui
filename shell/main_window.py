@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1180
     DEFAULT_HEIGHT = 720
     SCREEN_MARGIN = 48
+    LAYOUT_VERSION = 3
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -196,35 +197,36 @@ class MainWindow(QMainWindow):
     def _mount_docks(self) -> None:
         self.setCentralWidget(self._scrollable_panel(self._workspace_panel))
 
-        audio_dock = QDockWidget("Audio", self)
-        audio_dock.setObjectName("dock.audio")
-        audio_dock.setWidget(self._scrollable_panel(self._audio_panel))
-        self.addDockWidget(Qt.LeftDockWidgetArea, audio_dock)
+        self._audio_dock = QDockWidget("Audio", self)
+        self._audio_dock.setObjectName("dock.audio")
+        self._audio_dock.setWidget(self._scrollable_panel(self._audio_panel))
+        self.addDockWidget(Qt.LeftDockWidgetArea, self._audio_dock)
 
-        debug_dock = QDockWidget("Debug / Events", self)
-        debug_dock.setObjectName("dock.debug")
-        debug_dock.setWidget(self._scrollable_panel(self._debug_panel))
-        self.addDockWidget(Qt.BottomDockWidgetArea, debug_dock)
+        self._debug_dock = QDockWidget("Debug / Events", self)
+        self._debug_dock.setObjectName("dock.debug")
+        self._debug_dock.setWidget(self._scrollable_panel(self._debug_panel))
+        self.addDockWidget(Qt.BottomDockWidgetArea, self._debug_dock)
 
-        mixer_dock = QDockWidget("Mixer", self)
-        mixer_dock.setObjectName("dock.mixer")
-        mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
-        self.addDockWidget(Qt.RightDockWidgetArea, mixer_dock)
+        self._mixer_dock = QDockWidget("Mixer", self)
+        self._mixer_dock.setObjectName("dock.mixer")
+        self._mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
+        self.addDockWidget(Qt.RightDockWidgetArea, self._mixer_dock)
 
-        session_dock = QDockWidget("Session", self)
-        session_dock.setObjectName("dock.session")
-        session_dock.setWidget(self._scrollable_panel(self._session_panel))
-        self.addDockWidget(Qt.RightDockWidgetArea, session_dock)
+        self._session_dock = QDockWidget("Session", self)
+        self._session_dock.setObjectName("dock.session")
+        self._session_dock.setWidget(self._scrollable_panel(self._session_panel))
+        self.addDockWidget(Qt.RightDockWidgetArea, self._session_dock)
 
-        transport_dock = QDockWidget("Transport", self)
-        transport_dock.setObjectName("dock.transport")
-        transport_dock.setWidget(self._scrollable_panel(self._transport_panel))
-        self.addDockWidget(Qt.TopDockWidgetArea, transport_dock)
+        self._transport_dock = QDockWidget("Transport", self)
+        self._transport_dock.setObjectName("dock.transport")
+        self._transport_dock.setWidget(self._scrollable_panel(self._transport_panel))
+        self.addDockWidget(Qt.TopDockWidgetArea, self._transport_dock)
 
-        browser_dock = QDockWidget("Browser", self)
-        browser_dock.setObjectName("dock.browser")
-        browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
-        self.addDockWidget(Qt.LeftDockWidgetArea, browser_dock)
+        self._browser_dock = QDockWidget("Browser", self)
+        self._browser_dock.setObjectName("dock.browser")
+        self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
+        self.addDockWidget(Qt.LeftDockWidgetArea, self._browser_dock)
+        self._mount_view_menu()
 
     def _start_runtime(self) -> None:
         result = self._audio_controller.start_runtime_profile()
@@ -778,16 +780,41 @@ class MainWindow(QMainWindow):
         geometry = self._settings.load_geometry()
         if geometry is not None:
             self.restoreGeometry(geometry)
-        state = self._settings.load_window_state()
-        if state is not None:
-            self.restoreState(state)
+        if self._settings.load_layout_version() == self.LAYOUT_VERSION:
+            state = self._settings.load_window_state()
+            if state is not None:
+                self.restoreState(state)
+        else:
+            self._apply_default_dock_layout()
         self._fit_to_screen()
         self._debug_panel.set_event_filter(self._settings.load_debug_filter())
 
     def _save_shell_state(self) -> None:
         self._settings.save_geometry(self.saveGeometry())
         self._settings.save_window_state(self.saveState())
+        self._settings.save_layout_version(self.LAYOUT_VERSION)
         self._settings.save_debug_filter(self._debug_panel.event_filter_value())
+
+    def _mount_view_menu(self) -> None:
+        view_menu = self.menuBar().addMenu("View")
+        for dock in (
+            self._browser_dock,
+            self._audio_dock,
+            self._mixer_dock,
+            self._session_dock,
+            self._transport_dock,
+            self._debug_dock,
+        ):
+            view_menu.addAction(dock.toggleViewAction())
+
+    def _apply_default_dock_layout(self) -> None:
+        self.tabifyDockWidget(self._browser_dock, self._audio_dock)
+        self.tabifyDockWidget(self._mixer_dock, self._session_dock)
+        self._browser_dock.raise_()
+        self._mixer_dock.raise_()
+        self._transport_dock.hide()
+        self._debug_dock.hide()
+        self.resizeDocks([self._browser_dock, self._mixer_dock], [240, 330], Qt.Horizontal)
 
     def _default_window_size(self) -> tuple[int, int]:
         available = self._available_screen_geometry()
@@ -823,6 +850,7 @@ class MainWindow(QMainWindow):
         scroll.setWidget(widget)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         return scroll
 
 

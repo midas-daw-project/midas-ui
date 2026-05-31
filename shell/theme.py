@@ -33,6 +33,21 @@ QToolBar#midasHeader {
     spacing: 8px;
 }
 
+QMenuBar {
+    background-color: #180d2f;
+    color: #f7edff;
+}
+
+QMenuBar::item:selected, QMenu::item:selected {
+    background-color: #533094;
+}
+
+QMenu {
+    background-color: #180d2f;
+    border: 1px solid #5b2e93;
+    color: #f7edff;
+}
+
 QLabel#headerProjectTitle {
     color: #ffffff;
     font-size: 16px;
@@ -61,6 +76,26 @@ QGroupBox::title {
     subcontrol-position: top left;
     padding: 0 7px;
     color: #f7dfff;
+}
+
+QTabWidget::pane {
+    border: 1px solid #5b2e93;
+    border-radius: 6px;
+    background-color: rgba(29, 15, 55, 190);
+    top: -1px;
+}
+
+QTabBar::tab {
+    background-color: #21113f;
+    border: 1px solid #4f2687;
+    color: #d9c7ff;
+    padding: 7px 12px;
+    min-width: 76px;
+}
+
+QTabBar::tab:selected {
+    background-color: #533094;
+    color: #ffffff;
 }
 
 QPushButton {
@@ -159,6 +194,21 @@ QLabel[stepCell="true"] {
     border-radius: 3px;
     min-width: 12px;
     min-height: 16px;
+}
+
+QScrollBar:vertical {
+    background-color: #120821;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #5b2e93;
+    border-radius: 4px;
+    min-height: 24px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
 }
 """
 

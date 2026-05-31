@@ -41,6 +41,7 @@ class BrowserPanel(QWidget):
         for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
             self.category_list.addItem(category)
         self.category_list.setCurrentRow(1)
+        self.category_list.setMaximumHeight(150)
         library_layout.addWidget(self.category_list)
         layout.addWidget(library_box)
 
@@ -55,6 +56,7 @@ class BrowserPanel(QWidget):
             item = QListWidgetItem(f"{title}\n{subtitle}")
             self.pack_list.addItem(item)
         self.pack_list.setCurrentRow(0)
+        self.pack_list.setMaximumHeight(150)
         marketplace_layout.addWidget(self.pack_list)
         pack_actions = QHBoxLayout()
         self.preview_pack_button = QPushButton("Preview")
@@ -72,6 +74,7 @@ class BrowserPanel(QWidget):
         registry_layout.addWidget(self.insert_button)
 
         self.plugin_list = QListWidget()
+        self.plugin_list.setMinimumHeight(140)
         registry_layout.addWidget(self.plugin_list)
         layout.addWidget(registry_box)
 
