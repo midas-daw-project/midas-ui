@@ -105,6 +105,16 @@ QLabel#browserHeading {
     font-weight: 700;
 }
 
+QLabel[mixerStrip="true"] {
+    background-color: rgba(21, 11, 43, 220);
+    border: 1px solid #5e329a;
+    border-radius: 6px;
+    color: #f7edff;
+    font-weight: 600;
+    min-width: 54px;
+    padding: 8px;
+}
+
 QFrame#beatCanvas {
     background-color: rgba(19, 10, 36, 210);
     border: 1px solid #533094;

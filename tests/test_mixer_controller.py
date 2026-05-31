@@ -1,11 +1,23 @@
 from pathlib import Path
+import os
 import sys
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from PySide6.QtWidgets import QApplication
 
 from bridge.fallback_bridge import FallbackBridgeClient
 from controllers.mixer_controller import MixerController
+from panels.mixer.mixer_panel import MixerPanel
 from viewmodels.mixer_viewmodel import MixerViewModel
+
+
+def _app() -> QApplication:
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
 
 
 def test_mixer_mute_gain_flow():
@@ -83,3 +95,39 @@ def test_mixer_plugin_insert_chain_flow():
     assert len(vm.insert_chain) == 1
     assert controller.clear_insert_chain(1).ok
     assert vm.insert_chain == []
+
+
+def test_mixer_panel_renders_channel_strips_and_plugin_stack():
+    _app()
+    panel = MixerPanel(
+        on_apply_mute=lambda: None,
+        on_apply_gain=lambda: None,
+        on_insert_plugin=lambda: None,
+        on_remove_plugin=lambda: None,
+        on_move_slot_up=lambda: None,
+        on_move_slot_down=lambda: None,
+        on_move_slot_top=lambda: None,
+        on_move_slot_bottom=lambda: None,
+        on_toggle_bypass=lambda: None,
+        on_toggle_channel_bypass=lambda: None,
+        on_clear_chain=lambda: None,
+        on_refresh_runtime_state=lambda: None,
+        on_request_slot_load=lambda: None,
+        on_request_slot_unload=lambda: None,
+        on_refresh=lambda: None,
+    )
+    bridge = FallbackBridgeClient()
+    vm = MixerViewModel(selected_channel_id=1, selected_slot_index=0)
+    controller = MixerController(bridge, vm)
+    controller.refresh_channels()
+    assert controller.insert_plugin(1, "midas.eq.basic", 0).ok
+
+    panel.render(vm)
+
+    assert len(panel.channel_strip_labels) == 6
+    assert "Kick" in panel.channel_strip_labels[0].text()
+    assert "active" in panel.selected_strip_label.text()
+    assert "Plugin Stack: 1 insert" in panel.plugin_stack_label.text()
+    assert panel.chain_list.count() == 1
+    assert "Intent:" in panel.chain_list.item(0).text()
+    assert "Runtime:" in panel.chain_list.item(0).text()

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
@@ -56,6 +57,18 @@ class MixerPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
+
+        strip_box = QGroupBox("Mixer")
+        strip_layout = QHBoxLayout(strip_box)
+        self.channel_strip_labels: list[QLabel] = []
+        for name in ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]:
+            label = QLabel(f"{name}\n- dB\nidle")
+            label.setObjectName("mixerStrip")
+            label.setProperty("mixerStrip", True)
+            label.setWordWrap(True)
+            strip_layout.addWidget(label)
+            self.channel_strip_labels.append(label)
+        layout.addWidget(strip_box)
 
         control_box = QGroupBox("Mixer Channel")
         form = QFormLayout(control_box)
@@ -115,11 +128,16 @@ class MixerPanel(QWidget):
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
         self.status_label = QLabel("Channel 1 | muted=false | gain=1.0")
+        self.selected_strip_label = QLabel("Selected Strip: Channel 1")
         self.insert_status_label = QLabel("Insert Status: -")
+        self.plugin_stack_label = QLabel("Plugin Stack: no inserts")
+        self.plugin_stack_label.setWordWrap(True)
         self.chain_list = QListWidget()
         self.error_label = QLabel("Error: ")
         status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.selected_strip_label)
         status_layout.addWidget(self.insert_status_label)
+        status_layout.addWidget(self.plugin_stack_label)
         status_layout.addWidget(self.chain_list)
         status_layout.addWidget(self.error_label)
         layout.addWidget(status_box)
@@ -167,41 +185,48 @@ class MixerPanel(QWidget):
                 break
         if state is None:
             self.status_label.setText(f"Channel {channel} | muted=false | gain=1.0")
+            self.selected_strip_label.setText(f"Selected Strip: Channel {channel} | clean | gain=1.000")
         else:
             self.status_label.setText(
                 f"Channel {state.channel_id} | muted={'true' if state.muted else 'false'} | gain={state.gain:.3f}"
             )
+            self.selected_strip_label.setText(
+                f"Selected Strip: Channel {state.channel_id} | "
+                f"{'muted' if state.muted else 'active'} | gain={state.gain:.3f}"
+            )
             self.mute_input.setChecked(state.muted)
             self.gain_input.setValue(state.gain)
+        self._render_channel_strips(vm)
         self.insert_status_label.setText(f"Insert Status: {vm.last_insert_status or '-'}")
         self.chain_list.clear()
         all_bypassed = bool(vm.insert_chain) and all(slot.bypassed for slot in vm.insert_chain)
         self.channel_bypass_input.setChecked(all_bypassed)
+        self.plugin_stack_label.setText(
+            f"Plugin Stack: {len(vm.insert_chain)} insert{'s' if len(vm.insert_chain) != 1 else ''} | "
+            f"{'all bypassed' if all_bypassed else 'active path'}"
+        )
         for slot in vm.insert_chain:
             self.chain_list.addItem(
-                f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
-                f"intent_bypassed={'true' if slot.bypassed else 'false'} runtime={slot.load_state} "
-                f"host={slot.host_lifecycle_state} note={slot.runtime_message or '-'} "
-                f"host_note={slot.host_message or '-'} "
-                f"placeholder={slot.placeholder_instance_id or '-'} "
-                f"managed={slot.managed_instance_id or '-'} "
-                f"managed_state={slot.managed_instance_state or '-'} "
-                f"adapter={slot.managed_instance_adapter_state or '-'} "
-                f"adapter_reason={slot.managed_instance_adapter_reason_code or '-'} "
-                f"backend={slot.managed_instance_backend_name or '-'} "
-                f"handle={slot.managed_instance_backend_handle or '-'} "
-                f"handle_state={slot.managed_instance_handle_state or '-'} "
-                f"terminal={'true' if slot.managed_instance_terminal else 'false'} "
-                f"retryable={'true' if slot.managed_instance_retryable else 'false'} "
-                f"reason_source={slot.managed_instance_reason_source or '-'} "
-                f"loader_strategy={slot.managed_instance_loader_strategy or '-'} "
-                f"validator={slot.managed_instance_validator_path or '-'} "
-                f"attribution={slot.managed_instance_failure_attribution or '-'} "
-                f"descriptor_id={slot.managed_instance_descriptor_id or '-'} "
-                f"descriptor={slot.managed_instance_descriptor_kind or '-'}:{slot.managed_instance_descriptor_ref or '-'} "
-                f"managed_note={slot.managed_instance_message or '-'} "
-                f"loader={slot.loader_outcome or '-'} reason={slot.loader_reason_code or '-'}"
+                f"Slot {slot.slot_index}: {slot.plugin_name or slot.plugin_id or 'Empty'}\n"
+                f"Intent: {'bypassed' if slot.bypassed else 'active'} | "
+                f"Runtime: {slot.load_state} | Host: {slot.host_lifecycle_state}\n"
+                f"Instance: {slot.managed_instance_id or slot.placeholder_instance_id or '-'} | "
+                f"Handle: {slot.managed_instance_backend_handle or '-'} | "
+                f"Reason: {slot.loader_reason_code or slot.managed_instance_adapter_reason_code or '-'}"
             )
             if slot.slot_index == self.selected_slot_index():
                 self.bypass_input.setChecked(slot.bypassed)
         self.error_label.setText(f"Error: {vm.last_error}")
+
+    def _render_channel_strips(self, vm: MixerViewModel) -> None:
+        channel_map = {channel.channel_id: channel for channel in vm.channels}
+        names = ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]
+        for index, label in enumerate(self.channel_strip_labels, start=1):
+            channel = channel_map.get(index)
+            name = names[index - 1]
+            if channel is None:
+                label.setText(f"{name}\n- dB\nidle")
+                continue
+            db_hint = f"{channel.gain:.2f}x"
+            state = "muted" if channel.muted else "active"
+            label.setText(f"{name}\n{db_hint}\n{state}")
