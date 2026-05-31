@@ -3,8 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -38,23 +40,72 @@ class WorkspacePanel(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
 
         self.title_label = QLabel("MIDAS Workspace")
+        self.title_label.setObjectName("workspaceTitle")
         self.mode_label = QLabel("Shell / Runtime Overview")
+        self.mode_label.setObjectName("workspaceMode")
         layout.addWidget(self.title_label)
         layout.addWidget(self.mode_label)
 
         status_box = QGroupBox("Operator Status")
         status_grid = QGridLayout(status_box)
         self.next_action_label = QLabel("Next: Create a new session or open an existing one.")
+        self.next_action_label.setObjectName("operatorNext")
         self.next_action_label.setWordWrap(True)
         self.bridge_runtime_label = QLabel("Bridge: unknown v0 | Runtime: offline")
+        self.bridge_runtime_label.setObjectName("operatorBridge")
         self.session_flow_label = QLabel("Session: none | Phase: none | clean")
+        self.session_flow_label.setObjectName("operatorSession")
         self.reconcile_flow_label = QLabel("Reconcile: clear | Plugins: 0 available / 0 inserted")
+        self.reconcile_flow_label.setObjectName("operatorReconcile")
         self.reconcile_flow_label.setWordWrap(True)
         status_grid.addWidget(self.next_action_label, 0, 0, 1, 2)
         status_grid.addWidget(self.bridge_runtime_label, 1, 0)
         status_grid.addWidget(self.session_flow_label, 1, 1)
         status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
         layout.addWidget(status_box)
+
+        canvas_box = QGroupBox("Beat Workspace")
+        canvas_layout = QVBoxLayout(canvas_box)
+        self.beat_canvas = QFrame()
+        self.beat_canvas.setObjectName("beatCanvas")
+        beat_grid = QGridLayout(self.beat_canvas)
+        beat_grid.setHorizontalSpacing(6)
+        beat_grid.setVerticalSpacing(6)
+        for column in range(1, 9):
+            marker = QLabel(str(column))
+            marker.setAlignment(Qt.AlignCenter)
+            beat_grid.addWidget(marker, 0, column)
+        lanes = [
+            ("Kick", ["#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "", ""]),
+            ("Snare", ["", "#d83a9c", "", "#d83a9c", "", "#d83a9c", "", "#d83a9c"]),
+            ("Hi Hats", ["#804df2", "#804df2", "#804df2", "#804df2", "#804df2", "#804df2", "#6aa7ff", "#6aa7ff"]),
+            ("Melody", ["", "#9a6cff", "#9a6cff", "#9a6cff", "#78a6ff", "#78a6ff", "#78a6ff", ""]),
+            ("Bass", ["#2bd2c9", "", "#2bd2c9", "", "#2bd2c9", "", "#2bd2c9", ""]),
+        ]
+        for row, (name, colors) in enumerate(lanes, start=1):
+            lane_label = QLabel(name)
+            lane_label.setProperty("beatLane", True)
+            beat_grid.addWidget(lane_label, row, 0)
+            for column, color in enumerate(colors, start=1):
+                cell = QLabel(name if color and column == 1 else "")
+                cell.setProperty("beatCell", True)
+                cell.setStyleSheet(
+                    f"background-color: {color};" if color else "background-color: rgba(63, 37, 103, 120);"
+                )
+                beat_grid.addWidget(cell, row, column)
+        step_row = QHBoxLayout()
+        for index in range(32):
+            step = QLabel("")
+            step.setProperty("stepCell", True)
+            color = "#f9733d" if index in {2, 3, 4, 5, 14, 15, 16} else "#804df2" if index % 4 == 0 else "#3b2362"
+            step.setStyleSheet(f"background-color: {color};")
+            step_row.addWidget(step)
+        self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Suggest chord progression | Humanize MIDI")
+        self.assistant_prompt_label.setWordWrap(True)
+        canvas_layout.addWidget(self.beat_canvas)
+        canvas_layout.addLayout(step_row)
+        canvas_layout.addWidget(self.assistant_prompt_label)
+        layout.addWidget(canvas_box)
 
         overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
