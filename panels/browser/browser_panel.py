@@ -5,8 +5,10 @@ from typing import Callable
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -30,13 +32,48 @@ class BrowserPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
 
+        library_box = QGroupBox("Library")
+        library_layout = QVBoxLayout(library_box)
+        self.browser_heading_label = QLabel("Browser")
+        self.browser_heading_label.setObjectName("browserHeading")
+        library_layout.addWidget(self.browser_heading_label)
+        self.category_list = QListWidget()
+        for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
+            self.category_list.addItem(category)
+        self.category_list.setCurrentRow(1)
+        library_layout.addWidget(self.category_list)
+        layout.addWidget(library_box)
+
+        marketplace_box = QGroupBox("Marketplace")
+        marketplace_layout = QVBoxLayout(marketplace_box)
+        self.pack_list = QListWidget()
+        for title, subtitle in [
+            ("TRAP STARTER KIT", "Punchy drums and melodic one-shots"),
+            ("Analog Drum Pack", "Warm machine kits and percussion"),
+            ("Lo-Fi MIDI Pack", "Chord starts and humanized patterns"),
+        ]:
+            item = QListWidgetItem(f"{title}\n{subtitle}")
+            self.pack_list.addItem(item)
+        self.pack_list.setCurrentRow(0)
+        marketplace_layout.addWidget(self.pack_list)
+        pack_actions = QHBoxLayout()
+        self.preview_pack_button = QPushButton("Preview")
+        self.install_pack_button = QPushButton("Install")
+        pack_actions.addWidget(self.preview_pack_button)
+        pack_actions.addWidget(self.install_pack_button)
+        marketplace_layout.addLayout(pack_actions)
+        layout.addWidget(marketplace_box)
+
+        registry_box = QGroupBox("Plugins")
+        registry_layout = QVBoxLayout(registry_box)
         self.refresh_button = QPushButton("Refresh Registry")
         self.insert_button = QPushButton("Insert To Selected Mixer Slot")
-        layout.addWidget(self.refresh_button)
-        layout.addWidget(self.insert_button)
+        registry_layout.addWidget(self.refresh_button)
+        registry_layout.addWidget(self.insert_button)
 
         self.plugin_list = QListWidget()
-        layout.addWidget(self.plugin_list)
+        registry_layout.addWidget(self.plugin_list)
+        layout.addWidget(registry_box)
 
         details_box = QGroupBox("Plugin Details")
         details_form = QFormLayout(details_box)

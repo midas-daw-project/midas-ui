@@ -99,6 +99,12 @@ QLabel#operatorBridge, QLabel#operatorSession, QLabel#operatorReconcile {
     padding: 7px;
 }
 
+QLabel#browserHeading {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
 QFrame#beatCanvas {
     background-color: rgba(19, 10, 36, 210);
     border: 1px solid #533094;
