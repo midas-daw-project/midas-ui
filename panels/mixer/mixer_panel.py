@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from typing import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QDial,
     QFormLayout,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
-    QSpinBox,
-    QDoubleSpinBox,
+    QSlider,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -84,20 +86,27 @@ class MixerPanel(QWidget):
         control_layout = QVBoxLayout(channel_page)
         control_layout.setContentsMargins(0, 0, 0, 0)
         form = QFormLayout()
-        self.channel_input = QSpinBox()
-        self.channel_input.setRange(1, 2048)
+        self.channel_input = QSlider(Qt.Horizontal)
+        self.channel_input.setRange(1, 16)
         self.channel_input.setValue(1)
+        self.channel_value_label = QLabel("1")
         self.mute_input = QCheckBox("Muted")
-        self.gain_input = QDoubleSpinBox()
-        self.gain_input.setRange(0.0, 2.0)
-        self.gain_input.setSingleStep(0.05)
-        self.gain_input.setValue(1.0)
+        self.gain_input = QSlider(Qt.Horizontal)
+        self.gain_input.setRange(0, 200)
+        self.gain_input.setValue(100)
+        self.gain_value_label = QLabel("1.00x")
 
         self.apply_mute_button = QPushButton("Mute")
         self.apply_gain_button = QPushButton("Gain")
-        self.slot_input = QSpinBox()
+        self.slot_input = QSlider(Qt.Horizontal)
         self.slot_input.setRange(0, 32)
         self.slot_input.setValue(0)
+        self.slot_value_label = QLabel("0")
+        self.channel_input.valueChanged.connect(lambda value: self.channel_value_label.setText(str(value)))
+        self.gain_input.valueChanged.connect(
+            lambda value: self.gain_value_label.setText(f"{value / 100:.2f}x")
+        )
+        self.slot_input.valueChanged.connect(lambda value: self.slot_value_label.setText(str(value)))
         self.insert_button = QPushButton("Insert")
         self.remove_button = QPushButton("Remove")
         self.move_up_button = QPushButton("Move Up")
@@ -114,10 +123,10 @@ class MixerPanel(QWidget):
         self.request_unload_button = QPushButton("Unload")
         self.refresh_button = QPushButton("Refresh")
 
-        form.addRow("Channel", self.channel_input)
+        form.addRow("Channel", self._with_value_label(self.channel_input, self.channel_value_label))
         form.addRow("Mute", self.mute_input)
-        form.addRow("Gain", self.gain_input)
-        form.addRow("Insert Slot", self.slot_input)
+        form.addRow("Volume", self._with_value_label(self.gain_input, self.gain_value_label))
+        form.addRow("Insert Slot", self._with_value_label(self.slot_input, self.slot_value_label))
         form.addRow("Slot Bypass", self.bypass_input)
         form.addRow("Channel Bypass", self.channel_bypass_input)
         control_layout.addLayout(form)
@@ -153,8 +162,31 @@ class MixerPanel(QWidget):
         self.plugin_stack_label = QLabel("Plugin Stack: no inserts")
         self.plugin_stack_label.setWordWrap(True)
         self.chain_list = QListWidget()
-        self.chain_list.setMinimumHeight(130)
+        self.chain_list.setMinimumHeight(72)
+        self.chain_list.setMaximumHeight(104)
         self.error_label = QLabel("Error: ")
+        self.effect_macro_box = QGroupBox("Effect Macros")
+        macro_grid = QGridLayout(self.effect_macro_box)
+        self.effect_macro_dials: list[QDial] = []
+        for index, (name, value) in enumerate(
+            [
+                ("Mix", 70),
+                ("Tone", 55),
+                ("Rate", 30),
+                ("Feedback", 40),
+            ]
+        ):
+            dial = QDial()
+            dial.setRange(0, 100)
+            dial.setValue(value)
+            dial.setNotchesVisible(True)
+            dial.setObjectName("effectMacroDial")
+            label = QLabel(name)
+            label.setAlignment(Qt.AlignCenter)
+            label.setObjectName("effectMacroLabel")
+            macro_grid.addWidget(dial, 0, index)
+            macro_grid.addWidget(label, 1, index)
+            self.effect_macro_dials.append(dial)
         insert_tools = QGridLayout()
         insert_tools.setHorizontalSpacing(6)
         insert_tools.setVerticalSpacing(6)
@@ -174,6 +206,7 @@ class MixerPanel(QWidget):
         status_layout.addWidget(self.insert_status_label)
         status_layout.addWidget(self.plugin_stack_label)
         status_layout.addWidget(self.chain_list)
+        status_layout.addWidget(self.effect_macro_box)
         status_layout.addLayout(insert_tools)
         status_layout.addWidget(self.error_label)
         self.mixer_tabs.addTab(inserts_page, "Inserts")
@@ -201,7 +234,7 @@ class MixerPanel(QWidget):
         return bool(self.mute_input.isChecked())
 
     def selected_gain(self) -> float:
-        return float(self.gain_input.value())
+        return float(self.gain_input.value()) / 100.0
 
     def selected_slot_index(self) -> int:
         return int(self.slot_input.value())
@@ -231,7 +264,7 @@ class MixerPanel(QWidget):
                 f"{'muted' if state.muted else 'active'} | gain={state.gain:.3f}"
             )
             self.mute_input.setChecked(state.muted)
-            self.gain_input.setValue(state.gain)
+            self.gain_input.setValue(round(state.gain * 100))
         self._render_channel_strips(vm)
         self.insert_status_label.setText(f"Insert Status: {vm.last_insert_status or '-'}")
         self.chain_list.clear()
@@ -253,6 +286,17 @@ class MixerPanel(QWidget):
             if slot.slot_index == self.selected_slot_index():
                 self.bypass_input.setChecked(slot.bypassed)
         self.error_label.setText(f"Error: {vm.last_error}")
+
+    @staticmethod
+    def _with_value_label(control: QWidget, label: QLabel) -> QWidget:
+        wrapper = QWidget()
+        layout = QHBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(control, 1)
+        label.setMinimumWidth(42)
+        label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(label)
+        return wrapper
 
     def _render_channel_strips(self, vm: MixerViewModel) -> None:
         channel_map = {channel.channel_id: channel for channel in vm.channels}

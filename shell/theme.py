@@ -138,6 +138,36 @@ QDoubleSpinBox {
     color: #f6eaff;
 }
 
+QSlider::groove:horizontal {
+    background-color: #211a31;
+    border: 1px solid #3d3154;
+    border-radius: 4px;
+    height: 8px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #8f63df;
+    border: 1px solid #d8c9ef;
+    border-radius: 7px;
+    margin: -4px 0;
+    width: 14px;
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #5d38a0;
+    border-radius: 4px;
+}
+
+QDial#effectMacroDial {
+    background-color: #181522;
+    color: #f6eaff;
+}
+
+QLabel#effectMacroLabel {
+    color: #d8c9ef;
+    font-size: 11px;
+}
+
 QListWidget::item {
     border-radius: 5px;
     padding: 5px;

@@ -131,3 +131,5 @@ def test_mixer_panel_renders_channel_strips_and_plugin_stack():
     assert panel.chain_list.count() == 1
     assert "Intent:" in panel.chain_list.item(0).text()
     assert "Runtime:" in panel.chain_list.item(0).text()
+    assert panel.selected_gain() == 1.0
+    assert len(panel.effect_macro_dials) == 4

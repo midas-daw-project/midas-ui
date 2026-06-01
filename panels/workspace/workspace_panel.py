@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QPushButton,
     QSizePolicy,
-    QSpinBox,
+    QSlider,
     QStackedWidget,
     QTabWidget,
     QVBoxLayout,
@@ -231,22 +231,28 @@ class WorkspacePanel(QWidget):
         self.midi_pitch_selector = QComboBox()
         self.midi_pitch_selector.addItems(["C3", "D3", "E3", "F#3", "G3", "A3", "C4", "E4", "G4", "A4", "C5"])
         self.midi_pitch_selector.setCurrentText("C4")
-        self.midi_step_input = QSpinBox()
+        self.midi_step_input = QSlider(Qt.Horizontal)
         self.midi_step_input.setRange(1, 16)
         self.midi_step_input.setValue(1)
-        self.midi_length_input = QSpinBox()
+        self.midi_step_value_label = QLabel("1")
+        self.midi_length_input = QSlider(Qt.Horizontal)
         self.midi_length_input.setRange(1, 8)
         self.midi_length_input.setValue(2)
+        self.midi_length_value_label = QLabel("2")
         self.add_midi_note_button = QPushButton("Add Note")
         self.clear_midi_notes_button = QPushButton("Clear Track")
+        self.midi_step_input.valueChanged.connect(lambda value: self.midi_step_value_label.setText(str(value)))
+        self.midi_length_input.valueChanged.connect(lambda value: self.midi_length_value_label.setText(str(value)))
         midi_controls.addWidget(QLabel("Track"))
         midi_controls.addWidget(self.midi_track_selector, 1)
         midi_controls.addWidget(QLabel("Pitch"))
         midi_controls.addWidget(self.midi_pitch_selector)
         midi_controls.addWidget(QLabel("Step"))
-        midi_controls.addWidget(self.midi_step_input)
+        midi_controls.addWidget(self.midi_step_input, 1)
+        midi_controls.addWidget(self.midi_step_value_label)
         midi_controls.addWidget(QLabel("Length"))
-        midi_controls.addWidget(self.midi_length_input)
+        midi_controls.addWidget(self.midi_length_input, 1)
+        midi_controls.addWidget(self.midi_length_value_label)
         midi_controls.addWidget(self.add_midi_note_button)
         midi_controls.addWidget(self.clear_midi_notes_button)
         midi_layout.addLayout(midi_controls)
