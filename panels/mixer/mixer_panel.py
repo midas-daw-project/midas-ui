@@ -8,12 +8,14 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDial,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
+    QScrollArea,
     QSlider,
     QTabWidget,
     QVBoxLayout,
@@ -64,19 +66,32 @@ class MixerPanel(QWidget):
         layout.setSpacing(8)
 
         strip_box = QGroupBox("Mixer")
-        strip_layout = QGridLayout(strip_box)
+        strip_layout = QVBoxLayout(strip_box)
         strip_layout.setContentsMargins(8, 8, 8, 8)
-        strip_layout.setHorizontalSpacing(6)
-        strip_layout.setVerticalSpacing(6)
+        strip_layout.setSpacing(6)
+        strip_scroll = QScrollArea()
+        strip_scroll.setWidgetResizable(True)
+        strip_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        strip_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        strip_scroll.setMinimumHeight(248)
+        strip_scroll.setObjectName("mixerStripScroll")
+        strip_host = QWidget()
+        strip_row = QHBoxLayout(strip_host)
+        strip_row.setContentsMargins(0, 0, 0, 0)
+        strip_row.setSpacing(6)
         self.channel_strip_labels: list[QLabel] = []
-        for name in ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]:
-            label = QLabel(f"{name}\n- dB\nidle")
-            label.setObjectName("mixerStrip")
-            label.setProperty("mixerStrip", True)
-            label.setWordWrap(True)
-            index = len(self.channel_strip_labels)
-            strip_layout.addWidget(label, index // 3, index % 3)
-            self.channel_strip_labels.append(label)
+        self.channel_meter_labels: list[QLabel] = []
+        self.channel_faders: list[QSlider] = []
+        for index in range(0, 16):
+            strip = self._build_mixer_strip(
+                "Master" if index == 0 else str(index),
+                channel_id=index,
+                master=(index == 0),
+            )
+            strip_row.addWidget(strip)
+        strip_row.addStretch(1)
+        strip_scroll.setWidget(strip_host)
+        strip_layout.addWidget(strip_scroll)
         layout.addWidget(strip_box)
 
         self.mixer_tabs = QTabWidget()
@@ -147,7 +162,7 @@ class MixerPanel(QWidget):
             action_grid.addWidget(button, index // 2, index % 2)
         control_layout.addLayout(action_grid)
 
-        self.status_label = QLabel("Channel 1 | muted=false | gain=1.0")
+        self.status_label = QLabel("Channel 1 | muted=false | volume=0.0 dB")
         self.selected_strip_label = QLabel("Selected Strip: Channel 1")
         self.status_label.setWordWrap(True)
         self.selected_strip_label.setWordWrap(True)
@@ -246,6 +261,11 @@ class MixerPanel(QWidget):
     def selected_channel_bypass(self) -> bool:
         return bool(self.channel_bypass_input.isChecked())
 
+    def _request_insert_for_channel(self, channel_id: int) -> None:
+        if channel_id > 0 and hasattr(self, "channel_input"):
+            self.channel_input.setValue(channel_id)
+        self._on_insert_plugin()
+
     def render(self, vm: MixerViewModel) -> None:
         channel = vm.selected_channel_id
         state = None
@@ -302,16 +322,88 @@ class MixerPanel(QWidget):
 
     def _render_channel_strips(self, vm: MixerViewModel) -> None:
         channel_map = {channel.channel_id: channel for channel in vm.channels}
-        names = ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]
-        for index, label in enumerate(self.channel_strip_labels, start=1):
-            channel = channel_map.get(index)
-            name = names[index - 1]
+        for visual_index, label in enumerate(self.channel_strip_labels):
+            if visual_index == 0:
+                channel = None
+                name = "Master"
+            else:
+                channel = channel_map.get(visual_index)
+                name = str(visual_index)
             if channel is None:
-                label.setText(f"{name}\n- dB\nidle")
+                label.setText(name)
+                self.channel_meter_labels[visual_index].setText("-inf")
                 continue
             db_hint = self._gain_to_db_label(channel.gain)
             state = "muted" if channel.muted else "active"
-            label.setText(f"{name}\n{db_hint}\n{state}")
+            label.setText(name)
+            self.channel_meter_labels[visual_index].setText(f"{db_hint}\n{state}")
+            self.channel_faders[visual_index].setValue(round(channel.gain * 100))
+
+    def _build_mixer_strip(self, name: str, channel_id: int, master: bool = False) -> QWidget:
+        strip = QFrame()
+        strip.setObjectName("mixerChannelStrip")
+        strip.setProperty("mixerChannelStrip", True)
+        strip.setFixedWidth(96 if not master else 112)
+        layout = QVBoxLayout(strip)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+        insert_button = QPushButton("Insert")
+        insert_button.setObjectName("mixerInsertButton")
+        insert_button.clicked.connect(lambda _checked=False, selected_channel=channel_id: self._request_insert_for_channel(selected_channel))
+        route_button = QPushButton("Routing")
+        route_button.setObjectName("mixerRouteButton")
+        read_button = QPushButton("Read")
+        read_button.setObjectName("mixerReadButton")
+        pan = QDial()
+        pan.setRange(-100, 100)
+        pan.setValue(0)
+        pan.setObjectName("mixerPanDial")
+        pan.setFixedSize(42, 42)
+        meter_label = QLabel("-inf")
+        meter_label.setObjectName("mixerMeterLabel")
+        meter_label.setAlignment(Qt.AlignCenter)
+        fader_row = QHBoxLayout()
+        db_scale = QLabel("-6\n-12\n-24\n-36\n-48\n-60")
+        db_scale.setObjectName("mixerScaleLabel")
+        db_scale.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        fader = QSlider(Qt.Vertical)
+        fader.setRange(0, 200)
+        fader.setValue(100)
+        fader.setObjectName("mixerFader")
+        fader.setMinimumHeight(112)
+        fader_row.addWidget(db_scale)
+        fader_row.addWidget(fader)
+        input_button = QPushButton("I")
+        record_button = QPushButton("R")
+        mute_button = QPushButton("M")
+        solo_button = QPushButton("S")
+        for button in (input_button, record_button, mute_button, solo_button):
+            button.setCheckable(True)
+            button.setObjectName("mixerSmallButton")
+        small_buttons = QGridLayout()
+        small_buttons.setHorizontalSpacing(3)
+        small_buttons.setVerticalSpacing(3)
+        small_buttons.addWidget(input_button, 0, 0)
+        small_buttons.addWidget(record_button, 0, 1)
+        small_buttons.addWidget(mute_button, 1, 0)
+        small_buttons.addWidget(solo_button, 1, 1)
+        name_label = QLabel(name)
+        name_label.setObjectName("mixerStripName")
+        name_label.setProperty("mixerStrip", True)
+        name_label.setAlignment(Qt.AlignCenter)
+        name_label.setWordWrap(True)
+        layout.addWidget(insert_button)
+        layout.addWidget(route_button)
+        layout.addWidget(read_button)
+        layout.addWidget(pan, alignment=Qt.AlignHCenter)
+        layout.addWidget(meter_label)
+        layout.addLayout(fader_row)
+        layout.addLayout(small_buttons)
+        layout.addWidget(name_label)
+        self.channel_strip_labels.append(name_label)
+        self.channel_meter_labels.append(meter_label)
+        self.channel_faders.append(fader)
+        return strip
 
     @staticmethod
     def _gain_to_db_label(gain: float) -> str:

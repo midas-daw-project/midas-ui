@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
+    QCompleter,
     QDockWidget,
     QFileDialog,
     QHBoxLayout,
@@ -28,6 +29,7 @@ from panels.audio.audio_panel import AudioPanel
 from panels.browser.browser_panel import BrowserPanel
 from panels.debug.debug_panel import DebugPanel
 from panels.mixer.mixer_panel import MixerPanel
+from panels.mixer.plugin_insert_dialog import PluginInsertDialog
 from panels.session.session_panel import SessionPanel
 from panels.transport.transport_panel import TransportPanel
 from panels.workspace.open_existing_session_dialog import OpenExistingSessionDialog
@@ -45,7 +47,7 @@ class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1180
     DEFAULT_HEIGHT = 720
     SCREEN_MARGIN = 48
-    LAYOUT_VERSION = 5
+    LAYOUT_VERSION = 7
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -136,6 +138,7 @@ class MainWindow(QMainWindow):
 
         self._mount_header()
         self._mount_docks()
+        self._mount_commands()
         self._restore_shell_state()
         self._refresh_audio()
         self._refresh_mixer()
@@ -179,6 +182,7 @@ class MainWindow(QMainWindow):
         self._command_search_input = QLineEdit()
         self._command_search_input.setObjectName("headerSearch")
         self._command_search_input.setPlaceholderText("Search or type a command")
+        self._command_search_input.returnPressed.connect(self._execute_command_search)
         self._header_play_button = QPushButton("Play")
         self._header_stop_button = QPushButton("Stop")
         self._tempo_label = QLabel("140 BPM")
@@ -196,9 +200,40 @@ class MainWindow(QMainWindow):
         cockpit_row.addWidget(self._device_status_label)
         cockpit_row.addWidget(self._runtime_status_label)
         header_layout.addLayout(cockpit_row)
+        session_row = QHBoxLayout()
+        session_row.setSpacing(6)
+        self._header_session_ref_input = QLineEdit("local-session")
+        self._header_session_ref_input.setObjectName("headerSessionRef")
+        self._header_session_ref_input.setPlaceholderText("session name")
+        self._header_new_button = QPushButton("New")
+        self._header_open_button = QPushButton("Open")
+        self._header_save_button = QPushButton("Save")
+        self._header_load_button = QPushButton("Load")
+        self._header_apply_button = QPushButton("Apply")
+        self._header_refresh_button = QPushButton("Refresh")
+        self._header_mixer_button = QPushButton("Mixer")
+        self._header_mixer_button.setCheckable(True)
+        self._header_mixer_button.setChecked(False)
+        session_row.addWidget(QLabel("Session"))
+        session_row.addWidget(self._header_session_ref_input, 1)
+        session_row.addWidget(self._header_new_button)
+        session_row.addWidget(self._header_open_button)
+        session_row.addWidget(self._header_save_button)
+        session_row.addWidget(self._header_load_button)
+        session_row.addWidget(self._header_apply_button)
+        session_row.addWidget(self._header_refresh_button)
+        session_row.addWidget(self._header_mixer_button)
+        header_layout.addLayout(session_row)
         header_layout.addWidget(self._hint_status_label)
         self._header_play_button.clicked.connect(self._play_transport)
         self._header_stop_button.clicked.connect(self._stop_transport)
+        self._header_new_button.clicked.connect(lambda: self._new_session(self._header_session_ref_input.text()))
+        self._header_open_button.clicked.connect(lambda: self._open_session(self._header_session_ref_input.text()))
+        self._header_save_button.clicked.connect(self._save_session)
+        self._header_load_button.clicked.connect(self._load_session)
+        self._header_apply_button.clicked.connect(self._apply_session)
+        self._header_refresh_button.clicked.connect(self._manual_refresh_all)
+        self._header_mixer_button.clicked.connect(self._toggle_mixer_dock)
         self._header_toolbar.addWidget(header)
         self.addToolBar(Qt.TopToolBarArea, self._header_toolbar)
 
@@ -217,9 +252,9 @@ class MainWindow(QMainWindow):
 
         self._mixer_dock = QDockWidget("Mixer", self)
         self._mixer_dock.setObjectName("dock.mixer")
-        self._mixer_dock.setMinimumWidth(340)
+        self._mixer_dock.setMinimumHeight(300)
         self._mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
-        self.addDockWidget(Qt.RightDockWidgetArea, self._mixer_dock)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self._mixer_dock)
 
         self._session_dock = QDockWidget("Session", self)
         self._session_dock.setObjectName("dock.session")
@@ -331,10 +366,22 @@ class MainWindow(QMainWindow):
     def _insert_selected_plugin(self) -> None:
         channel = self._mixer_panel.selected_channel()
         slot = self._mixer_panel.selected_slot_index()
-        plugin_id = self._browser_vm.selected_plugin_id.strip()
+        self._browser_controller.load_registry()
+        dialog = PluginInsertDialog(
+            plugins=list(self._browser_vm.plugins),
+            selected_plugin_id=self._browser_vm.selected_plugin_id,
+            channel_id=channel,
+            parent=self,
+        )
+        if dialog.exec() != dialog.Accepted:
+            self._workspace_controller.mark_action("Add FX cancelled")
+            self._refresh_workspace()
+            return
+        plugin_id = dialog.selected_plugin_id().strip()
         if not plugin_id:
             self._debug_panel.append_result("insert_plugin", 3, "No plugin selected")
             return
+        self._browser_controller.select_plugin(plugin_id)
         result = self._mixer_controller.insert_plugin(channel, plugin_id, slot)
         self._browser_controller.mark_insert_result(result)
         self._debug_panel.append_result("insert_plugin", result.code, result.message)
@@ -479,6 +526,8 @@ class MainWindow(QMainWindow):
             return
         session_ref = self._session_vm.session_ref or self._workspace_vm.session_ref or "Untitled Beat"
         self._project_title_label.setText(session_ref if session_ref != "default-session" else "Untitled Beat")
+        if hasattr(self, "_header_session_ref_input") and not self._header_session_ref_input.hasFocus():
+            self._header_session_ref_input.setText(session_ref if session_ref != "Untitled Beat" else "")
         sample_rate = self._audio_vm.sample_rate or 48000
         buffer_size = self._audio_vm.buffer_size or 256
         self._device_status_label.setText(
@@ -492,6 +541,75 @@ class MainWindow(QMainWindow):
             f"Hint: {self._workspace_vm.startup_hint} | "
             f"Browser -> Arrangement/Editor -> Mixer | Last: {self._workspace_vm.last_action}"
         )
+        if hasattr(self, "_header_mixer_button"):
+            self._header_mixer_button.setChecked(not self._mixer_dock.isHidden())
+
+    def _toggle_mixer_dock(self) -> None:
+        self._set_mixer_visible(self._header_mixer_button.isChecked())
+
+    def _set_mixer_visible(self, should_show: bool) -> None:
+        self._mixer_dock.setVisible(should_show)
+        self._header_mixer_button.setChecked(should_show)
+        self._workspace_controller.mark_action("Opened mixer" if should_show else "Closed mixer")
+        self._refresh_header()
+
+    def _toggle_dock(self, dock: QDockWidget, label: str) -> None:
+        dock.setVisible(dock.isHidden())
+        self._workspace_controller.mark_action(f"{'Opened' if not dock.isHidden() else 'Closed'} {label}")
+        self._refresh_header()
+
+    def _mount_commands(self) -> None:
+        self._command_actions: dict[str, QAction] = {}
+
+        def register(label: str, callback, shortcut: str = "") -> None:
+            action = QAction(label, self)
+            if shortcut:
+                action.setShortcut(QKeySequence(shortcut))
+            action.triggered.connect(callback)
+            self.addAction(action)
+            self._command_actions[label] = action
+
+        register("New Session", lambda: self._new_session(self._header_session_ref_input.text()), "Ctrl+N")
+        register("Open Session", lambda: self._open_session(self._header_session_ref_input.text()), "Ctrl+O")
+        register("Save Session", self._save_session, "Ctrl+S")
+        register("Load Session", self._load_session, "Ctrl+L")
+        register("Apply Session", self._apply_session, "Ctrl+Return")
+        register("Refresh All", self._manual_refresh_all, "Ctrl+R")
+        register("Play", self._play_transport, "Space")
+        register("Stop", self._stop_transport, "Shift+Space")
+        register("Add Track", self._workspace_panel.add_arrangement_track_button.click, "Ctrl+T")
+        register("Show Arrangement", self._workspace_panel.show_arrangement, "Ctrl+1")
+        register("Show Drum Machine", self._workspace_panel.show_drum_machine, "Ctrl+2")
+        register("Show Piano Roll", self._workspace_panel.show_piano_roll, "Ctrl+3")
+        register("Toggle Browser", lambda: self._toggle_dock(self._browser_dock, "browser"), "Ctrl+B")
+        register("Toggle Audio", lambda: self._toggle_dock(self._audio_dock, "audio"), "Ctrl+Shift+A")
+        register("Toggle Mixer", lambda: self._set_mixer_visible(self._mixer_dock.isHidden()), "Ctrl+M")
+        register("Toggle Session", lambda: self._toggle_dock(self._session_dock, "session"), "Ctrl+Shift+S")
+        register("Toggle Transport", lambda: self._toggle_dock(self._transport_dock, "transport"), "Ctrl+Shift+T")
+        register("Toggle Debug", lambda: self._toggle_dock(self._debug_dock, "debug"), "Ctrl+Shift+D")
+        register("Add FX", self._insert_selected_plugin, "Ctrl+Shift+F")
+
+        self._command_completer = QCompleter(sorted(self._command_actions), self)
+        self._command_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self._command_search_input.setCompleter(self._command_completer)
+
+    def _execute_command_search(self) -> None:
+        query = self._command_search_input.text().strip()
+        if not query:
+            return
+        exact = {name.lower(): action for name, action in self._command_actions.items()}
+        action = exact.get(query.lower())
+        if action is None:
+            action = next(
+                (candidate for name, candidate in self._command_actions.items() if query.lower() in name.lower()),
+                None,
+            )
+        if action is None:
+            self._workspace_controller.mark_action(f"Command not found: {query}")
+            self._refresh_workspace()
+            return
+        self._command_search_input.clear()
+        action.trigger()
 
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()
@@ -828,12 +946,15 @@ class MainWindow(QMainWindow):
 
     def _apply_default_dock_layout(self) -> None:
         self.tabifyDockWidget(self._browser_dock, self._audio_dock)
-        self.tabifyDockWidget(self._mixer_dock, self._session_dock)
+        self._browser_dock.show()
         self._browser_dock.raise_()
         self._mixer_dock.raise_()
+        self._session_dock.hide()
+        self._mixer_dock.hide()
         self._transport_dock.hide()
         self._debug_dock.hide()
-        self.resizeDocks([self._browser_dock, self._mixer_dock], [250, 360], Qt.Horizontal)
+        self.resizeDocks([self._browser_dock], [250], Qt.Horizontal)
+        self.resizeDocks([self._mixer_dock], [320], Qt.Vertical)
 
     def _default_window_size(self) -> tuple[int, int]:
         available = self._available_screen_geometry()

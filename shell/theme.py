@@ -71,6 +71,14 @@ QLineEdit#headerSearch {
     color: #ffffff;
 }
 
+QLineEdit#headerSessionRef {
+    background-color: #15111f;
+    border: 1px solid #54416f;
+    border-radius: 6px;
+    color: #ffffff;
+    padding: 5px 8px;
+}
+
 QGroupBox {
     background-color: rgba(27, 23, 39, 232);
     border: 1px solid #413558;
@@ -234,6 +242,12 @@ QFrame#beatCanvas {
     border-radius: 7px;
 }
 
+QScrollArea#arrangementScrollArea {
+    background-color: rgba(18, 16, 25, 235);
+    border: 1px solid #44365f;
+    border-radius: 7px;
+}
+
 QFrame#channelRack {
     background-color: rgba(18, 16, 25, 235);
     border: 1px solid #44365f;
@@ -251,7 +265,51 @@ QLabel[beatLane="true"], QLabel[rackLane="true"] {
     font-weight: 600;
 }
 
-QLabel#arrangeMarker, QLabel#midiStepMarker, QLabel#midiPitchLabel {
+QFrame[arrangementTrackHeader="true"] {
+    background-color: rgba(74, 74, 78, 190);
+    border: 1px solid rgba(110, 110, 116, 190);
+    border-radius: 4px;
+}
+
+QLineEdit#arrangementTrackName {
+    background-color: rgba(31, 31, 36, 170);
+    border: 1px solid rgba(100, 100, 108, 160);
+    border-radius: 4px;
+    color: #f8f8ff;
+    font-weight: 600;
+    padding: 3px 5px;
+}
+
+QLabel#arrangementTrackKind, QLabel#trackNumberLabel {
+    color: #d5d2dc;
+    font-size: 11px;
+}
+
+QPushButton#trackControlButton {
+    background-color: #3d3d42;
+    border: 1px solid #6c6c75;
+    border-radius: 4px;
+    color: #f2f2f5;
+    padding: 2px 0;
+}
+
+QPushButton#trackControlButton:checked {
+    background-color: #7d55d8;
+}
+
+QPushButton#trackRemoveButton {
+    background-color: #3d3d42;
+    border: 1px solid #6c6c75;
+    border-radius: 4px;
+    color: #f2f2f5;
+    padding: 2px 0;
+}
+
+QPushButton#trackRemoveButton:hover {
+    background-color: #7d3548;
+}
+
+QLabel#arrangeMarker, QLabel#arrangeTimeMarker, QLabel#midiStepMarker, QLabel#midiPitchLabel {
     color: #a99abc;
     font-size: 11px;
 }
@@ -268,6 +326,57 @@ QLabel[stepCell="true"] {
     border-radius: 3px;
     min-width: 10px;
     min-height: 13px;
+}
+
+QFrame[mixerChannelStrip="true"] {
+    background-color: #505055;
+    border: 1px solid #303036;
+    border-radius: 3px;
+}
+
+QPushButton#mixerInsertButton, QPushButton#mixerRouteButton, QPushButton#mixerReadButton {
+    background-color: #5b5b60;
+    border: 1px solid #3b3b40;
+    border-radius: 4px;
+    color: #f1f1f1;
+    padding: 4px 2px;
+}
+
+QPushButton#mixerSmallButton {
+    background-color: #444449;
+    border: 1px solid #2c2c31;
+    border-radius: 4px;
+    color: #f1f1f1;
+    padding: 3px 0;
+}
+
+QPushButton#mixerSmallButton:checked {
+    background-color: #3f8d54;
+}
+
+QLabel#mixerStripName {
+    background-color: #3f3f44;
+    border-top: 1px solid #303036;
+    color: #ffffff;
+    font-weight: 700;
+    padding: 5px;
+}
+
+QLabel#mixerMeterLabel {
+    background-color: #202326;
+    border-radius: 3px;
+    color: #72e36f;
+    font-weight: 700;
+    padding: 3px;
+}
+
+QLabel#mixerScaleLabel {
+    color: #c6c6ca;
+    font-size: 10px;
+}
+
+QDial#mixerPanDial {
+    background-color: #4d4d53;
 }
 
 QLabel[midiCell="true"] {

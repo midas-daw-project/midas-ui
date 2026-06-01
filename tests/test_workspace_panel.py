@@ -5,7 +5,8 @@ import sys
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QPushButton
 
 from bridge.protocol import RecentSessionEntry
 from panels.debug.debug_panel import DebugPanel
@@ -68,30 +69,53 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.beat_canvas.objectName() == "beatCanvas"
     assert panel.channel_rack.objectName() == "channelRack"
     assert panel.editor_stack.objectName() == "editorStack"
+    assert panel.current_editor_name() == "Arrangement"
+    panel.show_next_editor()
     assert panel.current_editor_name() == "Drum Machine"
     panel.show_next_editor()
     assert panel.current_editor_name() == "Piano Roll"
     panel.show_previous_editor()
     assert panel.current_editor_name() == "Drum Machine"
+    panel.show_previous_editor()
+    assert panel.current_editor_name() == "Arrangement"
     assert panel.selected_mix_percent() == 100
     assert panel.selected_playrate() == 1.0
     panel.playrate_input.setValue(75)
     assert panel.playrate_label.text() == "Rate 0.75"
     assert panel.selected_playrate() == 0.75
-    assert panel.arrangement_clip_active("Sample Track 1", 1)
-    assert panel.drum_step_active("Bass Sampler", 0)
-    panel._arrangement_buttons[("Sample Track 1", 1)].click()
-    panel._drum_step_buttons[("Bass Sampler", 0)].click()
-    assert not panel.arrangement_clip_active("Sample Track 1", 1)
-    assert not panel.drum_step_active("Bass Sampler", 0)
+    assert panel.arrangement_track_count() == 11
+    assert panel.arrangement_track_names()[0] == "Master"
+    assert panel.arrangement_track_names()[1] == "Audio Track"
+    assert panel.arrangement_scroll_area.horizontalScrollBarPolicy() == Qt.ScrollBarAsNeeded
+    assert panel.arrangement_scroll_area.verticalScrollBarPolicy() == Qt.ScrollBarAsNeeded
+    assert panel.empty_arrangement_label.isVisibleTo(panel) is False or panel.empty_arrangement_label.text().startswith("No tracks")
+    panel.add_arrangement_track_button.click()
+    assert panel.arrangement_track_count() == 12
+    assert panel.arrangement_track_names()[-1] == "Audio Track"
+    panel.arrangement_track_name_inputs[-1].setText("Hook idea")
+    panel.arrangement_track_name_inputs[-1].editingFinished.emit()
+    assert panel.arrangement_track_names()[-1] == "Hook idea"
+    panel.arrangement_track_name_inputs[-1].parent().findChild(QPushButton, "trackRemoveButton").click()
+    assert panel.arrangement_track_count() == 11
+    assert panel.drum_track_count() == 0
+    panel.show_drum_machine()
+    panel.add_drum_track_button.click()
+    assert panel.drum_track_count() == 1
+    assert panel.drum_track_name_inputs[0].text() == "New Track"
+    assert not panel.drum_step_active("drum-track-1", 0)
+    panel._drum_step_buttons[("drum-track-1", 0)].click()
+    assert panel.drum_step_active("drum-track-1", 0)
+    panel.drum_track_name_inputs[0].parent().findChild(QPushButton, "trackRemoveButton").click()
+    assert panel.drum_track_count() == 0
     assert panel.midi_note_grid.objectName() == "midiNoteGrid"
-    assert panel.selected_midi_track() == "Kick Sampler"
-    starting_notes = panel.midi_note_count("Kick Sampler")
+    selected_midi_track = panel.selected_midi_track()
+    assert selected_midi_track == "Audio Track"
+    starting_notes = panel.midi_note_count(selected_midi_track)
     panel.midi_pitch_selector.setCurrentText("C4")
     panel.midi_step_input.setValue(2)
     panel.midi_length_input.setValue(2)
     panel.add_midi_note_button.click()
-    assert panel.midi_note_count("Kick Sampler") == starting_notes + 1
+    assert panel.midi_note_count(selected_midi_track) == starting_notes + 1
     assert "C4@2x2" in panel.midi_note_summary_label.text()
     assert "Generate drum pattern" in panel.assistant_prompt_label.text()
     assert "sampled MIDI notes" in panel.assistant_prompt_label.text()

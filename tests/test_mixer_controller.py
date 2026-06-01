@@ -5,7 +5,7 @@ import sys
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 
 from bridge.fallback_bridge import FallbackBridgeClient
 from controllers.mixer_controller import MixerController
@@ -99,10 +99,11 @@ def test_mixer_plugin_insert_chain_flow():
 
 def test_mixer_panel_renders_channel_strips_and_plugin_stack():
     _app()
+    insert_requests = []
     panel = MixerPanel(
         on_apply_mute=lambda: None,
         on_apply_gain=lambda: None,
-        on_insert_plugin=lambda: None,
+        on_insert_plugin=lambda: insert_requests.append(panel.selected_channel()),
         on_remove_plugin=lambda: None,
         on_move_slot_up=lambda: None,
         on_move_slot_down=lambda: None,
@@ -124,9 +125,10 @@ def test_mixer_panel_renders_channel_strips_and_plugin_stack():
 
     panel.render(vm)
 
-    assert len(panel.channel_strip_labels) == 6
-    assert "Kick" in panel.channel_strip_labels[0].text()
-    assert "0.0 dB" in panel.channel_strip_labels[0].text()
+    assert len(panel.channel_strip_labels) == 16
+    assert panel.channel_strip_labels[0].text() == "Master"
+    assert panel.channel_strip_labels[1].text() == "1"
+    assert "0.0 dB" in panel.channel_meter_labels[1].text()
     assert "active" in panel.selected_strip_label.text()
     assert "volume=+0.0 dB" in panel.selected_strip_label.text()
     assert "Plugin Stack: 1 insert" in panel.plugin_stack_label.text()
@@ -135,3 +137,6 @@ def test_mixer_panel_renders_channel_strips_and_plugin_stack():
     assert "Runtime:" in panel.chain_list.item(0).text()
     assert panel.selected_gain() == 1.0
     assert len(panel.effect_macro_dials) == 4
+    insert_buttons = panel.findChildren(QPushButton, "mixerInsertButton")
+    insert_buttons[2].click()
+    assert insert_requests[-1] == 2
