@@ -48,7 +48,7 @@ class BrowserPanel(QWidget):
         library_layout.addWidget(self.browser_hint_label)
         library_layout.addWidget(self.browser_search_input)
         self.category_list = QListWidget()
-        for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
+        for category in ["Drums", "Bass", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
             self.category_list.addItem(category)
         self.category_list.setCurrentRow(1)
         self.category_list.setMaximumHeight(130)

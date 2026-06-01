@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Callable
 
 from PySide6.QtCore import Qt
@@ -94,7 +95,7 @@ class MixerPanel(QWidget):
         self.gain_input = QSlider(Qt.Horizontal)
         self.gain_input.setRange(0, 200)
         self.gain_input.setValue(100)
-        self.gain_value_label = QLabel("1.00x")
+        self.gain_value_label = QLabel("0.0 dB")
 
         self.apply_mute_button = QPushButton("Mute")
         self.apply_gain_button = QPushButton("Gain")
@@ -104,7 +105,7 @@ class MixerPanel(QWidget):
         self.slot_value_label = QLabel("0")
         self.channel_input.valueChanged.connect(lambda value: self.channel_value_label.setText(str(value)))
         self.gain_input.valueChanged.connect(
-            lambda value: self.gain_value_label.setText(f"{value / 100:.2f}x")
+            lambda value: self.gain_value_label.setText(self._gain_to_db_label(value / 100.0))
         )
         self.slot_input.valueChanged.connect(lambda value: self.slot_value_label.setText(str(value)))
         self.insert_button = QPushButton("Insert")
@@ -253,15 +254,16 @@ class MixerPanel(QWidget):
                 state = item
                 break
         if state is None:
-            self.status_label.setText(f"Channel {channel} | muted=false | gain=1.0")
-            self.selected_strip_label.setText(f"Selected Strip: Channel {channel} | clean | gain=1.000")
+            self.status_label.setText(f"Channel {channel} | muted=false | volume=0.0 dB")
+            self.selected_strip_label.setText(f"Selected Strip: Channel {channel} | clean | volume=0.0 dB")
         else:
+            db_label = self._gain_to_db_label(state.gain)
             self.status_label.setText(
-                f"Channel {state.channel_id} | muted={'true' if state.muted else 'false'} | gain={state.gain:.3f}"
+                f"Channel {state.channel_id} | muted={'true' if state.muted else 'false'} | volume={db_label}"
             )
             self.selected_strip_label.setText(
                 f"Selected Strip: Channel {state.channel_id} | "
-                f"{'muted' if state.muted else 'active'} | gain={state.gain:.3f}"
+                f"{'muted' if state.muted else 'active'} | volume={db_label}"
             )
             self.mute_input.setChecked(state.muted)
             self.gain_input.setValue(round(state.gain * 100))
@@ -307,6 +309,13 @@ class MixerPanel(QWidget):
             if channel is None:
                 label.setText(f"{name}\n- dB\nidle")
                 continue
-            db_hint = f"{channel.gain:.2f}x"
+            db_hint = self._gain_to_db_label(channel.gain)
             state = "muted" if channel.muted else "active"
             label.setText(f"{name}\n{db_hint}\n{state}")
+
+    @staticmethod
+    def _gain_to_db_label(gain: float) -> str:
+        if gain <= 0:
+            return "-inf dB"
+        db_value = 20 * math.log10(gain)
+        return f"{db_value:+.1f} dB"

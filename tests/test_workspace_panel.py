@@ -73,6 +73,17 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.current_editor_name() == "Piano Roll"
     panel.show_previous_editor()
     assert panel.current_editor_name() == "Drum Machine"
+    assert panel.selected_mix_percent() == 100
+    assert panel.selected_playrate() == 1.0
+    panel.playrate_input.setValue(75)
+    assert panel.playrate_label.text() == "Rate 0.75"
+    assert panel.selected_playrate() == 0.75
+    assert panel.arrangement_clip_active("Sample Track 1", 1)
+    assert panel.drum_step_active("Bass Sampler", 0)
+    panel._arrangement_buttons[("Sample Track 1", 1)].click()
+    panel._drum_step_buttons[("Bass Sampler", 0)].click()
+    assert not panel.arrangement_clip_active("Sample Track 1", 1)
+    assert not panel.drum_step_active("Bass Sampler", 0)
     assert panel.midi_note_grid.objectName() == "midiNoteGrid"
     assert panel.selected_midi_track() == "Kick Sampler"
     starting_notes = panel.midi_note_count("Kick Sampler")

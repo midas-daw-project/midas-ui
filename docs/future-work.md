@@ -7,3 +7,4 @@
 - Add transport panel wired to typed transport bridge methods.
 - Add FL-inspired production workflow contracts: playlist/pattern scope, sampled tracks, MIDI notes, browser actions, mixer routing, automation, recording, export settings, and theme/accessibility preferences.
 - Add classic media-player-inspired preview deck, local media queue, EQ/analyzer, and theme/layout preset workflows without surfacing source-reference branding in the app.
+- Back the arrangement with real sample/MIDI/audio track contracts, user-renamable tracks, dB mixer volume, percentage mix controls, and 0.00-2.00 playrate.

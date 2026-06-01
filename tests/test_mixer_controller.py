@@ -126,7 +126,9 @@ def test_mixer_panel_renders_channel_strips_and_plugin_stack():
 
     assert len(panel.channel_strip_labels) == 6
     assert "Kick" in panel.channel_strip_labels[0].text()
+    assert "0.0 dB" in panel.channel_strip_labels[0].text()
     assert "active" in panel.selected_strip_label.text()
+    assert "volume=+0.0 dB" in panel.selected_strip_label.text()
     assert "Plugin Stack: 1 insert" in panel.plugin_stack_label.text()
     assert panel.chain_list.count() == 1
     assert "Intent:" in panel.chain_list.item(0).text()

@@ -28,6 +28,53 @@ from PySide6.QtWidgets import (
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
+ARRANGEMENT_TRACKS = [
+    {
+        "name": "Sample Track 1",
+        "kind": "Sample",
+        "color": "#f9733d",
+        "clips": [
+            {"start": 1, "length": 2, "label": "Sample"},
+            {"start": 5, "length": 2, "label": "Loop"},
+        ],
+    },
+    {
+        "name": "MIDI Track 1",
+        "kind": "MIDI",
+        "color": "#804df2",
+        "clips": [
+            {"start": 2, "length": 3, "label": "MIDI"},
+            {"start": 6, "length": 2, "label": "MIDI"},
+        ],
+    },
+    {
+        "name": "Audio Track 1",
+        "kind": "Audio",
+        "color": "#78a6ff",
+        "clips": [
+            {"start": 1, "length": 2, "label": "Take"},
+            {"start": 4, "length": 3, "label": "Record"},
+        ],
+    },
+    {
+        "name": "Vocal Track 1",
+        "kind": "Audio",
+        "color": "#d83a9c",
+        "clips": [
+            {"start": 3, "length": 2, "label": "Vocal"},
+            {"start": 6, "length": 2, "label": "Double"},
+        ],
+    },
+    {
+        "name": "Bus / Print",
+        "kind": "Route",
+        "color": "#2bd2c9",
+        "clips": [
+            {"start": 1, "length": 7, "label": "Mix"},
+        ],
+    },
+]
+
 SAMPLED_TRACKS = [
     {
         "name": "Kick Sampler",
@@ -62,8 +109,8 @@ SAMPLED_TRACKS = [
         "steps": {1, 2, 5, 6, 9, 10, 13},
     },
     {
-        "name": "808 Bass Sampler",
-        "short": "808 Bass",
+        "name": "Bass Sampler",
+        "short": "Bass",
         "source": "Sample track",
         "color": "#2bd2c9",
         "clips": {1, 3, 5, 7},
@@ -95,8 +142,16 @@ class WorkspacePanel(QWidget):
             "Snare Sampler": [(5, "D3", 1), (13, "D3", 1)],
             "Hi Hat Sampler": [(1, "F#3", 1), (3, "F#3", 1), (5, "F#3", 1), (7, "F#3", 1)],
             "Melody Sampler": [(2, "C4", 2), (5, "E4", 2), (9, "G4", 2), (13, "A4", 2)],
-            "808 Bass Sampler": [(1, "C3", 2), (4, "C3", 2), (9, "G3", 2), (12, "G3", 2)],
+            "Bass Sampler": [(1, "C3", 2), (4, "C3", 2), (9, "G3", 2), (12, "G3", 2)],
         }
+        self._arrangement_clips: dict[str, set[int]] = {
+            str(track["name"]): {int(clip["start"]) for clip in track["clips"]} for track in ARRANGEMENT_TRACKS
+        }
+        self._drum_steps: dict[str, set[int]] = {
+            str(track["name"]): set(track["steps"]) for track in SAMPLED_TRACKS
+        }
+        self._arrangement_buttons: dict[tuple[str, int], QPushButton] = {}
+        self._drum_step_buttons: dict[tuple[str, int], QPushButton] = {}
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
@@ -110,6 +165,31 @@ class WorkspacePanel(QWidget):
         title_row.addStretch(1)
         title_row.addWidget(self.mode_label)
         layout.addLayout(title_row)
+
+        project_control_row = QHBoxLayout()
+        project_control_row.setSpacing(8)
+        self.project_mix_label = QLabel("Mix 100%")
+        self.project_mix_input = QSlider(Qt.Horizontal)
+        self.project_mix_input.setRange(0, 100)
+        self.project_mix_input.setValue(100)
+        self.project_mix_input.setMaximumWidth(150)
+        self.playrate_label = QLabel("Rate 1.00")
+        self.playrate_input = QSlider(Qt.Horizontal)
+        self.playrate_input.setRange(0, 200)
+        self.playrate_input.setValue(100)
+        self.playrate_input.setMaximumWidth(170)
+        self.project_mix_input.valueChanged.connect(
+            lambda value: self.project_mix_label.setText(f"Mix {value}%")
+        )
+        self.playrate_input.valueChanged.connect(
+            lambda value: self.playrate_label.setText(f"Rate {value / 100:.2f}")
+        )
+        project_control_row.addWidget(self.project_mix_label)
+        project_control_row.addWidget(self.project_mix_input)
+        project_control_row.addWidget(self.playrate_label)
+        project_control_row.addWidget(self.playrate_input)
+        project_control_row.addStretch(1)
+        layout.addLayout(project_control_row)
 
         status_box = QGroupBox("Operator Status")
         status_box.setMaximumHeight(136)
@@ -132,15 +212,18 @@ class WorkspacePanel(QWidget):
         status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
         layout.addWidget(status_box)
 
-        canvas_box = QGroupBox("Arrangement / Sample Tracks")
+        canvas_box = QGroupBox("Arrangement")
         canvas_layout = QVBoxLayout(canvas_box)
         self.beat_canvas = QFrame()
         self.beat_canvas.setObjectName("beatCanvas")
-        self.beat_canvas.setMinimumHeight(170)
+        self.beat_canvas.setMinimumHeight(186)
         beat_grid = QGridLayout(self.beat_canvas)
         beat_grid.setContentsMargins(8, 8, 8, 8)
         beat_grid.setHorizontalSpacing(4)
         beat_grid.setVerticalSpacing(4)
+        header = QLabel("Track")
+        header.setObjectName("arrangeMarker")
+        beat_grid.addWidget(header, 0, 0)
         for column in range(1, 9):
             marker = QLabel(str(column))
             marker.setAlignment(Qt.AlignCenter)
@@ -148,23 +231,44 @@ class WorkspacePanel(QWidget):
             marker.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
             beat_grid.addWidget(marker, 0, column)
             beat_grid.setColumnStretch(column, 1)
-        for row, track in enumerate(SAMPLED_TRACKS, start=1):
-            lane_label = QLabel(str(track["short"]))
+        for row, track in enumerate(ARRANGEMENT_TRACKS, start=1):
+            track_name = str(track["name"])
+            lane_label = QLabel(f"{track_name}\n{track['kind']}")
             lane_label.setProperty("beatLane", True)
-            lane_label.setFixedWidth(104)
+            lane_label.setFixedWidth(132)
             lane_label.setWordWrap(True)
             beat_grid.addWidget(lane_label, row, 0)
-            for column in range(1, 9):
-                active = column in track["clips"]
-                cell = QLabel(track["short"] if active and column == min(track["clips"]) else "")
+            occupied: set[int] = set()
+            for clip in track["clips"]:
+                start = int(clip["start"])
+                length = max(1, min(int(clip["length"]), 9 - start))
+                occupied.update(range(start, start + length))
+                active = start in self._arrangement_clips[track_name]
+                cell = QPushButton(str(clip["label"]))
                 cell.setProperty("beatCell", True)
+                cell.setCheckable(True)
+                cell.setChecked(active)
                 cell.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
-                cell.setStyleSheet(
-                    f"background-color: {track['color']};"
-                    if active
-                    else "background-color: rgba(37, 24, 57, 165);"
+                cell.setToolTip(f"{track_name} region at bar {start}")
+                cell.clicked.connect(
+                    lambda checked, name=track_name, beat=start: self._set_arrangement_clip(name, beat, checked)
                 )
-                beat_grid.addWidget(cell, row, column)
+                self._arrangement_buttons[(track_name, start)] = cell
+                self._style_toggle_cell(cell, str(track["color"]), active)
+                beat_grid.addWidget(cell, row, start, 1, length)
+            for column in range(1, 9):
+                if column in occupied:
+                    continue
+                empty = QLabel("")
+                empty.setProperty("beatCell", True)
+                empty.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+                empty.setStyleSheet(
+                    "background-color: rgba(37, 24, 57, 115);"
+                    "border: 1px solid rgba(104, 82, 148, 70);"
+                    "border-radius: 4px;"
+                    "min-height: 20px;"
+                )
+                beat_grid.addWidget(empty, row, column)
         canvas_layout.addWidget(self.beat_canvas)
         layout.addWidget(canvas_box)
 
@@ -200,19 +304,26 @@ class WorkspacePanel(QWidget):
         rack_grid.setVerticalSpacing(5)
         rack_grid.setContentsMargins(8, 8, 8, 8)
         for row, track in enumerate(SAMPLED_TRACKS):
+            track_name = str(track["name"])
             rack_label = QLabel(track["short"])
             rack_label.setProperty("rackLane", True)
             rack_label.setFixedWidth(96)
             rack_grid.addWidget(rack_label, row, 0)
             for step_index in range(16):
-                step = QLabel("")
+                active = step_index in self._drum_steps[track_name]
+                step = QPushButton("")
                 step.setProperty("stepCell", True)
+                step.setCheckable(True)
+                step.setChecked(active)
                 step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                step.setStyleSheet(
-                    f"background-color: {track['color']};"
-                    if step_index in track["steps"]
-                    else "background-color: rgba(37, 24, 57, 175);"
+                step.setToolTip(f"{track['short']} step {step_index + 1}")
+                step.clicked.connect(
+                    lambda checked, name=track_name, step_number=step_index: self._set_drum_step(
+                        name, step_number, checked
+                    )
                 )
+                self._drum_step_buttons[(track_name, step_index)] = step
+                self._style_toggle_cell(step, str(track["color"]), active)
                 rack_grid.addWidget(step, row, step_index + 1)
                 rack_grid.setColumnStretch(step_index + 1, 1)
         self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Add sampled MIDI notes | Suggest chord progression")
@@ -532,6 +643,40 @@ class WorkspacePanel(QWidget):
         selected = track_name or self.selected_midi_track()
         return len(self._midi_notes.get(selected, []))
 
+    def arrangement_clip_active(self, track_name: str, beat: int) -> bool:
+        return beat in self._arrangement_clips.get(track_name, set())
+
+    def drum_step_active(self, track_name: str, step_index: int) -> bool:
+        return step_index in self._drum_steps.get(track_name, set())
+
+    def selected_mix_percent(self) -> int:
+        return int(self.project_mix_input.value())
+
+    def selected_playrate(self) -> float:
+        return float(self.playrate_input.value()) / 100.0
+
+    def _set_arrangement_clip(self, track_name: str, beat: int, active: bool) -> None:
+        clips = self._arrangement_clips.setdefault(track_name, set())
+        if active:
+            clips.add(beat)
+        else:
+            clips.discard(beat)
+        button = self._arrangement_buttons.get((track_name, beat))
+        if button is not None:
+            button.setChecked(active)
+            self._style_toggle_cell(button, self._track_color(track_name), active)
+
+    def _set_drum_step(self, track_name: str, step_index: int, active: bool) -> None:
+        steps = self._drum_steps.setdefault(track_name, set())
+        if active:
+            steps.add(step_index)
+        else:
+            steps.discard(step_index)
+        button = self._drum_step_buttons.get((track_name, step_index))
+        if button is not None:
+            button.setChecked(active)
+            self._style_toggle_cell(button, self._track_color(track_name), active)
+
     def _add_selected_midi_note(self) -> None:
         track = self.selected_midi_track()
         note = (int(self.midi_step_input.value()), self.midi_pitch_selector.currentText(), int(self.midi_length_input.value()))
@@ -590,6 +735,25 @@ class WorkspacePanel(QWidget):
             if track["name"] == track_name:
                 return str(track["color"])
         return "#78a6ff"
+
+    @staticmethod
+    def _style_toggle_cell(button: QPushButton, color: str, active: bool) -> None:
+        if active:
+            button.setStyleSheet(
+                f"background-color: {color};"
+                "border: 1px solid rgba(255, 255, 255, 90);"
+                "border-radius: 4px;"
+                "min-height: 16px;"
+                "padding: 0;"
+            )
+            return
+        button.setStyleSheet(
+                "background-color: rgba(37, 24, 57, 165);"
+                "border: 1px solid rgba(104, 82, 148, 90);"
+                "border-radius: 4px;"
+                "min-height: 16px;"
+                "padding: 0;"
+            )
 
     @staticmethod
     def _fmt_epoch(value: int) -> str:
