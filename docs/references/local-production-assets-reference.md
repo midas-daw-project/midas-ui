@@ -3,6 +3,7 @@
 Source material:
 
 - `/Users/matthewperalta/Documents/Image-Line`
+- `/Applications/FL Cloud Plugins.app`
 - `/Users/matthewperalta/Documents/iZotope`
 - `/Users/matthewperalta/Documents/MDrummer`
 - `/Users/matthewperalta/Documents/MPK mini IV - Logic Pro Setup Guide - v1.1.pdf`
@@ -17,6 +18,14 @@ Use these local folders as workflow and library references. Do not copy third-pa
 - Contains `.flp` projects, autosaves/backups, project-local audio, FL Studio Mobile factory data, FLEX pack/preset indexes, samples, templates, and resource files.
 - MIDAS should support preview-first FL project import and separate browser indexing for FLEX/content libraries.
 - See `docs/workflows/image-line-fl-studio-workflow.md`.
+
+## FL Cloud Plugins
+
+- External Image-Line plug-in manager reference.
+- The local bundle is a macOS app, not a loadable audio plug-in bundle.
+- It exposes bundle identifier `com.image-line.fl-cloud-plugins`, URL scheme `fl-cloud-plugins`, an install helper, a licensing library, and a WebKit-backed manager surface.
+- MIDAS should model this as an external manager/catalog source, then scan installed AU/VST3/CLAP locations separately for plug-ins that can actually be loaded.
+- See `docs/workflows/fl-cloud-plugins-manager-workflow.md`.
 
 ## iZotope
 
