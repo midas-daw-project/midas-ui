@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 from bridge.fallback_bridge import FallbackBridgeClient
 from bridge.native_bridge import NativeBridgeClient
 from shell.main_window import MainWindow
+from shell.theme import apply_midas_theme
 
 
 def build_bridge():
@@ -19,6 +20,7 @@ def build_bridge():
 
 def main() -> int:
     app = QApplication(sys.argv)
+    apply_midas_theme(app)
     bridge = build_bridge()
     window = MainWindow(bridge)
     window.show()

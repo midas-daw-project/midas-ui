@@ -2,15 +2,19 @@ from __future__ import annotations
 
 from typing import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QDial,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
-    QSpinBox,
-    QDoubleSpinBox,
+    QSlider,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -56,73 +60,156 @@ class MixerPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
-        control_box = QGroupBox("Mixer Channel")
-        form = QFormLayout(control_box)
-        self.channel_input = QSpinBox()
-        self.channel_input.setRange(1, 2048)
+        strip_box = QGroupBox("Mixer")
+        strip_layout = QGridLayout(strip_box)
+        strip_layout.setContentsMargins(8, 8, 8, 8)
+        strip_layout.setHorizontalSpacing(6)
+        strip_layout.setVerticalSpacing(6)
+        self.channel_strip_labels: list[QLabel] = []
+        for name in ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]:
+            label = QLabel(f"{name}\n- dB\nidle")
+            label.setObjectName("mixerStrip")
+            label.setProperty("mixerStrip", True)
+            label.setWordWrap(True)
+            index = len(self.channel_strip_labels)
+            strip_layout.addWidget(label, index // 3, index % 3)
+            self.channel_strip_labels.append(label)
+        layout.addWidget(strip_box)
+
+        self.mixer_tabs = QTabWidget()
+        self.mixer_tabs.setObjectName("mixerTabs")
+        layout.addWidget(self.mixer_tabs, 1)
+
+        channel_page = QWidget()
+        control_layout = QVBoxLayout(channel_page)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        form = QFormLayout()
+        self.channel_input = QSlider(Qt.Horizontal)
+        self.channel_input.setRange(1, 16)
         self.channel_input.setValue(1)
+        self.channel_value_label = QLabel("1")
         self.mute_input = QCheckBox("Muted")
-        self.gain_input = QDoubleSpinBox()
-        self.gain_input.setRange(0.0, 2.0)
-        self.gain_input.setSingleStep(0.05)
-        self.gain_input.setValue(1.0)
+        self.gain_input = QSlider(Qt.Horizontal)
+        self.gain_input.setRange(0, 200)
+        self.gain_input.setValue(100)
+        self.gain_value_label = QLabel("1.00x")
 
-        self.apply_mute_button = QPushButton("Apply Mute")
-        self.apply_gain_button = QPushButton("Apply Gain")
-        self.slot_input = QSpinBox()
+        self.apply_mute_button = QPushButton("Mute")
+        self.apply_gain_button = QPushButton("Gain")
+        self.slot_input = QSlider(Qt.Horizontal)
         self.slot_input.setRange(0, 32)
         self.slot_input.setValue(0)
-        self.insert_button = QPushButton("Insert Selected Plugin")
-        self.remove_button = QPushButton("Remove Slot Plugin")
-        self.move_up_button = QPushButton("Move Slot Up")
-        self.move_down_button = QPushButton("Move Slot Down")
-        self.move_top_button = QPushButton("Move Slot To Top")
-        self.move_bottom_button = QPushButton("Move Slot To Bottom")
+        self.slot_value_label = QLabel("0")
+        self.channel_input.valueChanged.connect(lambda value: self.channel_value_label.setText(str(value)))
+        self.gain_input.valueChanged.connect(
+            lambda value: self.gain_value_label.setText(f"{value / 100:.2f}x")
+        )
+        self.slot_input.valueChanged.connect(lambda value: self.slot_value_label.setText(str(value)))
+        self.insert_button = QPushButton("Insert")
+        self.remove_button = QPushButton("Remove")
+        self.move_up_button = QPushButton("Move Up")
+        self.move_down_button = QPushButton("Move Down")
+        self.move_top_button = QPushButton("Move Top")
+        self.move_bottom_button = QPushButton("Move Bottom")
         self.bypass_input = QCheckBox("Bypassed")
-        self.apply_bypass_button = QPushButton("Apply Slot Bypass")
+        self.apply_bypass_button = QPushButton("Slot Bypass")
         self.channel_bypass_input = QCheckBox("Bypass All Inserts")
-        self.apply_channel_bypass_button = QPushButton("Apply Channel Bypass")
-        self.clear_chain_button = QPushButton("Clear Channel Chain")
-        self.refresh_runtime_button = QPushButton("Refresh Runtime State")
-        self.request_load_button = QPushButton("Request Slot Load")
-        self.request_unload_button = QPushButton("Request Slot Unload")
+        self.apply_channel_bypass_button = QPushButton("Chain Bypass")
+        self.clear_chain_button = QPushButton("Clear Chain")
+        self.refresh_runtime_button = QPushButton("Runtime")
+        self.request_load_button = QPushButton("Load")
+        self.request_unload_button = QPushButton("Unload")
         self.refresh_button = QPushButton("Refresh")
 
-        form.addRow("Channel", self.channel_input)
+        form.addRow("Channel", self._with_value_label(self.channel_input, self.channel_value_label))
         form.addRow("Mute", self.mute_input)
-        form.addRow("Gain", self.gain_input)
-        form.addRow(self.apply_mute_button)
-        form.addRow(self.apply_gain_button)
-        form.addRow("Insert Slot", self.slot_input)
-        form.addRow(self.insert_button)
-        form.addRow(self.remove_button)
-        form.addRow(self.move_up_button)
-        form.addRow(self.move_down_button)
-        form.addRow(self.move_top_button)
-        form.addRow(self.move_bottom_button)
+        form.addRow("Volume", self._with_value_label(self.gain_input, self.gain_value_label))
+        form.addRow("Insert Slot", self._with_value_label(self.slot_input, self.slot_value_label))
         form.addRow("Slot Bypass", self.bypass_input)
-        form.addRow(self.apply_bypass_button)
         form.addRow("Channel Bypass", self.channel_bypass_input)
-        form.addRow(self.apply_channel_bypass_button)
-        form.addRow(self.clear_chain_button)
-        form.addRow(self.refresh_runtime_button)
-        form.addRow(self.request_load_button)
-        form.addRow(self.request_unload_button)
-        form.addRow(self.refresh_button)
-        layout.addWidget(control_box)
+        control_layout.addLayout(form)
 
-        status_box = QGroupBox("Status")
-        status_layout = QVBoxLayout(status_box)
+        action_grid = QGridLayout()
+        action_grid.setHorizontalSpacing(6)
+        action_grid.setVerticalSpacing(6)
+        action_buttons = [
+            self.apply_mute_button,
+            self.apply_gain_button,
+            self.insert_button,
+            self.remove_button,
+            self.apply_bypass_button,
+            self.refresh_button,
+        ]
+        for index, button in enumerate(action_buttons):
+            action_grid.addWidget(button, index // 2, index % 2)
+        control_layout.addLayout(action_grid)
+
         self.status_label = QLabel("Channel 1 | muted=false | gain=1.0")
+        self.selected_strip_label = QLabel("Selected Strip: Channel 1")
+        self.status_label.setWordWrap(True)
+        self.selected_strip_label.setWordWrap(True)
+        control_layout.addWidget(self.status_label)
+        control_layout.addWidget(self.selected_strip_label)
+        control_layout.addStretch(1)
+        self.mixer_tabs.addTab(channel_page, "Channel")
+
+        inserts_page = QWidget()
+        status_layout = QVBoxLayout(inserts_page)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self.insert_status_label = QLabel("Insert Status: -")
+        self.plugin_stack_label = QLabel("Plugin Stack: no inserts")
+        self.plugin_stack_label.setWordWrap(True)
         self.chain_list = QListWidget()
+        self.chain_list.setMinimumHeight(72)
+        self.chain_list.setMaximumHeight(104)
         self.error_label = QLabel("Error: ")
-        status_layout.addWidget(self.status_label)
+        self.effect_macro_box = QGroupBox("Effect Macros")
+        macro_grid = QGridLayout(self.effect_macro_box)
+        self.effect_macro_dials: list[QDial] = []
+        for index, (name, value) in enumerate(
+            [
+                ("Mix", 70),
+                ("Tone", 55),
+                ("Rate", 30),
+                ("Feedback", 40),
+            ]
+        ):
+            dial = QDial()
+            dial.setRange(0, 100)
+            dial.setValue(value)
+            dial.setNotchesVisible(True)
+            dial.setObjectName("effectMacroDial")
+            label = QLabel(name)
+            label.setAlignment(Qt.AlignCenter)
+            label.setObjectName("effectMacroLabel")
+            macro_grid.addWidget(dial, 0, index)
+            macro_grid.addWidget(label, 1, index)
+            self.effect_macro_dials.append(dial)
+        insert_tools = QGridLayout()
+        insert_tools.setHorizontalSpacing(6)
+        insert_tools.setVerticalSpacing(6)
+        advanced_buttons = [
+            self.move_up_button,
+            self.move_down_button,
+            self.move_top_button,
+            self.move_bottom_button,
+            self.apply_channel_bypass_button,
+            self.clear_chain_button,
+            self.refresh_runtime_button,
+            self.request_load_button,
+            self.request_unload_button,
+        ]
+        for index, button in enumerate(advanced_buttons):
+            insert_tools.addWidget(button, index // 2, index % 2)
         status_layout.addWidget(self.insert_status_label)
+        status_layout.addWidget(self.plugin_stack_label)
         status_layout.addWidget(self.chain_list)
+        status_layout.addWidget(self.effect_macro_box)
+        status_layout.addLayout(insert_tools)
         status_layout.addWidget(self.error_label)
-        layout.addWidget(status_box)
+        self.mixer_tabs.addTab(inserts_page, "Inserts")
 
         self.apply_mute_button.clicked.connect(self._on_apply_mute)
         self.apply_gain_button.clicked.connect(self._on_apply_gain)
@@ -147,7 +234,7 @@ class MixerPanel(QWidget):
         return bool(self.mute_input.isChecked())
 
     def selected_gain(self) -> float:
-        return float(self.gain_input.value())
+        return float(self.gain_input.value()) / 100.0
 
     def selected_slot_index(self) -> int:
         return int(self.slot_input.value())
@@ -167,41 +254,59 @@ class MixerPanel(QWidget):
                 break
         if state is None:
             self.status_label.setText(f"Channel {channel} | muted=false | gain=1.0")
+            self.selected_strip_label.setText(f"Selected Strip: Channel {channel} | clean | gain=1.000")
         else:
             self.status_label.setText(
                 f"Channel {state.channel_id} | muted={'true' if state.muted else 'false'} | gain={state.gain:.3f}"
             )
+            self.selected_strip_label.setText(
+                f"Selected Strip: Channel {state.channel_id} | "
+                f"{'muted' if state.muted else 'active'} | gain={state.gain:.3f}"
+            )
             self.mute_input.setChecked(state.muted)
-            self.gain_input.setValue(state.gain)
+            self.gain_input.setValue(round(state.gain * 100))
+        self._render_channel_strips(vm)
         self.insert_status_label.setText(f"Insert Status: {vm.last_insert_status or '-'}")
         self.chain_list.clear()
         all_bypassed = bool(vm.insert_chain) and all(slot.bypassed for slot in vm.insert_chain)
         self.channel_bypass_input.setChecked(all_bypassed)
+        self.plugin_stack_label.setText(
+            f"Plugin Stack: {len(vm.insert_chain)} insert{'s' if len(vm.insert_chain) != 1 else ''} | "
+            f"{'all bypassed' if all_bypassed else 'active path'}"
+        )
         for slot in vm.insert_chain:
             self.chain_list.addItem(
-                f"slot {slot.slot_index}: {slot.plugin_name or '-'} [{slot.plugin_id or 'empty'}] "
-                f"intent_bypassed={'true' if slot.bypassed else 'false'} runtime={slot.load_state} "
-                f"host={slot.host_lifecycle_state} note={slot.runtime_message or '-'} "
-                f"host_note={slot.host_message or '-'} "
-                f"placeholder={slot.placeholder_instance_id or '-'} "
-                f"managed={slot.managed_instance_id or '-'} "
-                f"managed_state={slot.managed_instance_state or '-'} "
-                f"adapter={slot.managed_instance_adapter_state or '-'} "
-                f"adapter_reason={slot.managed_instance_adapter_reason_code or '-'} "
-                f"backend={slot.managed_instance_backend_name or '-'} "
-                f"handle={slot.managed_instance_backend_handle or '-'} "
-                f"handle_state={slot.managed_instance_handle_state or '-'} "
-                f"terminal={'true' if slot.managed_instance_terminal else 'false'} "
-                f"retryable={'true' if slot.managed_instance_retryable else 'false'} "
-                f"reason_source={slot.managed_instance_reason_source or '-'} "
-                f"loader_strategy={slot.managed_instance_loader_strategy or '-'} "
-                f"validator={slot.managed_instance_validator_path or '-'} "
-                f"attribution={slot.managed_instance_failure_attribution or '-'} "
-                f"descriptor_id={slot.managed_instance_descriptor_id or '-'} "
-                f"descriptor={slot.managed_instance_descriptor_kind or '-'}:{slot.managed_instance_descriptor_ref or '-'} "
-                f"managed_note={slot.managed_instance_message or '-'} "
-                f"loader={slot.loader_outcome or '-'} reason={slot.loader_reason_code or '-'}"
+                f"Slot {slot.slot_index}: {slot.plugin_name or slot.plugin_id or 'Empty'}\n"
+                f"Intent: {'bypassed' if slot.bypassed else 'active'} | "
+                f"Runtime: {slot.load_state} | Host: {slot.host_lifecycle_state}\n"
+                f"Instance: {slot.managed_instance_id or slot.placeholder_instance_id or '-'} | "
+                f"Handle: {slot.managed_instance_backend_handle or '-'} | "
+                f"Reason: {slot.loader_reason_code or slot.managed_instance_adapter_reason_code or '-'}"
             )
             if slot.slot_index == self.selected_slot_index():
                 self.bypass_input.setChecked(slot.bypassed)
         self.error_label.setText(f"Error: {vm.last_error}")
+
+    @staticmethod
+    def _with_value_label(control: QWidget, label: QLabel) -> QWidget:
+        wrapper = QWidget()
+        layout = QHBoxLayout(wrapper)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(control, 1)
+        label.setMinimumWidth(42)
+        label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(label)
+        return wrapper
+
+    def _render_channel_strips(self, vm: MixerViewModel) -> None:
+        channel_map = {channel.channel_id: channel for channel in vm.channels}
+        names = ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]
+        for index, label in enumerate(self.channel_strip_labels, start=1):
+            channel = channel_map.get(index)
+            name = names[index - 1]
+            if channel is None:
+                label.setText(f"{name}\n- dB\nidle")
+                continue
+            db_hint = f"{channel.gain:.2f}x"
+            state = "muted" if channel.muted else "active"
+            label.setText(f"{name}\n{db_hint}\n{state}")

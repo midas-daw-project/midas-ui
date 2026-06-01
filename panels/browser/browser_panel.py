@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -29,14 +33,66 @@ class BrowserPanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
-        self.refresh_button = QPushButton("Refresh Registry")
-        self.insert_button = QPushButton("Insert To Selected Mixer Slot")
-        layout.addWidget(self.refresh_button)
-        layout.addWidget(self.insert_button)
+        library_box = QGroupBox("Library")
+        library_layout = QVBoxLayout(library_box)
+        self.browser_heading_label = QLabel("Browser")
+        self.browser_heading_label.setObjectName("browserHeading")
+        self.browser_hint_label = QLabel("Sounds, packs, MIDI, effects, and installed plug-ins.")
+        self.browser_hint_label.setObjectName("browserHint")
+        self.browser_hint_label.setWordWrap(True)
+        self.browser_search_input = QLineEdit()
+        self.browser_search_input.setPlaceholderText("Search sounds, plugins, presets")
+        library_layout.addWidget(self.browser_heading_label)
+        library_layout.addWidget(self.browser_hint_label)
+        library_layout.addWidget(self.browser_search_input)
+        self.category_list = QListWidget()
+        for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
+            self.category_list.addItem(category)
+        self.category_list.setCurrentRow(1)
+        self.category_list.setMaximumHeight(130)
+        library_layout.addWidget(self.category_list)
+        layout.addWidget(library_box)
+
+        marketplace_box = QGroupBox("Packs / Sounds")
+        marketplace_layout = QVBoxLayout(marketplace_box)
+        self.pack_list = QListWidget()
+        self.pack_list.setWordWrap(True)
+        self.pack_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        for title, subtitle in [
+            ("Starter Kit", "Drums and one-shots"),
+            ("Drum Pack", "Machine kits"),
+            ("MIDI Pack", "Chords and patterns"),
+        ]:
+            item = QListWidgetItem(f"{title}\n{subtitle}")
+            self.pack_list.addItem(item)
+        self.pack_list.setCurrentRow(0)
+        self.pack_list.setMaximumHeight(132)
+        marketplace_layout.addWidget(self.pack_list)
+        pack_actions = QHBoxLayout()
+        self.preview_pack_button = QPushButton("Preview")
+        self.install_pack_button = QPushButton("Install")
+        pack_actions.addWidget(self.preview_pack_button)
+        pack_actions.addWidget(self.install_pack_button)
+        marketplace_layout.addLayout(pack_actions)
+        layout.addWidget(marketplace_box)
+
+        registry_box = QGroupBox("Plugin Registry")
+        registry_layout = QVBoxLayout(registry_box)
+        registry_actions = QHBoxLayout()
+        self.refresh_button = QPushButton("Refresh")
+        self.insert_button = QPushButton("Insert")
+        registry_actions.addWidget(self.refresh_button)
+        registry_actions.addWidget(self.insert_button)
+        registry_layout.addLayout(registry_actions)
 
         self.plugin_list = QListWidget()
-        layout.addWidget(self.plugin_list)
+        self.plugin_list.setWordWrap(True)
+        self.plugin_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.plugin_list.setMinimumHeight(132)
+        registry_layout.addWidget(self.plugin_list)
+        layout.addWidget(registry_box)
 
         details_box = QGroupBox("Plugin Details")
         details_form = QFormLayout(details_box)
@@ -59,6 +115,7 @@ class BrowserPanel(QWidget):
         details_form.addRow(self.insert_status_label)
         details_form.addRow(self.error_label)
         layout.addWidget(details_box)
+        layout.addStretch(1)
 
         self.refresh_button.clicked.connect(self._on_refresh_registry)
         self.insert_button.clicked.connect(self._on_insert_plugin)

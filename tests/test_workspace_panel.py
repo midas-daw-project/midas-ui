@@ -65,6 +65,30 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     panel.render(vm)
 
     assert panel.project_heading_label.text() == "mix-a"
+    assert panel.beat_canvas.objectName() == "beatCanvas"
+    assert panel.channel_rack.objectName() == "channelRack"
+    assert panel.editor_stack.objectName() == "editorStack"
+    assert panel.current_editor_name() == "Drum Machine"
+    panel.show_next_editor()
+    assert panel.current_editor_name() == "Piano Roll"
+    panel.show_previous_editor()
+    assert panel.current_editor_name() == "Drum Machine"
+    assert panel.midi_note_grid.objectName() == "midiNoteGrid"
+    assert panel.selected_midi_track() == "Kick Sampler"
+    starting_notes = panel.midi_note_count("Kick Sampler")
+    panel.midi_pitch_selector.setCurrentText("C4")
+    panel.midi_step_input.setValue(2)
+    panel.midi_length_input.setValue(2)
+    panel.add_midi_note_button.click()
+    assert panel.midi_note_count("Kick Sampler") == starting_notes + 1
+    assert "C4@2x2" in panel.midi_note_summary_label.text()
+    assert "Generate drum pattern" in panel.assistant_prompt_label.text()
+    assert "sampled MIDI notes" in panel.assistant_prompt_label.text()
+    assert "Next:" in panel.next_action_label.text()
+    assert "Bridge: unknown v0" in panel.bridge_runtime_label.text()
+    assert "Session: mix-a" in panel.session_flow_label.text()
+    assert "Phase: modified" in panel.session_flow_label.text()
+    assert "Plugins: 0 available / 0 inserted" in panel.reconcile_flow_label.text()
     assert "Dirty: dirty" in panel.session_identity_label.text()
     assert "Recent: 2" in panel.recent_summary_card_label.text()
     assert "Discoverable: 3" in panel.recent_summary_card_label.text()

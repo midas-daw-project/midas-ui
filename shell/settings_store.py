@@ -25,6 +25,12 @@ class ShellSettingsStore:
     def save_window_state(self, state: QByteArray) -> None:
         self._settings.setValue("window/state", state)
 
+    def load_layout_version(self) -> int:
+        return int(self._settings.value("window/layout_version", 0))
+
+    def save_layout_version(self, version: int) -> None:
+        self._settings.setValue("window/layout_version", int(version))
+
     def load_debug_filter(self) -> str:
         value = self._settings.value("debug/event_filter", "all")
         return str(value)

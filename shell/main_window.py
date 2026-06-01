@@ -1,7 +1,21 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtWidgets import QDockWidget, QFileDialog, QMainWindow, QMessageBox
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import (
+    QDockWidget,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bridge.protocol import BridgeClient
 from controllers.audio_controller import AudioController
@@ -28,12 +42,17 @@ from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
 class MainWindow(QMainWindow):
+    DEFAULT_WIDTH = 1180
+    DEFAULT_HEIGHT = 720
+    SCREEN_MARGIN = 48
+    LAYOUT_VERSION = 5
+
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
         self._bridge = bridge
         self._settings = ShellSettingsStore()
         self.setWindowTitle("MIDAS - Phase 1 Shell")
-        self.resize(1280, 780)
+        self.resize(*self._default_window_size())
 
         self._audio_vm = AudioViewModel()
         self._mixer_vm = MixerViewModel()
@@ -93,6 +112,7 @@ class MainWindow(QMainWindow):
             on_load_session=self._load_session,
             on_apply_session=self._apply_session,
             on_reconcile_inserts=self._reconcile_all_inserts,
+            on_midi_notes_changed=self._midi_notes_changed,
         )
         bridge_mode = "native" if self._bridge.__class__.__name__ == "NativeBridgeClient" else "fallback"
         self._workspace_controller.set_bridge_identity(mode=bridge_mode, version=self._bridge.bridge_version())
@@ -114,6 +134,7 @@ class MainWindow(QMainWindow):
             on_refresh=self._refresh_audio,
         )
 
+        self._mount_header()
         self._mount_docks()
         self._restore_shell_state()
         self._refresh_audio()
@@ -142,38 +163,80 @@ class MainWindow(QMainWindow):
         )
         self._refresh_debug_summary()
 
+    def _mount_header(self) -> None:
+        self._header_toolbar = QToolBar("MIDAS Header", self)
+        self._header_toolbar.setObjectName("midasHeader")
+        self._header_toolbar.setMovable(False)
+        self._header_toolbar.setFloatable(False)
+        header = QWidget()
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(8, 4, 8, 5)
+        header_layout.setSpacing(4)
+        cockpit_row = QHBoxLayout()
+        cockpit_row.setSpacing(8)
+        self._project_title_label = QLabel("Untitled Beat")
+        self._project_title_label.setObjectName("headerProjectTitle")
+        self._command_search_input = QLineEdit()
+        self._command_search_input.setObjectName("headerSearch")
+        self._command_search_input.setPlaceholderText("Search or type a command")
+        self._header_play_button = QPushButton("Play")
+        self._header_stop_button = QPushButton("Stop")
+        self._tempo_label = QLabel("140 BPM")
+        self._key_label = QLabel("Key C Major")
+        self._device_status_label = QLabel("Fallback Bridge - 48kHz / 256")
+        self._runtime_status_label = QLabel("Runtime: offline")
+        self._hint_status_label = QLabel("Hint: Use Browser, Arrangement, Editor, and Mixer like a familiar DAW workspace.")
+        self._hint_status_label.setObjectName("headerHint")
+        cockpit_row.addWidget(self._project_title_label)
+        cockpit_row.addWidget(self._command_search_input, 1)
+        cockpit_row.addWidget(self._header_play_button)
+        cockpit_row.addWidget(self._header_stop_button)
+        cockpit_row.addWidget(self._tempo_label)
+        cockpit_row.addWidget(self._key_label)
+        cockpit_row.addWidget(self._device_status_label)
+        cockpit_row.addWidget(self._runtime_status_label)
+        header_layout.addLayout(cockpit_row)
+        header_layout.addWidget(self._hint_status_label)
+        self._header_play_button.clicked.connect(self._play_transport)
+        self._header_stop_button.clicked.connect(self._stop_transport)
+        self._header_toolbar.addWidget(header)
+        self.addToolBar(Qt.TopToolBarArea, self._header_toolbar)
+
     def _mount_docks(self) -> None:
-        self.setCentralWidget(self._workspace_panel)
+        self.setCentralWidget(self._scrollable_panel(self._workspace_panel))
 
-        audio_dock = QDockWidget("Audio", self)
-        audio_dock.setObjectName("dock.audio")
-        audio_dock.setWidget(self._audio_panel)
-        self.addDockWidget(Qt.LeftDockWidgetArea, audio_dock)
+        self._audio_dock = QDockWidget("Audio", self)
+        self._audio_dock.setObjectName("dock.audio")
+        self._audio_dock.setWidget(self._scrollable_panel(self._audio_panel))
+        self.addDockWidget(Qt.LeftDockWidgetArea, self._audio_dock)
 
-        debug_dock = QDockWidget("Debug / Events", self)
-        debug_dock.setObjectName("dock.debug")
-        debug_dock.setWidget(self._debug_panel)
-        self.addDockWidget(Qt.BottomDockWidgetArea, debug_dock)
+        self._debug_dock = QDockWidget("Debug / Events", self)
+        self._debug_dock.setObjectName("dock.debug")
+        self._debug_dock.setWidget(self._scrollable_panel(self._debug_panel))
+        self.addDockWidget(Qt.BottomDockWidgetArea, self._debug_dock)
 
-        mixer_dock = QDockWidget("Mixer", self)
-        mixer_dock.setObjectName("dock.mixer")
-        mixer_dock.setWidget(self._mixer_panel)
-        self.addDockWidget(Qt.RightDockWidgetArea, mixer_dock)
+        self._mixer_dock = QDockWidget("Mixer", self)
+        self._mixer_dock.setObjectName("dock.mixer")
+        self._mixer_dock.setMinimumWidth(340)
+        self._mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
+        self.addDockWidget(Qt.RightDockWidgetArea, self._mixer_dock)
 
-        session_dock = QDockWidget("Session", self)
-        session_dock.setObjectName("dock.session")
-        session_dock.setWidget(self._session_panel)
-        self.addDockWidget(Qt.RightDockWidgetArea, session_dock)
+        self._session_dock = QDockWidget("Session", self)
+        self._session_dock.setObjectName("dock.session")
+        self._session_dock.setWidget(self._scrollable_panel(self._session_panel))
+        self.addDockWidget(Qt.RightDockWidgetArea, self._session_dock)
 
-        transport_dock = QDockWidget("Transport", self)
-        transport_dock.setObjectName("dock.transport")
-        transport_dock.setWidget(self._transport_panel)
-        self.addDockWidget(Qt.TopDockWidgetArea, transport_dock)
+        self._transport_dock = QDockWidget("Transport", self)
+        self._transport_dock.setObjectName("dock.transport")
+        self._transport_dock.setWidget(self._scrollable_panel(self._transport_panel))
+        self.addDockWidget(Qt.TopDockWidgetArea, self._transport_dock)
 
-        browser_dock = QDockWidget("Browser", self)
-        browser_dock.setObjectName("dock.browser")
-        browser_dock.setWidget(self._browser_panel)
-        self.addDockWidget(Qt.LeftDockWidgetArea, browser_dock)
+        self._browser_dock = QDockWidget("Browser", self)
+        self._browser_dock.setObjectName("dock.browser")
+        self._browser_dock.setMinimumWidth(240)
+        self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
+        self.addDockWidget(Qt.LeftDockWidgetArea, self._browser_dock)
+        self._mount_view_menu()
 
     def _start_runtime(self) -> None:
         result = self._audio_controller.start_runtime_profile()
@@ -243,6 +306,7 @@ class MainWindow(QMainWindow):
         self._transport_vm.track_channel = self._transport_panel.selected_track_channel()
         self._transport_controller.refresh_status()
         self._transport_panel.render(self._transport_vm)
+        self._refresh_header()
         self._refresh_debug_summary()
         self._refresh_workspace()
 
@@ -408,6 +472,26 @@ class MainWindow(QMainWindow):
         self._workspace_controller.ingest_browser_state(self._browser_vm)
         self._workspace_controller.ingest_mixer_state(self._mixer_vm)
         self._workspace_panel.render(self._workspace_vm)
+        self._refresh_header()
+
+    def _refresh_header(self) -> None:
+        if not hasattr(self, "_runtime_status_label"):
+            return
+        session_ref = self._session_vm.session_ref or self._workspace_vm.session_ref or "Untitled Beat"
+        self._project_title_label.setText(session_ref if session_ref != "default-session" else "Untitled Beat")
+        sample_rate = self._audio_vm.sample_rate or 48000
+        buffer_size = self._audio_vm.buffer_size or 256
+        self._device_status_label.setText(
+            f"{self._workspace_vm.bridge_mode.title()} Bridge - {sample_rate // 1000 if sample_rate else 48}kHz / {buffer_size}"
+        )
+        runtime = "active" if self._workspace_vm.runtime_active or self._transport_vm.runtime_active else "offline"
+        self._runtime_status_label.setText(
+            f"Runtime: {runtime} | Transport: {self._transport_vm.play_state}"
+        )
+        self._hint_status_label.setText(
+            f"Hint: {self._workspace_vm.startup_hint} | "
+            f"Browser -> Arrangement/Editor -> Mixer | Last: {self._workspace_vm.last_action}"
+        )
 
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()
@@ -583,6 +667,11 @@ class MainWindow(QMainWindow):
     def _mark_session_modified(self) -> None:
         self._session_controller.mark_dirty()
 
+    def _midi_notes_changed(self, track_name: str, note_count: int) -> None:
+        self._workspace_controller.mark_action(f"MIDI notes updated on {track_name} ({note_count})")
+        self._mark_session_modified()
+        self._refresh_session()
+
     def _refresh_debug_summary(self) -> None:
         runtime_status = self._bridge.get_runtime_status()
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
@@ -710,15 +799,78 @@ class MainWindow(QMainWindow):
         geometry = self._settings.load_geometry()
         if geometry is not None:
             self.restoreGeometry(geometry)
-        state = self._settings.load_window_state()
-        if state is not None:
-            self.restoreState(state)
+        if self._settings.load_layout_version() == self.LAYOUT_VERSION:
+            state = self._settings.load_window_state()
+            if state is not None:
+                self.restoreState(state)
+        else:
+            self._apply_default_dock_layout()
+        self._fit_to_screen()
         self._debug_panel.set_event_filter(self._settings.load_debug_filter())
 
     def _save_shell_state(self) -> None:
         self._settings.save_geometry(self.saveGeometry())
         self._settings.save_window_state(self.saveState())
+        self._settings.save_layout_version(self.LAYOUT_VERSION)
         self._settings.save_debug_filter(self._debug_panel.event_filter_value())
+
+    def _mount_view_menu(self) -> None:
+        view_menu = self.menuBar().addMenu("View")
+        for dock in (
+            self._browser_dock,
+            self._audio_dock,
+            self._mixer_dock,
+            self._session_dock,
+            self._transport_dock,
+            self._debug_dock,
+        ):
+            view_menu.addAction(dock.toggleViewAction())
+
+    def _apply_default_dock_layout(self) -> None:
+        self.tabifyDockWidget(self._browser_dock, self._audio_dock)
+        self.tabifyDockWidget(self._mixer_dock, self._session_dock)
+        self._browser_dock.raise_()
+        self._mixer_dock.raise_()
+        self._transport_dock.hide()
+        self._debug_dock.hide()
+        self.resizeDocks([self._browser_dock, self._mixer_dock], [250, 360], Qt.Horizontal)
+
+    def _default_window_size(self) -> tuple[int, int]:
+        available = self._available_screen_geometry()
+        if available is None:
+            return self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT
+        width = min(self.DEFAULT_WIDTH, max(760, available.width() - self.SCREEN_MARGIN))
+        height = min(self.DEFAULT_HEIGHT, max(560, available.height() - self.SCREEN_MARGIN))
+        return width, height
+
+    def _fit_to_screen(self) -> None:
+        available = self._available_screen_geometry()
+        if available is None:
+            return
+        max_width = max(760, available.width() - self.SCREEN_MARGIN)
+        max_height = max(560, available.height() - self.SCREEN_MARGIN)
+        if self.width() > max_width or self.height() > max_height:
+            self.resize(min(self.width(), max_width), min(self.height(), max_height))
+        frame = self.frameGeometry()
+        if not available.contains(frame):
+            frame.moveCenter(available.center())
+            self.move(frame.topLeft())
+
+    @staticmethod
+    def _available_screen_geometry():
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            return None
+        return screen.availableGeometry()
+
+    @staticmethod
+    def _scrollable_panel(widget: QWidget) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidget(widget)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        return scroll
 
 
 # Keep Qt imports grouped with UI shell to avoid accidental backend coupling in modules.
