@@ -7,12 +7,12 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
     QSpinBox,
     QDoubleSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -76,8 +76,13 @@ class MixerPanel(QWidget):
             self.channel_strip_labels.append(label)
         layout.addWidget(strip_box)
 
-        control_box = QGroupBox("Mixer Channel")
-        control_layout = QVBoxLayout(control_box)
+        self.mixer_tabs = QTabWidget()
+        self.mixer_tabs.setObjectName("mixerTabs")
+        layout.addWidget(self.mixer_tabs, 1)
+
+        channel_page = QWidget()
+        control_layout = QVBoxLayout(channel_page)
+        control_layout.setContentsMargins(0, 0, 0, 0)
         form = QFormLayout()
         self.channel_input = QSpinBox()
         self.channel_input.setRange(1, 2048)
@@ -118,48 +123,60 @@ class MixerPanel(QWidget):
         control_layout.addLayout(form)
 
         action_grid = QGridLayout()
+        action_grid.setHorizontalSpacing(6)
         action_grid.setVerticalSpacing(6)
         action_buttons = [
             self.apply_mute_button,
             self.apply_gain_button,
             self.insert_button,
             self.remove_button,
-            self.move_up_button,
-            self.move_down_button,
-            self.move_top_button,
-            self.move_bottom_button,
             self.apply_bypass_button,
-            self.apply_channel_bypass_button,
-            self.clear_chain_button,
-            self.refresh_runtime_button,
-            self.request_load_button,
-            self.request_unload_button,
             self.refresh_button,
         ]
         for index, button in enumerate(action_buttons):
-            action_grid.addWidget(button, index, 0)
+            action_grid.addWidget(button, index // 2, index % 2)
         control_layout.addLayout(action_grid)
-        layout.addWidget(control_box)
 
-        status_box = QGroupBox("Status")
-        status_layout = QVBoxLayout(status_box)
         self.status_label = QLabel("Channel 1 | muted=false | gain=1.0")
         self.selected_strip_label = QLabel("Selected Strip: Channel 1")
+        self.status_label.setWordWrap(True)
+        self.selected_strip_label.setWordWrap(True)
+        control_layout.addWidget(self.status_label)
+        control_layout.addWidget(self.selected_strip_label)
+        control_layout.addStretch(1)
+        self.mixer_tabs.addTab(channel_page, "Channel")
+
+        inserts_page = QWidget()
+        status_layout = QVBoxLayout(inserts_page)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self.insert_status_label = QLabel("Insert Status: -")
         self.plugin_stack_label = QLabel("Plugin Stack: no inserts")
         self.plugin_stack_label.setWordWrap(True)
         self.chain_list = QListWidget()
         self.chain_list.setMinimumHeight(130)
         self.error_label = QLabel("Error: ")
-        selected_row = QHBoxLayout()
-        selected_row.addWidget(self.status_label)
-        selected_row.addWidget(self.selected_strip_label)
-        status_layout.addLayout(selected_row)
+        insert_tools = QGridLayout()
+        insert_tools.setHorizontalSpacing(6)
+        insert_tools.setVerticalSpacing(6)
+        advanced_buttons = [
+            self.move_up_button,
+            self.move_down_button,
+            self.move_top_button,
+            self.move_bottom_button,
+            self.apply_channel_bypass_button,
+            self.clear_chain_button,
+            self.refresh_runtime_button,
+            self.request_load_button,
+            self.request_unload_button,
+        ]
+        for index, button in enumerate(advanced_buttons):
+            insert_tools.addWidget(button, index // 2, index % 2)
         status_layout.addWidget(self.insert_status_label)
         status_layout.addWidget(self.plugin_stack_label)
         status_layout.addWidget(self.chain_list)
+        status_layout.addLayout(insert_tools)
         status_layout.addWidget(self.error_label)
-        layout.addWidget(status_box)
+        self.mixer_tabs.addTab(inserts_page, "Inserts")
 
         self.apply_mute_button.clicked.connect(self._on_apply_mute)
         self.apply_gain_button.clicked.connect(self._on_apply_gain)

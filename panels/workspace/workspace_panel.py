@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Callable
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpinBox,
+    QStackedWidget,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -30,7 +32,7 @@ SAMPLED_TRACKS = [
     {
         "name": "Kick Sampler",
         "short": "Kick",
-        "source": "TRAP STARTER KIT / punch kick",
+        "source": "Sample track",
         "color": "#f9733d",
         "clips": {1, 2, 3, 4, 5, 6},
         "steps": {0, 4, 8, 12},
@@ -38,7 +40,7 @@ SAMPLED_TRACKS = [
     {
         "name": "Snare Sampler",
         "short": "Snare",
-        "source": "Analog Drum Pack / rim snare",
+        "source": "Sample track",
         "color": "#d83a9c",
         "clips": {2, 4, 6, 8},
         "steps": {4, 12},
@@ -46,7 +48,7 @@ SAMPLED_TRACKS = [
     {
         "name": "Hi Hat Sampler",
         "short": "Hi Hats",
-        "source": "Lo-Fi MIDI Pack / closed hat",
+        "source": "Sample track",
         "color": "#804df2",
         "clips": {1, 2, 3, 4, 5, 6, 7, 8},
         "steps": {0, 2, 4, 6, 8, 10, 12, 14},
@@ -54,7 +56,7 @@ SAMPLED_TRACKS = [
     {
         "name": "Melody Sampler",
         "short": "Melody",
-        "source": "FLEX / keys one-shot",
+        "source": "Sample track",
         "color": "#78a6ff",
         "clips": {2, 3, 4, 5, 6, 7},
         "steps": {1, 2, 5, 6, 9, 10, 13},
@@ -62,7 +64,7 @@ SAMPLED_TRACKS = [
     {
         "name": "808 Bass Sampler",
         "short": "808 Bass",
-        "source": "Hard 808s / tuned bass",
+        "source": "Sample track",
         "color": "#2bd2c9",
         "clips": {1, 3, 5, 7},
         "steps": {0, 3, 8, 11},
@@ -101,7 +103,7 @@ class WorkspacePanel(QWidget):
 
         self.title_label = QLabel("MIDAS Workspace")
         self.title_label.setObjectName("workspaceTitle")
-        self.mode_label = QLabel("Arrangement / MIDI / Runtime")
+        self.mode_label = QLabel("Arrangement / Editor / Runtime")
         self.mode_label.setObjectName("workspaceMode")
         title_row = QHBoxLayout()
         title_row.addWidget(self.title_label)
@@ -147,9 +149,9 @@ class WorkspacePanel(QWidget):
             beat_grid.addWidget(marker, 0, column)
             beat_grid.setColumnStretch(column, 1)
         for row, track in enumerate(SAMPLED_TRACKS, start=1):
-            lane_label = QLabel(f"{track['short']}\n{track['source']}")
+            lane_label = QLabel(str(track["short"]))
             lane_label.setProperty("beatLane", True)
-            lane_label.setFixedWidth(142)
+            lane_label.setFixedWidth(104)
             lane_label.setWordWrap(True)
             beat_grid.addWidget(lane_label, row, 0)
             for column in range(1, 9):
@@ -166,8 +168,31 @@ class WorkspacePanel(QWidget):
         canvas_layout.addWidget(self.beat_canvas)
         layout.addWidget(canvas_box)
 
-        rack_box = QGroupBox("Channel Rack / Step Sequencer")
-        rack_layout = QVBoxLayout(rack_box)
+        editor_box = QGroupBox("Editor")
+        editor_layout = QVBoxLayout(editor_box)
+        editor_header = QHBoxLayout()
+        self.previous_editor_button = QPushButton("<")
+        self.previous_editor_button.setObjectName("editorArrow")
+        self.previous_editor_button.setFixedWidth(32)
+        self.next_editor_button = QPushButton(">")
+        self.next_editor_button.setObjectName("editorArrow")
+        self.next_editor_button.setFixedWidth(32)
+        self.editor_mode_label = QLabel("Drum Machine")
+        self.editor_mode_label.setObjectName("editorModeLabel")
+        self.editor_hint_label = QLabel("Left / Right switches editor.")
+        self.editor_hint_label.setObjectName("editorHintLabel")
+        editor_header.addWidget(self.previous_editor_button)
+        editor_header.addWidget(self.editor_mode_label)
+        editor_header.addWidget(self.editor_hint_label, 1)
+        editor_header.addWidget(self.next_editor_button)
+        editor_layout.addLayout(editor_header)
+
+        self.editor_stack = QStackedWidget()
+        self.editor_stack.setObjectName("editorStack")
+
+        drum_page = QWidget()
+        drum_layout = QVBoxLayout(drum_page)
+        drum_layout.setContentsMargins(0, 0, 0, 0)
         self.channel_rack = QFrame()
         self.channel_rack.setObjectName("channelRack")
         rack_grid = QGridLayout(self.channel_rack)
@@ -192,11 +217,13 @@ class WorkspacePanel(QWidget):
                 rack_grid.setColumnStretch(step_index + 1, 1)
         self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Add sampled MIDI notes | Suggest chord progression")
         self.assistant_prompt_label.setWordWrap(True)
-        rack_layout.addWidget(self.channel_rack)
-        rack_layout.addWidget(self.assistant_prompt_label)
+        drum_layout.addWidget(self.channel_rack)
+        drum_layout.addWidget(self.assistant_prompt_label)
+        self.editor_stack.addWidget(drum_page)
 
-        midi_box = QGroupBox("MIDI Notes / Sample Track Editor")
-        midi_layout = QVBoxLayout(midi_box)
+        midi_page = QWidget()
+        midi_layout = QVBoxLayout(midi_page)
+        midi_layout.setContentsMargins(0, 0, 0, 0)
         midi_controls = QHBoxLayout()
         self.midi_track_selector = QComboBox()
         for track in SAMPLED_TRACKS:
@@ -237,8 +264,17 @@ class WorkspacePanel(QWidget):
         self.add_midi_note_button.clicked.connect(self._add_selected_midi_note)
         self.clear_midi_notes_button.clicked.connect(self._clear_selected_midi_notes)
         self._render_midi_grid()
-        layout.addWidget(midi_box)
-        layout.addWidget(rack_box)
+        self.editor_stack.addWidget(midi_page)
+        editor_layout.addWidget(self.editor_stack)
+        self.previous_editor_button.clicked.connect(self.show_previous_editor)
+        self.next_editor_button.clicked.connect(self.show_next_editor)
+        self._left_shortcut = QShortcut(QKeySequence(Qt.Key_Left), self)
+        self._left_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self._left_shortcut.activated.connect(self.show_previous_editor)
+        self._right_shortcut = QShortcut(QKeySequence(Qt.Key_Right), self)
+        self._right_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self._right_shortcut.activated.connect(self.show_next_editor)
+        layout.addWidget(editor_box)
 
         self.summary_tabs = QTabWidget()
         self.summary_tabs.setObjectName("workspaceSummaryTabs")
@@ -469,6 +505,19 @@ class WorkspacePanel(QWidget):
         if item is None:
             return ""
         return str(item.data(0x0100) or "")
+
+    def current_editor_name(self) -> str:
+        return "Piano Roll" if self.editor_stack.currentIndex() == 1 else "Drum Machine"
+
+    def show_previous_editor(self) -> None:
+        self._set_editor_index((self.editor_stack.currentIndex() - 1) % self.editor_stack.count())
+
+    def show_next_editor(self) -> None:
+        self._set_editor_index((self.editor_stack.currentIndex() + 1) % self.editor_stack.count())
+
+    def _set_editor_index(self, index: int) -> None:
+        self.editor_stack.setCurrentIndex(index)
+        self.editor_mode_label.setText(self.current_editor_name())
 
     def selected_midi_track(self) -> str:
         return self.midi_track_selector.currentText()

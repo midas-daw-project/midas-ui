@@ -5,7 +5,6 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -48,13 +47,6 @@ class BrowserPanel(QWidget):
         library_layout.addWidget(self.browser_heading_label)
         library_layout.addWidget(self.browser_hint_label)
         library_layout.addWidget(self.browser_search_input)
-        source_grid = QGridLayout()
-        for index, source in enumerate(["Local", "Image-Line", "FL Cloud", "REAPER Media"]):
-            chip = QLabel(source)
-            chip.setProperty("sourceChip", True)
-            chip.setAlignment(Qt.AlignCenter)
-            source_grid.addWidget(chip, index // 2, index % 2)
-        library_layout.addLayout(source_grid)
         self.category_list = QListWidget()
         for category in ["Drums", "808s", "Hi Hats", "Melodies", "MIDI", "Loops", "FX"]:
             self.category_list.addItem(category)
@@ -67,10 +59,11 @@ class BrowserPanel(QWidget):
         marketplace_layout = QVBoxLayout(marketplace_box)
         self.pack_list = QListWidget()
         self.pack_list.setWordWrap(True)
+        self.pack_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         for title, subtitle in [
-            ("TRAP STARTER KIT", "Punchy drums and melodic one-shots"),
-            ("Analog Drum Pack", "Warm machine kits and percussion"),
-            ("Lo-Fi MIDI Pack", "Chord starts and humanized patterns"),
+            ("Starter Kit", "Drums and one-shots"),
+            ("Drum Pack", "Machine kits"),
+            ("MIDI Pack", "Chords and patterns"),
         ]:
             item = QListWidgetItem(f"{title}\n{subtitle}")
             self.pack_list.addItem(item)
@@ -96,6 +89,7 @@ class BrowserPanel(QWidget):
 
         self.plugin_list = QListWidget()
         self.plugin_list.setWordWrap(True)
+        self.plugin_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.plugin_list.setMinimumHeight(132)
         registry_layout.addWidget(self.plugin_list)
         layout.addWidget(registry_box)

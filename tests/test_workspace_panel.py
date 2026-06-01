@@ -67,6 +67,12 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.project_heading_label.text() == "mix-a"
     assert panel.beat_canvas.objectName() == "beatCanvas"
     assert panel.channel_rack.objectName() == "channelRack"
+    assert panel.editor_stack.objectName() == "editorStack"
+    assert panel.current_editor_name() == "Drum Machine"
+    panel.show_next_editor()
+    assert panel.current_editor_name() == "Piano Roll"
+    panel.show_previous_editor()
+    assert panel.current_editor_name() == "Drum Machine"
     assert panel.midi_note_grid.objectName() == "midiNoteGrid"
     assert panel.selected_midi_track() == "Kick Sampler"
     starting_notes = panel.midi_note_count("Kick Sampler")

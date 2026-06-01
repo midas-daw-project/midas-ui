@@ -64,5 +64,5 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert panel.category_list.count() == 7
     assert panel.category_list.currentItem().text() == "808s"
     assert panel.pack_list.count() == 3
-    assert "TRAP STARTER KIT" in panel.pack_list.item(0).text()
+    assert "Starter Kit" in panel.pack_list.item(0).text()
     assert panel.plugin_list.count() >= 1

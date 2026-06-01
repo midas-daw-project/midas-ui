@@ -185,7 +185,7 @@ class MainWindow(QMainWindow):
         self._key_label = QLabel("Key C Major")
         self._device_status_label = QLabel("Fallback Bridge - 48kHz / 256")
         self._runtime_status_label = QLabel("Runtime: offline")
-        self._hint_status_label = QLabel("Hint: Use Browser, Arrangement, Channel Rack, and Mixer like a familiar DAW workspace.")
+        self._hint_status_label = QLabel("Hint: Use Browser, Arrangement, Editor, and Mixer like a familiar DAW workspace.")
         self._hint_status_label.setObjectName("headerHint")
         cockpit_row.addWidget(self._project_title_label)
         cockpit_row.addWidget(self._command_search_input, 1)
@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
         )
         self._hint_status_label.setText(
             f"Hint: {self._workspace_vm.startup_hint} | "
-            f"Browser -> Arrange/Channel Rack -> Mixer | Last: {self._workspace_vm.last_action}"
+            f"Browser -> Arrangement/Editor -> Mixer | Last: {self._workspace_vm.last_action}"
         )
 
     def _apply_mixer_mute(self) -> None:
