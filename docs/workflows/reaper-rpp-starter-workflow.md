@@ -75,6 +75,13 @@ ReaperProjectPreview
 
 After confirmation, MIDAS should create a native session from the preview plus any parsed tracks/items that are supported. Unsupported REAPER fields should be warnings, not hard failures, for an empty starter project.
 
+## Tracking Issues
+
+- Frontend preview workflow: <https://github.com/midas-daw-project/midas-ui/issues/10>
+- Core preview/import facade: <https://github.com/midas-daw-project/midas-core/issues/2>
+- Public preview/warning DTOs: <https://github.com/midas-daw-project/shared-contracts/issues/2>
+- Imported-session provenance persistence: <https://github.com/midas-daw-project/session-system/issues/1>
+
 ## Guardrails
 
 - Do not overwrite or mutate the source `.RPP`.
