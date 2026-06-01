@@ -6,3 +6,4 @@
 - Expand debug panel with filterable event categories and operation timing.
 - Add transport panel wired to typed transport bridge methods.
 - Add FL-inspired production workflow contracts: playlist/pattern scope, sampled tracks, MIDI notes, browser actions, mixer routing, automation, recording, export settings, and theme/accessibility preferences.
+- Add classic media-player-inspired preview deck, local media queue, EQ/analyzer, and theme/layout preset workflows without surfacing source-reference branding in the app.
