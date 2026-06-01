@@ -45,7 +45,7 @@ class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1180
     DEFAULT_HEIGHT = 720
     SCREEN_MARGIN = 48
-    LAYOUT_VERSION = 4
+    LAYOUT_VERSION = 5
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
             on_load_session=self._load_session,
             on_apply_session=self._apply_session,
             on_reconcile_inserts=self._reconcile_all_inserts,
+            on_midi_notes_changed=self._midi_notes_changed,
         )
         bridge_mode = "native" if self._bridge.__class__.__name__ == "NativeBridgeClient" else "fallback"
         self._workspace_controller.set_bridge_identity(mode=bridge_mode, version=self._bridge.bridge_version())
@@ -216,6 +217,7 @@ class MainWindow(QMainWindow):
 
         self._mixer_dock = QDockWidget("Mixer", self)
         self._mixer_dock.setObjectName("dock.mixer")
+        self._mixer_dock.setMinimumWidth(340)
         self._mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
         self.addDockWidget(Qt.RightDockWidgetArea, self._mixer_dock)
 
@@ -231,6 +233,7 @@ class MainWindow(QMainWindow):
 
         self._browser_dock = QDockWidget("Browser", self)
         self._browser_dock.setObjectName("dock.browser")
+        self._browser_dock.setMinimumWidth(240)
         self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
         self.addDockWidget(Qt.LeftDockWidgetArea, self._browser_dock)
         self._mount_view_menu()
@@ -664,6 +667,11 @@ class MainWindow(QMainWindow):
     def _mark_session_modified(self) -> None:
         self._session_controller.mark_dirty()
 
+    def _midi_notes_changed(self, track_name: str, note_count: int) -> None:
+        self._workspace_controller.mark_action(f"MIDI notes updated on {track_name} ({note_count})")
+        self._mark_session_modified()
+        self._refresh_session()
+
     def _refresh_debug_summary(self) -> None:
         runtime_status = self._bridge.get_runtime_status()
         mixer_channel = self._mixer_controller.channel(self._mixer_vm.selected_channel_id)
@@ -825,7 +833,7 @@ class MainWindow(QMainWindow):
         self._mixer_dock.raise_()
         self._transport_dock.hide()
         self._debug_dock.hide()
-        self.resizeDocks([self._browser_dock, self._mixer_dock], [250, 320], Qt.Horizontal)
+        self.resizeDocks([self._browser_dock, self._mixer_dock], [250, 360], Qt.Horizontal)
 
     def _default_window_size(self) -> tuple[int, int]:
         available = self._available_screen_geometry()

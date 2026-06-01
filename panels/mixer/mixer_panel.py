@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
@@ -61,6 +62,9 @@ class MixerPanel(QWidget):
 
         strip_box = QGroupBox("Mixer")
         strip_layout = QGridLayout(strip_box)
+        strip_layout.setContentsMargins(8, 8, 8, 8)
+        strip_layout.setHorizontalSpacing(6)
+        strip_layout.setVerticalSpacing(6)
         self.channel_strip_labels: list[QLabel] = []
         for name in ["Kick", "Snare", "Hi Hats", "Melody", "Bass", "Master"]:
             label = QLabel(f"{name}\n- dB\nidle")
@@ -84,13 +88,13 @@ class MixerPanel(QWidget):
         self.gain_input.setSingleStep(0.05)
         self.gain_input.setValue(1.0)
 
-        self.apply_mute_button = QPushButton("Apply Mute")
-        self.apply_gain_button = QPushButton("Apply Gain")
+        self.apply_mute_button = QPushButton("Mute")
+        self.apply_gain_button = QPushButton("Gain")
         self.slot_input = QSpinBox()
         self.slot_input.setRange(0, 32)
         self.slot_input.setValue(0)
-        self.insert_button = QPushButton("Insert Plugin")
-        self.remove_button = QPushButton("Remove Slot")
+        self.insert_button = QPushButton("Insert")
+        self.remove_button = QPushButton("Remove")
         self.move_up_button = QPushButton("Move Up")
         self.move_down_button = QPushButton("Move Down")
         self.move_top_button = QPushButton("Move Top")
@@ -100,9 +104,9 @@ class MixerPanel(QWidget):
         self.channel_bypass_input = QCheckBox("Bypass All Inserts")
         self.apply_channel_bypass_button = QPushButton("Chain Bypass")
         self.clear_chain_button = QPushButton("Clear Chain")
-        self.refresh_runtime_button = QPushButton("Runtime State")
-        self.request_load_button = QPushButton("Load Slot")
-        self.request_unload_button = QPushButton("Unload Slot")
+        self.refresh_runtime_button = QPushButton("Runtime")
+        self.request_load_button = QPushButton("Load")
+        self.request_unload_button = QPushButton("Unload")
         self.refresh_button = QPushButton("Refresh")
 
         form.addRow("Channel", self.channel_input)
@@ -114,26 +118,26 @@ class MixerPanel(QWidget):
         control_layout.addLayout(form)
 
         action_grid = QGridLayout()
-        for row, button in enumerate(
-            [
-                self.apply_mute_button,
-                self.apply_gain_button,
-                self.insert_button,
-                self.remove_button,
-                self.move_up_button,
-                self.move_down_button,
-                self.move_top_button,
-                self.move_bottom_button,
-                self.apply_bypass_button,
-                self.apply_channel_bypass_button,
-                self.clear_chain_button,
-                self.refresh_runtime_button,
-                self.request_load_button,
-                self.request_unload_button,
-                self.refresh_button,
-            ]
-        ):
-            action_grid.addWidget(button, row, 0)
+        action_grid.setVerticalSpacing(6)
+        action_buttons = [
+            self.apply_mute_button,
+            self.apply_gain_button,
+            self.insert_button,
+            self.remove_button,
+            self.move_up_button,
+            self.move_down_button,
+            self.move_top_button,
+            self.move_bottom_button,
+            self.apply_bypass_button,
+            self.apply_channel_bypass_button,
+            self.clear_chain_button,
+            self.refresh_runtime_button,
+            self.request_load_button,
+            self.request_unload_button,
+            self.refresh_button,
+        ]
+        for index, button in enumerate(action_buttons):
+            action_grid.addWidget(button, index, 0)
         control_layout.addLayout(action_grid)
         layout.addWidget(control_box)
 
@@ -147,8 +151,10 @@ class MixerPanel(QWidget):
         self.chain_list = QListWidget()
         self.chain_list.setMinimumHeight(130)
         self.error_label = QLabel("Error: ")
-        status_layout.addWidget(self.status_label)
-        status_layout.addWidget(self.selected_strip_label)
+        selected_row = QHBoxLayout()
+        selected_row.addWidget(self.status_label)
+        selected_row.addWidget(self.selected_strip_label)
+        status_layout.addLayout(selected_row)
         status_layout.addWidget(self.insert_status_label)
         status_layout.addWidget(self.plugin_stack_label)
         status_layout.addWidget(self.chain_list)

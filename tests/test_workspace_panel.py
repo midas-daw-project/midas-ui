@@ -67,7 +67,17 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.project_heading_label.text() == "mix-a"
     assert panel.beat_canvas.objectName() == "beatCanvas"
     assert panel.channel_rack.objectName() == "channelRack"
+    assert panel.midi_note_grid.objectName() == "midiNoteGrid"
+    assert panel.selected_midi_track() == "Kick Sampler"
+    starting_notes = panel.midi_note_count("Kick Sampler")
+    panel.midi_pitch_selector.setCurrentText("C4")
+    panel.midi_step_input.setValue(2)
+    panel.midi_length_input.setValue(2)
+    panel.add_midi_note_button.click()
+    assert panel.midi_note_count("Kick Sampler") == starting_notes + 1
+    assert "C4@2x2" in panel.midi_note_summary_label.text()
     assert "Generate drum pattern" in panel.assistant_prompt_label.text()
+    assert "sampled MIDI notes" in panel.assistant_prompt_label.text()
     assert "Next:" in panel.next_action_label.text()
     assert "Bridge: unknown v0" in panel.bridge_runtime_label.text()
     assert "Session: mix-a" in panel.session_flow_label.text()

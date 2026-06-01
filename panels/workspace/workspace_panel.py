@@ -5,6 +5,7 @@ from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QFormLayout,
     QFrame,
     QGridLayout,
@@ -16,12 +17,59 @@ from PySide6.QtWidgets import (
     QListWidget,
     QPushButton,
     QSizePolicy,
+    QSpinBox,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
+
+
+SAMPLED_TRACKS = [
+    {
+        "name": "Kick Sampler",
+        "short": "Kick",
+        "source": "TRAP STARTER KIT / punch kick",
+        "color": "#f9733d",
+        "clips": {1, 2, 3, 4, 5, 6},
+        "steps": {0, 4, 8, 12},
+    },
+    {
+        "name": "Snare Sampler",
+        "short": "Snare",
+        "source": "Analog Drum Pack / rim snare",
+        "color": "#d83a9c",
+        "clips": {2, 4, 6, 8},
+        "steps": {4, 12},
+    },
+    {
+        "name": "Hi Hat Sampler",
+        "short": "Hi Hats",
+        "source": "Lo-Fi MIDI Pack / closed hat",
+        "color": "#804df2",
+        "clips": {1, 2, 3, 4, 5, 6, 7, 8},
+        "steps": {0, 2, 4, 6, 8, 10, 12, 14},
+    },
+    {
+        "name": "Melody Sampler",
+        "short": "Melody",
+        "source": "FLEX / keys one-shot",
+        "color": "#78a6ff",
+        "clips": {2, 3, 4, 5, 6, 7},
+        "steps": {1, 2, 5, 6, 9, 10, 13},
+    },
+    {
+        "name": "808 Bass Sampler",
+        "short": "808 Bass",
+        "source": "Hard 808s / tuned bass",
+        "color": "#2bd2c9",
+        "clips": {1, 3, 5, 7},
+        "steps": {0, 3, 8, 11},
+    },
+]
+
+MIDI_PITCHES = ["C5", "A4", "G4", "E4", "C4", "G3", "F#3", "C3"]
 
 
 class WorkspacePanel(QWidget):
@@ -36,20 +84,33 @@ class WorkspacePanel(QWidget):
         on_load_session: Callable[[], None],
         on_apply_session: Callable[[], None],
         on_reconcile_inserts: Callable[[], None],
+        on_midi_notes_changed: Callable[[str, int], None] | None = None,
     ) -> None:
         super().__init__()
+        self._on_midi_notes_changed = on_midi_notes_changed or (lambda _track, _count: None)
+        self._midi_notes: dict[str, list[tuple[int, str, int]]] = {
+            "Kick Sampler": [(1, "C3", 1), (5, "C3", 1), (9, "C3", 1), (13, "C3", 1)],
+            "Snare Sampler": [(5, "D3", 1), (13, "D3", 1)],
+            "Hi Hat Sampler": [(1, "F#3", 1), (3, "F#3", 1), (5, "F#3", 1), (7, "F#3", 1)],
+            "Melody Sampler": [(2, "C4", 2), (5, "E4", 2), (9, "G4", 2), (13, "A4", 2)],
+            "808 Bass Sampler": [(1, "C3", 2), (4, "C3", 2), (9, "G3", 2), (12, "G3", 2)],
+        }
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
+        layout.setSpacing(8)
 
         self.title_label = QLabel("MIDAS Workspace")
         self.title_label.setObjectName("workspaceTitle")
-        self.mode_label = QLabel("Shell / Runtime Overview")
+        self.mode_label = QLabel("Arrangement / MIDI / Runtime")
         self.mode_label.setObjectName("workspaceMode")
-        layout.addWidget(self.title_label)
-        layout.addWidget(self.mode_label)
+        title_row = QHBoxLayout()
+        title_row.addWidget(self.title_label)
+        title_row.addStretch(1)
+        title_row.addWidget(self.mode_label)
+        layout.addLayout(title_row)
 
         status_box = QGroupBox("Operator Status")
+        status_box.setMaximumHeight(136)
         status_grid = QGridLayout(status_box)
         self.next_action_label = QLabel("Next: Create a new session or open an existing one.")
         self.next_action_label.setObjectName("operatorNext")
@@ -69,38 +130,37 @@ class WorkspacePanel(QWidget):
         status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
         layout.addWidget(status_box)
 
-        canvas_box = QGroupBox("Arrangement")
+        canvas_box = QGroupBox("Arrangement / Sample Tracks")
         canvas_layout = QVBoxLayout(canvas_box)
         self.beat_canvas = QFrame()
         self.beat_canvas.setObjectName("beatCanvas")
-        self.beat_canvas.setMinimumHeight(190)
+        self.beat_canvas.setMinimumHeight(170)
         beat_grid = QGridLayout(self.beat_canvas)
-        beat_grid.setHorizontalSpacing(6)
-        beat_grid.setVerticalSpacing(6)
+        beat_grid.setContentsMargins(8, 8, 8, 8)
+        beat_grid.setHorizontalSpacing(4)
+        beat_grid.setVerticalSpacing(4)
         for column in range(1, 9):
             marker = QLabel(str(column))
             marker.setAlignment(Qt.AlignCenter)
+            marker.setObjectName("arrangeMarker")
             marker.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
             beat_grid.addWidget(marker, 0, column)
             beat_grid.setColumnStretch(column, 1)
-        lanes = [
-            ("Kick", ["#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "#f9733d", "", ""]),
-            ("Snare", ["", "#d83a9c", "", "#d83a9c", "", "#d83a9c", "", "#d83a9c"]),
-            ("Hi Hats", ["#804df2", "#804df2", "#804df2", "#804df2", "#804df2", "#804df2", "#6aa7ff", "#6aa7ff"]),
-            ("Melody", ["", "#9a6cff", "#9a6cff", "#9a6cff", "#78a6ff", "#78a6ff", "#78a6ff", ""]),
-            ("Bass", ["#2bd2c9", "", "#2bd2c9", "", "#2bd2c9", "", "#2bd2c9", ""]),
-        ]
-        for row, (name, colors) in enumerate(lanes, start=1):
-            lane_label = QLabel(name)
+        for row, track in enumerate(SAMPLED_TRACKS, start=1):
+            lane_label = QLabel(f"{track['short']}\n{track['source']}")
             lane_label.setProperty("beatLane", True)
-            lane_label.setFixedWidth(72)
+            lane_label.setFixedWidth(142)
+            lane_label.setWordWrap(True)
             beat_grid.addWidget(lane_label, row, 0)
-            for column, color in enumerate(colors, start=1):
-                cell = QLabel(name if color and column == 1 else "")
+            for column in range(1, 9):
+                active = column in track["clips"]
+                cell = QLabel(track["short"] if active and column == min(track["clips"]) else "")
                 cell.setProperty("beatCell", True)
                 cell.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
                 cell.setStyleSheet(
-                    f"background-color: {color};" if color else "background-color: rgba(63, 37, 103, 120);"
+                    f"background-color: {track['color']};"
+                    if active
+                    else "background-color: rgba(37, 24, 57, 165);"
                 )
                 beat_grid.addWidget(cell, row, column)
         canvas_layout.addWidget(self.beat_canvas)
@@ -113,34 +173,71 @@ class WorkspacePanel(QWidget):
         rack_grid = QGridLayout(self.channel_rack)
         rack_grid.setHorizontalSpacing(5)
         rack_grid.setVerticalSpacing(5)
-        rack_steps = {
-            "Kick": {0, 4, 8, 12},
-            "Snare": {4, 12},
-            "Hi Hats": {0, 2, 4, 6, 8, 10, 12, 14},
-            "Melody": {1, 2, 5, 6, 9, 10, 13},
-            "Bass": {0, 3, 8, 11},
-        }
-        for row, (name, active_steps) in enumerate(rack_steps.items()):
-            rack_label = QLabel(name)
+        rack_grid.setContentsMargins(8, 8, 8, 8)
+        for row, track in enumerate(SAMPLED_TRACKS):
+            rack_label = QLabel(track["short"])
             rack_label.setProperty("rackLane", True)
-            rack_label.setFixedWidth(72)
+            rack_label.setFixedWidth(96)
             rack_grid.addWidget(rack_label, row, 0)
             for step_index in range(16):
                 step = QLabel("")
                 step.setProperty("stepCell", True)
                 step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                color = "#f9733d" if name in {"Kick", "Snare"} else "#804df2" if name in {"Hi Hats", "Melody"} else "#2bd2c9"
                 step.setStyleSheet(
-                    f"background-color: {color};"
-                    if step_index in active_steps
-                    else "background-color: rgba(63, 37, 103, 150);"
+                    f"background-color: {track['color']};"
+                    if step_index in track["steps"]
+                    else "background-color: rgba(37, 24, 57, 175);"
                 )
                 rack_grid.addWidget(step, row, step_index + 1)
                 rack_grid.setColumnStretch(step_index + 1, 1)
-        self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Suggest chord progression | Humanize MIDI")
+        self.assistant_prompt_label = QLabel("Assistant: Generate drum pattern | Add sampled MIDI notes | Suggest chord progression")
         self.assistant_prompt_label.setWordWrap(True)
         rack_layout.addWidget(self.channel_rack)
         rack_layout.addWidget(self.assistant_prompt_label)
+
+        midi_box = QGroupBox("MIDI Notes / Sample Track Editor")
+        midi_layout = QVBoxLayout(midi_box)
+        midi_controls = QHBoxLayout()
+        self.midi_track_selector = QComboBox()
+        for track in SAMPLED_TRACKS:
+            self.midi_track_selector.addItem(track["name"])
+        self.midi_pitch_selector = QComboBox()
+        self.midi_pitch_selector.addItems(["C3", "D3", "E3", "F#3", "G3", "A3", "C4", "E4", "G4", "A4", "C5"])
+        self.midi_pitch_selector.setCurrentText("C4")
+        self.midi_step_input = QSpinBox()
+        self.midi_step_input.setRange(1, 16)
+        self.midi_step_input.setValue(1)
+        self.midi_length_input = QSpinBox()
+        self.midi_length_input.setRange(1, 8)
+        self.midi_length_input.setValue(2)
+        self.add_midi_note_button = QPushButton("Add Note")
+        self.clear_midi_notes_button = QPushButton("Clear Track")
+        midi_controls.addWidget(QLabel("Track"))
+        midi_controls.addWidget(self.midi_track_selector, 1)
+        midi_controls.addWidget(QLabel("Pitch"))
+        midi_controls.addWidget(self.midi_pitch_selector)
+        midi_controls.addWidget(QLabel("Step"))
+        midi_controls.addWidget(self.midi_step_input)
+        midi_controls.addWidget(QLabel("Length"))
+        midi_controls.addWidget(self.midi_length_input)
+        midi_controls.addWidget(self.add_midi_note_button)
+        midi_controls.addWidget(self.clear_midi_notes_button)
+        midi_layout.addLayout(midi_controls)
+        self.midi_note_grid = QFrame()
+        self.midi_note_grid.setObjectName("midiNoteGrid")
+        self._midi_grid_layout = QGridLayout(self.midi_note_grid)
+        self._midi_grid_layout.setContentsMargins(8, 8, 8, 8)
+        self._midi_grid_layout.setHorizontalSpacing(3)
+        self._midi_grid_layout.setVerticalSpacing(3)
+        midi_layout.addWidget(self.midi_note_grid)
+        self.midi_note_summary_label = QLabel("")
+        self.midi_note_summary_label.setWordWrap(True)
+        midi_layout.addWidget(self.midi_note_summary_label)
+        self.midi_track_selector.currentTextChanged.connect(lambda _value: self._render_midi_grid())
+        self.add_midi_note_button.clicked.connect(self._add_selected_midi_note)
+        self.clear_midi_notes_button.clicked.connect(self._clear_selected_midi_notes)
+        self._render_midi_grid()
+        layout.addWidget(midi_box)
         layout.addWidget(rack_box)
 
         self.summary_tabs = QTabWidget()
@@ -372,6 +469,72 @@ class WorkspacePanel(QWidget):
         if item is None:
             return ""
         return str(item.data(0x0100) or "")
+
+    def selected_midi_track(self) -> str:
+        return self.midi_track_selector.currentText()
+
+    def midi_note_count(self, track_name: str = "") -> int:
+        selected = track_name or self.selected_midi_track()
+        return len(self._midi_notes.get(selected, []))
+
+    def _add_selected_midi_note(self) -> None:
+        track = self.selected_midi_track()
+        note = (int(self.midi_step_input.value()), self.midi_pitch_selector.currentText(), int(self.midi_length_input.value()))
+        notes = self._midi_notes.setdefault(track, [])
+        if note not in notes:
+            notes.append(note)
+            notes.sort(key=lambda item: (item[0], item[1], item[2]))
+        self._render_midi_grid()
+        self._on_midi_notes_changed(track, len(notes))
+
+    def _clear_selected_midi_notes(self) -> None:
+        track = self.selected_midi_track()
+        self._midi_notes[track] = []
+        self._render_midi_grid()
+        self._on_midi_notes_changed(track, 0)
+
+    def _render_midi_grid(self) -> None:
+        while self._midi_grid_layout.count():
+            item = self._midi_grid_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        track = self.selected_midi_track() or SAMPLED_TRACKS[0]["name"]
+        notes = self._midi_notes.get(track, [])
+        note_cells = {(step + offset, pitch) for step, pitch, length in notes for offset in range(length) if step + offset <= 16}
+        for column in range(1, 17):
+            marker = QLabel(str(column))
+            marker.setObjectName("midiStepMarker")
+            marker.setAlignment(Qt.AlignCenter)
+            self._midi_grid_layout.addWidget(marker, 0, column)
+            self._midi_grid_layout.setColumnStretch(column, 1)
+        for row, pitch in enumerate(MIDI_PITCHES, start=1):
+            pitch_label = QLabel(pitch)
+            pitch_label.setObjectName("midiPitchLabel")
+            pitch_label.setFixedWidth(42)
+            self._midi_grid_layout.addWidget(pitch_label, row, 0)
+            for column in range(1, 17):
+                cell = QLabel("")
+                cell.setProperty("midiCell", True)
+                cell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                active = (column, pitch) in note_cells
+                color = self._track_color(track)
+                cell.setStyleSheet(
+                    f"background-color: {color};"
+                    if active
+                    else "background-color: rgba(31, 22, 47, 175);"
+                )
+                self._midi_grid_layout.addWidget(cell, row, column)
+        if hasattr(self, "midi_note_summary_label"):
+            summary = ", ".join(f"{pitch}@{step}x{length}" for step, pitch, length in notes) or "No MIDI notes on this track yet."
+            self.midi_note_summary_label.setText(f"{track}: {summary}")
+
+    @staticmethod
+    def _track_color(track_name: str) -> str:
+        for track in SAMPLED_TRACKS:
+            if track["name"] == track_name:
+                return str(track["color"])
+        return "#78a6ff"
 
     @staticmethod
     def _fmt_epoch(value: int) -> str:
