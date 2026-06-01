@@ -5,3 +5,4 @@
 - Add session panel vertical slice (`save`, `load`, `apply`).
 - Expand debug panel with filterable event categories and operation timing.
 - Add transport panel wired to typed transport bridge methods.
+- Add FL-inspired production workflow contracts: playlist/pattern scope, sampled tracks, MIDI notes, browser actions, mixer routing, automation, recording, export settings, and theme/accessibility preferences.

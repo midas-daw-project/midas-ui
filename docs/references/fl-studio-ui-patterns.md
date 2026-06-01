@@ -4,6 +4,7 @@ Source material:
 
 - <https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/Index_Frame_Left.html>
 - <https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_interface.htm>
+- `/Users/matthewperalta/Downloads/Training for you.pdf`
 
 Use this as workflow precedent, not a visual clone target. FL Studio is especially useful for MIDAS because it prioritizes beat-making surfaces: browser, channel rack, step sequencer, playlist, pattern workflow, mixer, and a persistent toolbar.
 
@@ -19,6 +20,7 @@ Use this as workflow precedent, not a visual clone target. FL Studio is especial
 - **Common control gestures**: knobs, sliders, number displays, preset selectors, wave displays, and menu icons should feel consistent across the app.
 - **Favorites and presets**: frequently used folders, presets, and reusable content should become first-class browser shortcuts.
 - **Power tools later**: piano roll tools, automation tools, controller linking, scripting, and action-like command surfaces can arrive after the shell is stable.
+- **Beginner-to-song journey**: training transcripts show a useful order for MIDAS guidance: template/open project, add sounds, make a pattern, draw MIDI, arrange in playlist, route to mixer, add effects, automate, record, export, then customize.
 
 ## MIDAS Adaptation
 
@@ -29,6 +31,7 @@ Use this as workflow precedent, not a visual clone target. FL Studio is especial
 - Keep the right mixer/effects panel as channel strip plus plugin stack, not a generic settings form.
 - Add hint text and next-action guidance near major controls rather than a separate welcome screen.
 - Keep windows/panels docked by default; expose detach or multi-screen behavior only after the shell layout is stable.
+- See `docs/references/fl-studio-training-transcripts-reference.md` for the expanded frontend/backend workflow translation.
 
 ## Guardrails
 
