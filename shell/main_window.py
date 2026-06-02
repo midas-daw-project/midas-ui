@@ -133,6 +133,7 @@ class MainWindow(QMainWindow):
         self._workspace_controller.set_bridge_identity(mode=bridge_mode, version=self._bridge.bridge_version())
         self._project_tempo_bpm = 120.0
         self._project_key = "C Major"
+        self._project_key_source = "Manual"
         self._project_key_notes = MAJOR_SCALES[self._project_key]
         self._debug_panel.set_bridge_info(
             mode=bridge_mode,
@@ -671,6 +672,7 @@ class MainWindow(QMainWindow):
         if normalized is None:
             return False
         self._project_key = normalized
+        self._project_key_source = "Manual"
         self._project_key_notes = MAJOR_SCALES[normalized]
         self._workspace_controller.mark_action(
             f"Key set to {normalized}: {' '.join(self._project_key_notes)}"
@@ -728,6 +730,7 @@ class MainWindow(QMainWindow):
             self._refresh_workspace()
             return
         self._project_key = dialog.selected_key()
+        self._project_key_source = "Manual"
         self._project_key_notes = dialog.selected_scale_notes()
         self._workspace_controller.mark_action(
             f"Key set to {self._project_key}: {' '.join(self._project_key_notes)}"
@@ -761,7 +764,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_key_button"):
             self._key_button.setText(self._project_key)
         if hasattr(self, "_key_notes_label"):
-            self._key_notes_label.setText(f"Scale: {'  '.join(self._project_key_notes)}")
+            self._key_notes_label.setText(
+                f"Scale: {'  '.join(self._project_key_notes)} | Source: {self._project_key_source}"
+            )
         self._hint_status_label.setText(
             f"{self._workspace_vm.startup_hint} | "
             f"Browser -> Arrangement/Editor -> Mixer | Last: {self._workspace_vm.last_action}"
@@ -1077,9 +1082,59 @@ class MainWindow(QMainWindow):
         self._session_controller.mark_dirty()
 
     def _midi_notes_changed(self, track_name: str, note_count: int) -> None:
-        self._workspace_controller.mark_action(f"MIDI notes updated on {track_name} ({note_count})")
+        detected_key = self._infer_project_key_from_midi(self._workspace_panel.midi_pitches_for_track(track_name))
+        if detected_key is not None:
+            self._project_key = detected_key
+            self._project_key_notes = MAJOR_SCALES[detected_key]
+            self._project_key_source = f"MIDI: {track_name}"
+            self._workspace_controller.mark_action(
+                f"MIDI notes updated on {track_name} ({note_count}); detected {detected_key}"
+            )
+        else:
+            self._workspace_controller.mark_action(f"MIDI notes updated on {track_name} ({note_count})")
         self._mark_session_modified()
         self._refresh_session()
+
+    def _infer_project_key_from_midi(self, pitches: list[str]) -> str | None:
+        pitch_classes = [self._normalize_pitch_class(pitch) for pitch in pitches]
+        pitch_classes = [pitch for pitch in pitch_classes if pitch]
+        if not pitch_classes:
+            return None
+        counts: dict[str, int] = {}
+        for pitch in pitch_classes:
+            counts[pitch] = counts.get(pitch, 0) + 1
+        tonic_hint = pitch_classes[0]
+        best_key = None
+        best_score = -1
+        for key_name, scale_notes in MAJOR_SCALES.items():
+            tonic = self._normalize_pitch_class(scale_notes[0])
+            scale = {self._normalize_pitch_class(note) for note in scale_notes[:-1]}
+            score = sum(count for pitch, count in counts.items() if pitch in scale)
+            score -= sum(count for pitch, count in counts.items() if pitch not in scale) * 2
+            if tonic in counts:
+                score += counts[tonic] * 2
+            if tonic == tonic_hint:
+                score += 1
+            if score > best_score:
+                best_key = key_name
+                best_score = score
+        return best_key if best_score > 0 else None
+
+    @staticmethod
+    def _normalize_pitch_class(pitch: str) -> str:
+        cleaned = "".join(ch for ch in pitch.strip() if not ch.isdigit()).replace("♯", "#").replace("♭", "b")
+        aliases = {
+            "A#": "Bb",
+            "B#": "C",
+            "Cb": "B",
+            "C#": "Db",
+            "D#": "Eb",
+            "E#": "F",
+            "Fb": "E",
+            "F#": "Gb",
+            "G#": "Ab",
+        }
+        return aliases.get(cleaned, cleaned)
 
     def _refresh_debug_summary(self) -> None:
         runtime_status = self._bridge.get_runtime_status()

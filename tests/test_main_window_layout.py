@@ -110,6 +110,27 @@ def test_main_window_project_controls_update_tempo_and_key():
     window.close()
 
 
+def test_main_window_detects_project_key_from_midi_notes():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    window._workspace_panel.show_piano_roll()
+    track = window._workspace_panel.selected_midi_track()
+    window._workspace_panel.midi_pitch_selector.setCurrentText("A3")
+    window._workspace_panel.midi_step_input.setValue(1)
+    window._workspace_panel.midi_length_input.setValue(1)
+    window._workspace_panel.add_midi_note_button.click()
+
+    assert window._project_key == "A Major"
+    assert window._key_button.text() == "A Major"
+    assert "Source: MIDI: " in window._key_notes_label.text()
+    assert track in window._key_notes_label.text()
+
+    window.close()
+
+
 def test_main_window_header_audio_controls_update_sample_rate_and_block_size():
     _app()
     window = MainWindow(FallbackBridgeClient())

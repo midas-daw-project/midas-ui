@@ -627,6 +627,10 @@ class WorkspacePanel(QWidget):
         selected = track_name or self.selected_midi_track()
         return len(self._midi_notes.get(selected, []))
 
+    def midi_pitches_for_track(self, track_name: str = "") -> list[str]:
+        selected = track_name or self.selected_midi_track()
+        return [pitch for _step, pitch, _length in self._midi_notes.get(selected, [])]
+
     def arrangement_clip_active(self, track_name: str, beat: int) -> bool:
         return beat in self._arrangement_clips.get(track_name, set())
 

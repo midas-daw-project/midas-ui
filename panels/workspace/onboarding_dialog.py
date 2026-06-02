@@ -56,7 +56,7 @@ class DawOnboardingDialog(QDialog):
             ("MIDI", "Open the piano roll for notes, scale-aware ideas, and pattern edits."),
             ("Mix", "Show the mixer and plugin insert workflow."),
             ("Browse", "Open the browser for plugins, instruments, loops, and samples."),
-            ("Tempo / Key", "Set BPM directly, or open the key wheel to choose a scale."),
+            ("Tempo / Key", "Set BPM directly, open the key wheel, or let MIDI notes suggest the project key."),
         ]
         for row, (name, description) in enumerate(rows):
             name_label = QLabel(name)
@@ -102,6 +102,7 @@ class DawOnboardingDialog(QDialog):
             ("Selection Wheel", "Click a wheel segment to select a plugin/source and read the explanation bubble."),
             ("Queued Chain", "Ready insert effects queue as you select them; setup tools and installers only explain themselves."),
             ("Add FX", "Use Insert or Ctrl+Shift+F to choose an insert effect for the selected mixer slot."),
+            ("Key Detection", "MIDI notes can suggest the project key now; audio sample key detection needs the backend analysis engine."),
         ]
         for row, (name, description) in enumerate(workflow_rows):
             name_label = QLabel(name)

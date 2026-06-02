@@ -128,6 +128,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     panel.midi_length_input.setValue(2)
     panel.add_midi_note_button.click()
     assert panel.midi_note_count(selected_midi_track) == starting_notes + 1
+    assert panel.midi_pitches_for_track(selected_midi_track) == ["C4"]
     assert "C4@2x2" in panel.midi_note_summary_label.text()
     assert "Generate drum pattern" in panel.assistant_prompt_label.text()
     assert "sampled MIDI notes" in panel.assistant_prompt_label.text()
