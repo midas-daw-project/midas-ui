@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QCompleter,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QToolBar,
     QVBoxLayout,
     QWidget,
@@ -53,16 +54,19 @@ from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
 
 class MainWindow(QMainWindow):
-    DEFAULT_WIDTH = 1180
-    DEFAULT_HEIGHT = 720
-    SCREEN_MARGIN = 48
-    LAYOUT_VERSION = 8
+    DEFAULT_WIDTH = 1060
+    DEFAULT_HEIGHT = 680
+    MIN_WIDTH = 720
+    MIN_HEIGHT = 500
+    SCREEN_MARGIN = 72
+    LAYOUT_VERSION = 9
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
         self._bridge = bridge
         self._settings = ShellSettingsStore()
         self.setWindowTitle("MIDAS - Phase 1 Shell")
+        self.setMinimumSize(self.MIN_WIDTH, self.MIN_HEIGHT)
         self.resize(*self._default_window_size())
 
         self._audio_vm = AudioViewModel()
@@ -227,8 +231,22 @@ class MainWindow(QMainWindow):
         self._snap_input = QComboBox()
         self._snap_input.setObjectName("snapCombo")
         self._snap_input.addItems(["Grid 1/4", "Grid 1/8", "Grid 1/16", "Grid 1/32"])
-        self._device_status_label = QLabel("48kHz / 256")
+        self._device_status_label = QLabel("Audio")
         self._device_status_label.setObjectName("deviceStatusLabel")
+        self._sample_rate_input = QSpinBox()
+        self._sample_rate_input.setObjectName("sampleRateInput")
+        self._sample_rate_input.setRange(8000, 192000)
+        self._sample_rate_input.setSingleStep(1000)
+        self._sample_rate_input.setSuffix(" Hz")
+        self._sample_rate_input.setValue(self._audio_vm.sample_rate or 48000)
+        self._sample_rate_input.setToolTip("Project audio sample rate")
+        self._buffer_size_input = QSpinBox()
+        self._buffer_size_input.setObjectName("bufferSizeInput")
+        self._buffer_size_input.setRange(32, 4096)
+        self._buffer_size_input.setSingleStep(32)
+        self._buffer_size_input.setSuffix(" spls")
+        self._buffer_size_input.setValue(self._audio_vm.buffer_size or 256)
+        self._buffer_size_input.setToolTip("Audio block size / buffer size")
         self._runtime_status_label = QLabel("Runtime: offline")
         self._runtime_status_label.setObjectName("runtimeStatusLabel")
         self._hint_status_label = QLabel("Hint: Browser -> Arrangement/Editor -> Mixer")
@@ -248,6 +266,8 @@ class MainWindow(QMainWindow):
         cockpit_row.addWidget(self._snap_input)
         cockpit_row.addWidget(self._status_chip)
         cockpit_row.addWidget(self._device_status_label)
+        cockpit_row.addWidget(self._sample_rate_input)
+        cockpit_row.addWidget(self._buffer_size_input)
         cockpit_row.addWidget(self._runtime_status_label)
         header_layout.addLayout(cockpit_row)
         key_row = QHBoxLayout()
@@ -304,6 +324,8 @@ class MainWindow(QMainWindow):
             lambda checked: self._workspace_controller.mark_action("Metronome on" if checked else "Metronome off")
         )
         self._key_button.clicked.connect(self._open_key_selection_wheel)
+        self._sample_rate_input.valueChanged.connect(self._set_audio_sample_rate)
+        self._buffer_size_input.valueChanged.connect(self._set_audio_buffer_size)
         self._header_new_button.clicked.connect(lambda: self._new_session(self._header_session_ref_input.text()))
         self._header_open_button.clicked.connect(lambda: self._open_session(self._header_session_ref_input.text()))
         self._header_save_button.clicked.connect(self._save_session)
@@ -329,7 +351,7 @@ class MainWindow(QMainWindow):
 
         self._mixer_dock = QDockWidget("Mixer", self)
         self._mixer_dock.setObjectName("dock.mixer")
-        self._mixer_dock.setMinimumHeight(300)
+        self._mixer_dock.setMinimumHeight(240)
         self._mixer_dock.setWidget(self._scrollable_panel(self._mixer_panel))
         self.addDockWidget(Qt.BottomDockWidgetArea, self._mixer_dock)
 
@@ -345,7 +367,7 @@ class MainWindow(QMainWindow):
 
         self._browser_dock = QDockWidget("Browser", self)
         self._browser_dock.setObjectName("dock.browser")
-        self._browser_dock.setMinimumWidth(240)
+        self._browser_dock.setMinimumWidth(210)
         self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
         self.addDockWidget(Qt.LeftDockWidgetArea, self._browser_dock)
         self._mount_view_menu()
@@ -363,6 +385,7 @@ class MainWindow(QMainWindow):
         self._refresh_audio()
 
     def _init_audio(self) -> None:
+        self._sync_header_audio_config_to_panel()
         self._audio_panel.read_config_into(self._audio_vm)
         result = self._audio_controller.init_audio()
         self._debug_panel.append_result("init_audio", result.code, result.message)
@@ -376,6 +399,7 @@ class MainWindow(QMainWindow):
         self._refresh_audio()
 
     def _start_audio(self) -> None:
+        self._sync_header_audio_config_to_panel()
         self._audio_panel.read_config_into(self._audio_vm)
         result = self._audio_controller.start_audio()
         self._debug_panel.append_result("start_audio", result.code, result.message)
@@ -654,6 +678,49 @@ class MainWindow(QMainWindow):
         self._refresh_header()
         return True
 
+    def _set_audio_sample_rate(self, sample_rate: int) -> None:
+        self._audio_vm.sample_rate = int(sample_rate)
+        self._sync_header_audio_config_to_panel()
+        self._workspace_controller.mark_action(f"Sample rate set to {self._format_sample_rate(int(sample_rate))}")
+        self._refresh_header()
+
+    def _set_audio_buffer_size(self, buffer_size: int) -> None:
+        self._audio_vm.buffer_size = int(buffer_size)
+        self._sync_header_audio_config_to_panel()
+        self._workspace_controller.mark_action(f"Block size set to {int(buffer_size)} samples")
+        self._refresh_header()
+
+    def _sync_header_audio_config_to_panel(self) -> None:
+        if not hasattr(self, "_audio_panel"):
+            return
+        sample_rate = int(getattr(self, "_sample_rate_input", self._audio_panel.sample_rate_input).value())
+        buffer_size = int(getattr(self, "_buffer_size_input", self._audio_panel.buffer_size_input).value())
+        self._audio_vm.sample_rate = sample_rate
+        self._audio_vm.buffer_size = buffer_size
+        self._audio_panel.sample_rate_input.blockSignals(True)
+        self._audio_panel.buffer_size_input.blockSignals(True)
+        self._audio_panel.sample_rate_input.setValue(sample_rate)
+        self._audio_panel.buffer_size_input.setValue(buffer_size)
+        self._audio_panel.sample_rate_input.blockSignals(False)
+        self._audio_panel.buffer_size_input.blockSignals(False)
+
+    def _sync_audio_config_controls_from_vm(self) -> None:
+        sample_rate = int(self._audio_vm.sample_rate or 48000)
+        buffer_size = int(self._audio_vm.buffer_size or 256)
+        if hasattr(self, "_sample_rate_input") and not self._sample_rate_input.hasFocus():
+            self._sample_rate_input.blockSignals(True)
+            self._sample_rate_input.setValue(sample_rate)
+            self._sample_rate_input.blockSignals(False)
+        if hasattr(self, "_buffer_size_input") and not self._buffer_size_input.hasFocus():
+            self._buffer_size_input.blockSignals(True)
+            self._buffer_size_input.setValue(buffer_size)
+            self._buffer_size_input.blockSignals(False)
+
+    def _format_sample_rate(self, sample_rate: int) -> str:
+        if sample_rate % 1000 == 0:
+            return f"{sample_rate // 1000}kHz"
+        return f"{sample_rate / 1000:.1f}kHz"
+
     def _open_key_selection_wheel(self) -> None:
         dialog = KeySelectionWheelDialog(self._project_key, self)
         if dialog.exec() != dialog.Accepted:
@@ -677,9 +744,8 @@ class MainWindow(QMainWindow):
             self._header_session_ref_input.setText(session_ref if session_ref != "Untitled Beat" else "")
         sample_rate = self._audio_vm.sample_rate or 48000
         buffer_size = self._audio_vm.buffer_size or 256
-        self._device_status_label.setText(
-            f"{sample_rate // 1000 if sample_rate else 48}kHz / {buffer_size}"
-        )
+        self._device_status_label.setText(f"{self._format_sample_rate(int(sample_rate))} / {buffer_size}")
+        self._sync_audio_config_controls_from_vm()
         runtime = "active" if self._workspace_vm.runtime_active or self._transport_vm.runtime_active else "offline"
         self._status_chip.setText("Online" if runtime == "active" else "Offline")
         self._status_chip.setProperty("online", runtime == "active")
@@ -803,6 +869,36 @@ class MainWindow(QMainWindow):
                 if not self._set_project_key(key_text):
                     self._workspace_controller.mark_action(f"Unknown key: {key_text}")
                     self._refresh_workspace()
+                return True
+        sample_rate_prefixes = ("set sample rate", "sample rate")
+        for prefix in sample_rate_prefixes:
+            if lowered.startswith(prefix):
+                value_text = lowered.removeprefix(prefix).replace("to", "").strip()
+                multiplier = 1000 if "khz" in value_text else 1
+                value_text = value_text.replace("khz", "").replace("hz", "").strip()
+                try:
+                    sample_rate = int(float(value_text) * multiplier)
+                except ValueError:
+                    self._workspace_controller.mark_action(f"Sample rate command needs a number: {query}")
+                    self._refresh_workspace()
+                    return True
+                self._sample_rate_input.setValue(
+                    max(self._sample_rate_input.minimum(), min(self._sample_rate_input.maximum(), sample_rate))
+                )
+                return True
+        buffer_prefixes = ("set block size", "block size", "set buffer", "buffer")
+        for prefix in buffer_prefixes:
+            if lowered.startswith(prefix):
+                value_text = lowered.removeprefix(prefix).replace("to", "").replace("samples", "").strip()
+                try:
+                    buffer_size = int(float(value_text))
+                except ValueError:
+                    self._workspace_controller.mark_action(f"Block size command needs a number: {query}")
+                    self._refresh_workspace()
+                    return True
+                self._buffer_size_input.setValue(
+                    max(self._buffer_size_input.minimum(), min(self._buffer_size_input.maximum(), buffer_size))
+                )
                 return True
         return False
 
@@ -1148,23 +1244,26 @@ class MainWindow(QMainWindow):
         self._mixer_dock.hide()
         self._transport_dock.hide()
         self._debug_dock.hide()
-        self.resizeDocks([self._browser_dock], [250], Qt.Horizontal)
-        self.resizeDocks([self._mixer_dock], [320], Qt.Vertical)
+        available = self._available_screen_geometry()
+        browser_width = 230 if available is None else max(210, min(260, int(available.width() * 0.22)))
+        mixer_height = 280 if available is None else max(240, min(320, int(available.height() * 0.34)))
+        self.resizeDocks([self._browser_dock], [browser_width], Qt.Horizontal)
+        self.resizeDocks([self._mixer_dock], [mixer_height], Qt.Vertical)
 
     def _default_window_size(self) -> tuple[int, int]:
         available = self._available_screen_geometry()
         if available is None:
             return self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT
-        width = min(self.DEFAULT_WIDTH, max(760, available.width() - self.SCREEN_MARGIN))
-        height = min(self.DEFAULT_HEIGHT, max(560, available.height() - self.SCREEN_MARGIN))
+        width = min(self.DEFAULT_WIDTH, max(self.MIN_WIDTH, int(available.width() * 0.92)))
+        height = min(self.DEFAULT_HEIGHT, max(self.MIN_HEIGHT, int(available.height() * 0.88)))
         return width, height
 
     def _fit_to_screen(self) -> None:
         available = self._available_screen_geometry()
         if available is None:
             return
-        max_width = max(760, available.width() - self.SCREEN_MARGIN)
-        max_height = max(560, available.height() - self.SCREEN_MARGIN)
+        max_width = max(self.MIN_WIDTH, available.width() - self.SCREEN_MARGIN)
+        max_height = max(self.MIN_HEIGHT, available.height() - self.SCREEN_MARGIN)
         if self.width() > max_width or self.height() > max_height:
             self.resize(min(self.width(), max_width), min(self.height(), max_height))
         frame = self.frameGeometry()

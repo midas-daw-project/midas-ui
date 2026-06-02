@@ -202,7 +202,12 @@ QPushButton#headerModeButton:checked {
     background-color: rgba(143, 99, 223, 44);
 }
 
-QDoubleSpinBox#tempoInput, QComboBox#meterCombo, QComboBox#snapCombo, QPushButton#keyButton {
+QDoubleSpinBox#tempoInput,
+QSpinBox#sampleRateInput,
+QSpinBox#bufferSizeInput,
+QComboBox#meterCombo,
+QComboBox#snapCombo,
+QPushButton#keyButton {
     background-color: #0d101b;
     border: 1px solid #2b3651;
     border-radius: 7px;
@@ -214,6 +219,14 @@ QDoubleSpinBox#tempoInput, QComboBox#meterCombo, QComboBox#snapCombo, QPushButto
 
 QDoubleSpinBox#tempoInput {
     min-width: 112px;
+}
+
+QSpinBox#sampleRateInput {
+    min-width: 102px;
+}
+
+QSpinBox#bufferSizeInput {
+    min-width: 92px;
 }
 
 QPushButton#keyButton {

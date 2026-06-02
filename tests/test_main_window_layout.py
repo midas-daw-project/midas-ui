@@ -5,7 +5,7 @@ import sys
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
 
 from bridge.fallback_bridge import FallbackBridgeClient
@@ -13,6 +13,7 @@ from shell.main_window import MainWindow
 
 
 def _app() -> QApplication:
+    QSettings("MIDAS", "MIDAS-UI").clear()
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
@@ -105,5 +106,36 @@ def test_main_window_project_controls_update_tempo_and_key():
     assert window._key_button.text() == "A Major"
     assert window._project_key_notes == ["A", "B", "C#", "D", "E", "F#", "G#", "A"]
     assert "A  B  C#  D  E  F#  G#  A" in window._key_notes_label.text()
+
+    window.close()
+
+
+def test_main_window_header_audio_controls_update_sample_rate_and_block_size():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    assert window._sample_rate_input.value() == 48000
+    assert window._buffer_size_input.value() == 256
+    assert "48kHz / 256" in window._device_status_label.text()
+
+    window._sample_rate_input.setValue(44100)
+    window._buffer_size_input.setValue(128)
+    assert window._audio_vm.sample_rate == 44100
+    assert window._audio_vm.buffer_size == 128
+    assert window._audio_panel.sample_rate_input.value() == 44100
+    assert window._audio_panel.buffer_size_input.value() == 128
+    assert "44.1kHz / 128" in window._device_status_label.text()
+
+    window._command_search_input.setText("set sample rate 96 khz")
+    window._execute_command_search()
+    window._command_search_input.setText("block size 512")
+    window._execute_command_search()
+    assert window._sample_rate_input.value() == 96000
+    assert window._buffer_size_input.value() == 512
+    assert window._audio_vm.sample_rate == 96000
+    assert window._audio_vm.buffer_size == 512
+    assert "96kHz / 512" in window._device_status_label.text()
 
     window.close()

@@ -37,6 +37,14 @@ NON_INSERT_CATEGORIES = {
 PLUGIN_GROUP_ORDER = [
     "Mount Olympus Signal Forge",
     "Elysium Reverb Fields",
+    "Tartarus Tone Crucible",
+    "Hermes Echo Roads",
+    "Aegean Spatial Harbor",
+    "Delphi Filter Temple",
+    "Daedalus Texture Labyrinth",
+    "Nereid Modulation Springs",
+    "Hermes Utility Bench",
+    "Oracle Harmony Hall",
     "Phrygia Host Gates",
     "Gordium Action Forge",
     "Poseidon Wave Harbor",
@@ -55,18 +63,45 @@ PLUGIN_GROUP_ORDER = [
 PLUGIN_GROUPS = {
     "midas.eq.basic": "Mount Olympus Signal Forge",
     "midas.comp.basic": "Mount Olympus Signal Forge",
+    "midas.reverb.silenus": "Elysium Reverb Fields",
+    "midas.drive.inferno": "Tartarus Tone Crucible",
+    "midas.delay.hermes": "Hermes Echo Roads",
+    "midas.stereo.aegean": "Aegean Spatial Harbor",
+    "midas.filter.oracle": "Delphi Filter Temple",
+    "midas.lofi.daedalus": "Daedalus Texture Labyrinth",
+    "midas.mod.nereid": "Nereid Modulation Springs",
+    "midas.utility.hermes": "Hermes Utility Bench",
+    "midas.midi.oracle_chords": "Oracle Harmony Hall",
     "thirdparty.reverb.demo": "Elysium Reverb Fields",
 }
 
 PLUGIN_PURPOSES = {
     "midas.eq.basic": "MIDAS-native EQ for shaping tone and carving space in a mix.",
     "midas.comp.basic": "MIDAS-native compressor for controlling dynamics and adding punch.",
+    "midas.reverb.silenus": "MIDAS-native reverb for rooms, ambience, tails, and depth around vocals, drums, and instruments.",
+    "midas.drive.inferno": "MIDAS-native drive inspired by distortion/saturation workflows for adding grit, edge, and harmonic heat.",
+    "midas.delay.hermes": "MIDAS-native tempo-aware delay for echoes, throws, rhythmic repeats, and filtered space.",
+    "midas.stereo.aegean": "MIDAS-native stereo width tool for balancing mono focus, spread, pan feel, and left/right offset.",
+    "midas.filter.oracle": "MIDAS-native filter for low-pass, high-pass, band-pass, peak, notch, and shelf-style movement.",
+    "midas.lofi.daedalus": "MIDAS-native lo-fi texture insert for bit-depth feel, sample-rate reduction, and wet/dry degradation.",
+    "midas.mod.nereid": "MIDAS-native chorus/modulation insert for thickening parts, widening pads, and adding gentle movement.",
+    "midas.utility.hermes": "MIDAS-native gain and trim utility for level staging before, between, or after other inserts.",
+    "midas.midi.oracle_chords": "MIDAS-native key, scale, chord, bass, and melody assistant for sketching harmonic ideas.",
     "thirdparty.reverb.demo": "Demo reverb placeholder for space, ambience, and room-style effects.",
 }
 
 PLUGIN_FUNCTION_LABELS = {
     "midas.eq.basic": "EQ",
     "midas.comp.basic": "Compressor",
+    "midas.reverb.silenus": "Reverb",
+    "midas.drive.inferno": "Drive",
+    "midas.delay.hermes": "Delay",
+    "midas.stereo.aegean": "Width",
+    "midas.filter.oracle": "Filter",
+    "midas.lofi.daedalus": "LoFi",
+    "midas.mod.nereid": "Chorus",
+    "midas.utility.hermes": "Gain",
+    "midas.midi.oracle_chords": "Chords",
     "thirdparty.reverb.demo": "Reverb",
 }
 

@@ -30,7 +30,19 @@ from bridge.plugin_catalog import (
 
 CATEGORY_FILTERS = {
     "All Sources": set(),
-    "Insert FX": {"EQ", "Dynamics", "Reverb"},
+    "Insert FX": {
+        "Delay",
+        "Dynamics",
+        "EQ",
+        "Filter",
+        "Imaging",
+        "LoFi",
+        "MIDI Effect",
+        "Modulation",
+        "Reverb",
+        "Saturation",
+        "Utility",
+    },
     "Drum Instruments": {"Drum Instrument"},
     "Instruments": {"Instrument Source"},
     "Sample Libraries": {"Sample Library", "Sample Pack"},

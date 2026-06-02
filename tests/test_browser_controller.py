@@ -55,6 +55,28 @@ def test_browser_selection_queues_only_available_insert_effects():
     assert vm.queued_plugin_ids == []
 
 
+def test_browser_registry_exposes_midas_native_plugin_equivalents():
+    bridge = FallbackBridgeClient()
+    plugins = {plugin.plugin_id: plugin for plugin in bridge.get_plugin_registry()}
+
+    for plugin_id in (
+        "midas.reverb.silenus",
+        "midas.drive.inferno",
+        "midas.delay.hermes",
+        "midas.stereo.aegean",
+        "midas.filter.oracle",
+        "midas.lofi.daedalus",
+        "midas.mod.nereid",
+        "midas.utility.hermes",
+        "midas.midi.oracle_chords",
+    ):
+        assert plugins[plugin_id].available
+        assert plugins[plugin_id].source == "builtin"
+
+    assert bridge.insert_plugin(1, "midas.drive.inferno", 0).ok
+    assert bridge.get_insert_chain(1)[0].plugin_name == "MIDAS Inferno Drive"
+
+
 def test_browser_registry_refresh():
     bridge = FallbackBridgeClient()
     vm = BrowserViewModel()

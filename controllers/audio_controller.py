@@ -58,8 +58,10 @@ class AudioController:
         status = self._bridge.get_audio_status()
         self._vm.state = status.state
         self._vm.device_id = status.device_id
-        self._vm.sample_rate = status.sample_rate
-        self._vm.buffer_size = status.buffer_size
+        if status.sample_rate:
+            self._vm.sample_rate = status.sample_rate
+        if status.buffer_size:
+            self._vm.buffer_size = status.buffer_size
         self._vm.render_status = status.render_status
         self._vm.render_produced = status.render_produced
         self._vm.render_frames_produced = status.render_frames_produced
