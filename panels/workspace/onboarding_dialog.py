@@ -103,6 +103,7 @@ class DawOnboardingDialog(QDialog):
             ("Queued Chain", "Ready insert effects queue as you select them; setup tools and installers only explain themselves."),
             ("Add FX", "Use Insert or Ctrl+Shift+F to choose an insert effect for the selected mixer slot."),
             ("Key Detection", "MIDI notes can suggest the project key now; audio sample key detection needs the backend analysis engine."),
+            ("Feature Status", "Implemented Shell means usable frontend insert shell; Reference Source means detected tool or design source; Backend Required means the audio engine still has to own it."),
         ]
         for row, (name, description) in enumerate(workflow_rows):
             name_label = QLabel(name)
@@ -112,6 +113,26 @@ class DawOnboardingDialog(QDialog):
             workflow_grid.addWidget(name_label, row, 0)
             workflow_grid.addWidget(description_label, row, 1)
         content_layout.addWidget(workflow_box)
+
+        mode_box = QGroupBox("Creator Modes")
+        mode_grid = QGridLayout(mode_box)
+        mode_grid.setColumnStretch(1, 1)
+        mode_rows = [
+            ("Producer Mode", "Fast beatmaking, drums, loops, patterns, MIDI, and scale-aware writing."),
+            ("Engineer Mode", "Mixer control, routing, FX chains, sends, automation, and detailed editing."),
+            ("Recording Mode", "Vocals, instruments, voiceovers, monitoring, takes, punch-ins, and comping."),
+            ("Performance Mode", "Session-style clips, live looping, triggering, and stage-friendly playback."),
+            ("Collab Mode", "Project members, comments, roles, versions, and shared assets. Planned / Backend Required."),
+            ("Master Mode", "Export checks, references, loudness, stems, formats, and release preparation."),
+        ]
+        for row, (name, description) in enumerate(mode_rows):
+            name_label = QLabel(name)
+            name_label.setObjectName("onboardingFeatureName")
+            description_label = QLabel(description)
+            description_label.setWordWrap(True)
+            mode_grid.addWidget(name_label, row, 0)
+            mode_grid.addWidget(description_label, row, 1)
+        content_layout.addWidget(mode_box)
 
         shortcut_box = QGroupBox("Key Commands")
         shortcut_grid = QGridLayout(shortcut_box)

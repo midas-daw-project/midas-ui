@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
     MIN_WIDTH = 720
     MIN_HEIGHT = 500
     SCREEN_MARGIN = 72
-    LAYOUT_VERSION = 9
+    LAYOUT_VERSION = 10
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -304,6 +304,25 @@ class MainWindow(QMainWindow):
         self._header_mixer_button = QPushButton("Mixer")
         self._header_mixer_button.setCheckable(True)
         self._header_mixer_button.setChecked(False)
+        self._workspace_preset_input = QComboBox()
+        self._workspace_preset_input.setObjectName("workspacePresetCombo")
+        self._workspace_preset_input.addItems(
+            ["Beginner", "Producer", "Engineer", "Recording", "Performance", "Master", "Advanced"]
+        )
+        self._left_panel_button = QPushButton("Left")
+        self._left_panel_button.setObjectName("panelToggleButton")
+        self._left_panel_button.setCheckable(True)
+        self._right_panel_button = QPushButton("Right")
+        self._right_panel_button.setObjectName("panelToggleButton")
+        self._right_panel_button.setCheckable(True)
+        self._bottom_panel_button = QPushButton("Bottom")
+        self._bottom_panel_button.setObjectName("panelToggleButton")
+        self._bottom_panel_button.setCheckable(True)
+        self._focus_mode_button = QPushButton("Focus")
+        self._focus_mode_button.setObjectName("panelToggleButton")
+        self._focus_mode_button.setCheckable(True)
+        self._reset_layout_button = QPushButton("Reset Layout")
+        self._reset_layout_button.setObjectName("panelToggleButton")
         session_row.addWidget(QLabel("Session"))
         session_row.addWidget(self._header_session_ref_input, 1)
         session_row.addWidget(self._header_new_button)
@@ -313,6 +332,13 @@ class MainWindow(QMainWindow):
         session_row.addWidget(self._header_apply_button)
         session_row.addWidget(self._header_refresh_button)
         session_row.addWidget(self._header_mixer_button)
+        session_row.addWidget(QLabel("Workspace"))
+        session_row.addWidget(self._workspace_preset_input)
+        session_row.addWidget(self._left_panel_button)
+        session_row.addWidget(self._right_panel_button)
+        session_row.addWidget(self._bottom_panel_button)
+        session_row.addWidget(self._focus_mode_button)
+        session_row.addWidget(self._reset_layout_button)
         header_layout.addLayout(session_row)
         header_layout.addWidget(self._hint_status_label)
         self._header_play_button.clicked.connect(self._play_transport)
@@ -334,6 +360,12 @@ class MainWindow(QMainWindow):
         self._header_apply_button.clicked.connect(self._apply_session)
         self._header_refresh_button.clicked.connect(self._manual_refresh_all)
         self._header_mixer_button.clicked.connect(self._toggle_mixer_dock)
+        self._workspace_preset_input.currentTextChanged.connect(self._apply_workspace_preset)
+        self._left_panel_button.clicked.connect(lambda checked: self._set_left_panel_visible(checked))
+        self._right_panel_button.clicked.connect(lambda checked: self._set_right_panel_visible(checked))
+        self._bottom_panel_button.clicked.connect(lambda checked: self._set_bottom_panel_visible(checked))
+        self._focus_mode_button.clicked.connect(self._set_focus_mode)
+        self._reset_layout_button.clicked.connect(self._reset_layout)
         self._header_toolbar.addWidget(header)
         self.addToolBar(Qt.TopToolBarArea, self._header_toolbar)
 
@@ -370,7 +402,7 @@ class MainWindow(QMainWindow):
         self._browser_dock.setObjectName("dock.browser")
         self._browser_dock.setMinimumWidth(210)
         self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
-        self.addDockWidget(Qt.LeftDockWidgetArea, self._browser_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self._browser_dock)
         self._mount_view_menu()
 
     def _start_runtime(self) -> None:
@@ -624,6 +656,8 @@ class MainWindow(QMainWindow):
         self._refresh_header()
 
     def _select_header_mode(self, mode_name: str) -> None:
+        if hasattr(self, "_focus_mode_button") and self._focus_mode_button.isChecked() and mode_name != "Arrange":
+            self._focus_mode_button.setChecked(False)
         for button in getattr(self, "_header_mode_buttons", []):
             button.setChecked(button.text() == mode_name)
         if mode_name == "Start":
@@ -640,6 +674,117 @@ class MainWindow(QMainWindow):
         elif mode_name == "Browse":
             self._browser_dock.setVisible(True)
             self._workspace_controller.mark_action("Opened browser")
+        self._refresh_workspace()
+
+    def _apply_workspace_preset(self, preset_name: str) -> None:
+        if not preset_name or not hasattr(self, "_browser_dock"):
+            return
+        if hasattr(self, "_focus_mode_button") and self._focus_mode_button.isChecked():
+            self._focus_mode_button.blockSignals(True)
+            self._focus_mode_button.setChecked(False)
+            self._focus_mode_button.blockSignals(False)
+        preset = preset_name.strip().lower()
+        if preset == "beginner":
+            self._workspace_panel.show_arrangement()
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(True, refresh=False)
+            self._set_bottom_panel_visible(False, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.hide()
+            self._debug_dock.hide()
+        elif preset == "producer":
+            self._workspace_panel.show_drum_machine()
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(True, refresh=False)
+            self._set_bottom_panel_visible(False, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.hide()
+            self._debug_dock.hide()
+        elif preset == "engineer":
+            self._workspace_panel.show_arrangement()
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(False, refresh=False)
+            self._set_bottom_panel_visible(True, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.hide()
+            self._debug_dock.hide()
+        elif preset == "recording":
+            self._workspace_panel.show_arrangement()
+            self._set_left_panel_visible(True, refresh=False)
+            self._set_right_panel_visible(False, refresh=False)
+            self._set_bottom_panel_visible(True, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.show()
+            self._debug_dock.hide()
+        elif preset == "performance":
+            self._workspace_panel.show_drum_machine()
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(False, refresh=False)
+            self._set_bottom_panel_visible(False, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.show()
+            self._debug_dock.hide()
+        elif preset == "master":
+            self._workspace_panel.show_arrangement()
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(True, refresh=False)
+            self._set_bottom_panel_visible(True, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.hide()
+            self._debug_dock.hide()
+        elif preset == "advanced":
+            self._workspace_panel.show_arrangement()
+            self._set_left_panel_visible(True, refresh=False)
+            self._set_right_panel_visible(True, refresh=False)
+            self._set_bottom_panel_visible(True, refresh=False)
+            self._session_dock.show()
+            self._transport_dock.show()
+            self._debug_dock.hide()
+        self._workspace_controller.mark_action(f"Workspace preset: {preset_name}")
+        self._refresh_workspace()
+
+    def _set_left_panel_visible(self, should_show: bool, *, refresh: bool = True) -> None:
+        self._audio_dock.setVisible(should_show)
+        self._left_panel_button.setChecked(should_show)
+        if should_show:
+            self._audio_dock.raise_()
+        if refresh:
+            self._workspace_controller.mark_action("Opened left panel" if should_show else "Closed left panel")
+            self._refresh_header()
+
+    def _set_right_panel_visible(self, should_show: bool, *, refresh: bool = True) -> None:
+        self._browser_dock.setVisible(should_show)
+        self._right_panel_button.setChecked(should_show)
+        if should_show:
+            self._browser_dock.raise_()
+        if refresh:
+            self._workspace_controller.mark_action("Opened right browser" if should_show else "Closed right browser")
+            self._refresh_header()
+
+    def _set_bottom_panel_visible(self, should_show: bool, *, refresh: bool = True) -> None:
+        self._set_mixer_visible(should_show, refresh=refresh)
+
+    def _set_focus_mode(self, enabled: bool) -> None:
+        if enabled:
+            self._set_left_panel_visible(False, refresh=False)
+            self._set_right_panel_visible(False, refresh=False)
+            self._set_bottom_panel_visible(False, refresh=False)
+            self._session_dock.hide()
+            self._transport_dock.hide()
+            self._debug_dock.hide()
+            self._workspace_controller.mark_action("Focus mode on")
+            self._refresh_workspace()
+            return
+        self._apply_workspace_preset(self._workspace_preset_input.currentText() or "Beginner")
+
+    def _reset_layout(self) -> None:
+        self._focus_mode_button.setChecked(False)
+        self._workspace_preset_input.blockSignals(True)
+        self._workspace_preset_input.setCurrentText("Beginner")
+        self._workspace_preset_input.blockSignals(False)
+        self._apply_default_dock_layout()
+        self._workspace_panel.show_arrangement()
+        self._workspace_controller.mark_action("Reset layout")
         self._refresh_workspace()
 
     def _focus_tempo_control(self) -> None:
@@ -773,15 +918,24 @@ class MainWindow(QMainWindow):
         )
         if hasattr(self, "_header_mixer_button"):
             self._header_mixer_button.setChecked(not self._mixer_dock.isHidden())
+        if hasattr(self, "_left_panel_button"):
+            self._left_panel_button.setChecked(not self._audio_dock.isHidden())
+        if hasattr(self, "_right_panel_button"):
+            self._right_panel_button.setChecked(not self._browser_dock.isHidden())
+        if hasattr(self, "_bottom_panel_button"):
+            self._bottom_panel_button.setChecked(not self._mixer_dock.isHidden())
 
     def _toggle_mixer_dock(self) -> None:
         self._set_mixer_visible(self._header_mixer_button.isChecked())
 
-    def _set_mixer_visible(self, should_show: bool) -> None:
+    def _set_mixer_visible(self, should_show: bool, *, refresh: bool = True) -> None:
         self._mixer_dock.setVisible(should_show)
         self._header_mixer_button.setChecked(should_show)
-        self._workspace_controller.mark_action("Opened mixer" if should_show else "Closed mixer")
-        self._refresh_header()
+        if hasattr(self, "_bottom_panel_button"):
+            self._bottom_panel_button.setChecked(should_show)
+        if refresh:
+            self._workspace_controller.mark_action("Opened mixer" if should_show else "Closed mixer")
+            self._refresh_header()
 
     def _toggle_dock(self, dock: QDockWidget, label: str) -> None:
         dock.setVisible(dock.isHidden())
@@ -823,6 +977,8 @@ class MainWindow(QMainWindow):
         register("Toggle Transport", lambda: self._toggle_dock(self._transport_dock, "transport"), "Ctrl+Shift+T")
         register("Toggle Debug", lambda: self._toggle_dock(self._debug_dock, "debug"), "Ctrl+Shift+D")
         register("Add FX", self._insert_selected_plugin, "Ctrl+Shift+F")
+        register("Focus Mode", lambda: self._focus_mode_button.click(), "Ctrl+Shift+0")
+        register("Reset Layout", self._reset_layout, "Ctrl+Shift+R")
 
         self._command_completer = QCompleter(sorted(self._command_actions), self)
         self._command_completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -1291,7 +1447,7 @@ class MainWindow(QMainWindow):
             view_menu.addAction(dock.toggleViewAction())
 
     def _apply_default_dock_layout(self) -> None:
-        self.tabifyDockWidget(self._browser_dock, self._audio_dock)
+        self._audio_dock.hide()
         self._browser_dock.show()
         self._browser_dock.raise_()
         self._mixer_dock.raise_()

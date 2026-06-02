@@ -27,6 +27,8 @@ def test_main_window_default_layout_prioritizes_workspace():
     QApplication.processEvents()
 
     assert not window._browser_dock.isHidden()
+    assert window.dockWidgetArea(window._browser_dock) == Qt.RightDockWidgetArea
+    assert window._audio_dock.isHidden()
     assert window._mixer_dock.isHidden()
     assert window.dockWidgetArea(window._mixer_dock) == Qt.BottomDockWidgetArea
     assert window._session_dock.isHidden()
@@ -41,11 +43,17 @@ def test_main_window_default_layout_prioritizes_workspace():
     assert window._header_save_button.text() == "Save"
     assert window._header_load_button.text() == "Load"
     assert not window._header_mixer_button.isChecked()
+    assert window._workspace_preset_input.currentText() == "Beginner"
+    assert not window._left_panel_button.isChecked()
+    assert window._right_panel_button.isChecked()
+    assert not window._bottom_panel_button.isChecked()
     window._header_mixer_button.click()
     assert not window._mixer_dock.isHidden()
     assert window._header_mixer_button.isChecked()
+    assert window._bottom_panel_button.isChecked()
     window._header_mixer_button.click()
     assert window._mixer_dock.isHidden()
+    assert not window._bottom_panel_button.isChecked()
     assert window.centralWidget() is not None
     assert "Browser -> Arrangement/Editor -> Mixer" in window._hint_status_label.text()
 
@@ -64,6 +72,8 @@ def test_main_window_command_search_executes_window_and_workspace_commands():
     assert "Edit BPM" in window._command_actions
     assert "Open Key Wheel" in window._command_actions
     assert "Show Navigation Help" in window._command_actions
+    assert "Focus Mode" in window._command_actions
+    assert "Reset Layout" in window._command_actions
 
     window._command_search_input.setText("toggle mixer")
     window._execute_command_search()
@@ -81,6 +91,36 @@ def test_main_window_command_search_executes_window_and_workspace_commands():
     window._command_search_input.setText("add track")
     window._execute_command_search()
     assert window._workspace_panel.arrangement_track_count() == 12
+
+    window.close()
+
+
+def test_main_window_workspace_presets_focus_and_reset_layout():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    window._workspace_preset_input.setCurrentText("Engineer")
+    assert window._mixer_dock.isVisible()
+    assert window._bottom_panel_button.isChecked()
+    assert window._browser_dock.isHidden()
+    assert not window._right_panel_button.isChecked()
+
+    window._focus_mode_button.click()
+    assert window._focus_mode_button.isChecked()
+    assert window._browser_dock.isHidden()
+    assert window._audio_dock.isHidden()
+    assert window._mixer_dock.isHidden()
+    assert not window._bottom_panel_button.isChecked()
+
+    window._reset_layout_button.click()
+    assert window._workspace_preset_input.currentText() == "Beginner"
+    assert not window._focus_mode_button.isChecked()
+    assert window._browser_dock.isVisible()
+    assert window._audio_dock.isHidden()
+    assert window._mixer_dock.isHidden()
+    assert window._right_panel_button.isChecked()
 
     window.close()
 

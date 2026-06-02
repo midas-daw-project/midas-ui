@@ -207,6 +207,7 @@ QSpinBox#sampleRateInput,
 QSpinBox#bufferSizeInput,
 QComboBox#meterCombo,
 QComboBox#snapCombo,
+QComboBox#workspacePresetCombo,
 QPushButton#keyButton {
     background-color: #0d101b;
     border: 1px solid #2b3651;
@@ -232,6 +233,28 @@ QSpinBox#bufferSizeInput {
 QPushButton#keyButton {
     color: #f1ddff;
     min-width: 92px;
+}
+
+QComboBox#workspacePresetCombo {
+    min-width: 108px;
+}
+
+QPushButton#panelToggleButton {
+    background-color: #101522;
+    border: 1px solid #28324a;
+    border-radius: 6px;
+    color: #d8deef;
+    padding: 5px 8px;
+}
+
+QPushButton#panelToggleButton:hover {
+    border-color: #8f63df;
+}
+
+QPushButton#panelToggleButton:checked {
+    background-color: rgba(143, 99, 223, 54);
+    border-color: #8f63df;
+    color: #ffffff;
 }
 
 QLabel#keyNotesLabel {

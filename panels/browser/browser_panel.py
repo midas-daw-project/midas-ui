@@ -22,6 +22,7 @@ from viewmodels.browser_viewmodel import BrowserViewModel
 from bridge.plugin_catalog import (
     NON_INSERT_CATEGORIES,
     PLUGIN_GROUP_ORDER,
+    plugin_feature_status,
     plugin_function_label,
     plugin_group,
     plugin_purpose,
@@ -173,6 +174,7 @@ class BrowserPanel(QWidget):
         self.vendor_label = QLabel("-")
         self.source_label = QLabel("-")
         self.group_label = QLabel("-")
+        self.feature_status_label = QLabel("-")
         self.purpose_label = QLabel("-")
         self.purpose_label.setWordWrap(True)
         self.available_label = QLabel("-")
@@ -187,6 +189,7 @@ class BrowserPanel(QWidget):
         details_form.addRow("Vendor", self.vendor_label)
         details_form.addRow("Source", self.source_label)
         details_form.addRow("Group", self.group_label)
+        details_form.addRow("Feature Status", self.feature_status_label)
         details_form.addRow("Purpose", self.purpose_label)
         details_form.addRow("Available", self.available_label)
         details_form.addRow("Works in MIDAS", self.works_label)
@@ -218,6 +221,11 @@ class BrowserPanel(QWidget):
         self.source_label.setText(vm.selected_source or "-")
         self.group_label.setText(plugin_group(vm.selected_plugin_id) if vm.selected_plugin_id else "-")
         self.purpose_label.setText(plugin_purpose(vm.selected_plugin_id) if vm.selected_plugin_id else "-")
+        self.feature_status_label.setText(
+            plugin_feature_status(vm.selected_plugin_id, vm.selected_category, vm.selected_available)
+            if vm.selected_plugin_id
+            else "-"
+        )
         if vm.selected_category in NON_INSERT_CATEGORIES:
             self.available_label.setText("detected source, not a mixer insert")
             self.works_label.setText("No. This is used for setup, discovery, or reference, not audio processing inside MIDAS.")
@@ -253,9 +261,10 @@ class BrowserPanel(QWidget):
                 status = "detected" if plugin.source.startswith("detected:") else "not installed"
             else:
                 status = "ready" if plugin.available else "unavailable"
+            feature_status = plugin_feature_status(plugin.plugin_id, plugin.category, plugin.available)
             function_label = plugin_function_label(plugin.plugin_id, plugin.category)
             item = QListWidgetItem(
-                f"{plugin.name}\n{function_label} | {plugin.vendor or 'Unknown'} | {status}\n"
+                f"{plugin.name}\n{function_label} | {feature_status} | {plugin.vendor or 'Unknown'} | {status}\n"
                 f"{plugin_purpose(plugin.plugin_id)}"
             )
             item.setData(Qt.UserRole, plugin.plugin_id)
@@ -310,7 +319,9 @@ class BrowserPanel(QWidget):
             role = "Unavailable insert"
         return (
             f"{vm.selected_name}\n"
-            f"{plugin_function_label(vm.selected_plugin_id, vm.selected_category)} | {plugin_group(vm.selected_plugin_id)}\n"
+            f"{plugin_function_label(vm.selected_plugin_id, vm.selected_category)} | "
+            f"{plugin_feature_status(vm.selected_plugin_id, vm.selected_category, vm.selected_available)} | "
+            f"{plugin_group(vm.selected_plugin_id)}\n"
             f"{role}: {plugin_purpose(vm.selected_plugin_id)}"
         )
 

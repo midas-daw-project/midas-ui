@@ -344,3 +344,13 @@ def plugin_purpose(plugin_id: str) -> str:
 
 def plugin_function_label(plugin_id: str, category: str) -> str:
     return PLUGIN_FUNCTION_LABELS.get(plugin_id, category or "Other")
+
+
+def plugin_feature_status(plugin_id: str, category: str, available: bool) -> str:
+    if category in NON_INSERT_CATEGORIES:
+        return "Reference Source"
+    if plugin_id.startswith("midas.") and available:
+        return "Implemented Shell"
+    if available:
+        return "Implemented Insert"
+    return "Planned / Backend Required"
