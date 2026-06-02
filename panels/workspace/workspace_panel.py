@@ -93,27 +93,34 @@ class WorkspacePanel(QWidget):
         self.drum_track_name_inputs: list[QLineEdit] = []
         self._seed_default_arrangement()
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
 
-        self.title_label = QLabel("MIDAS Workspace")
+        self.title_label = QLabel("Arrange")
         self.title_label.setObjectName("workspaceTitle")
-        self.mode_label = QLabel("Universal Sound Workspace")
+        self.mode_label = QLabel("Track view | Media items | Mixer-ready routing")
         self.mode_label.setObjectName("workspaceMode")
         title_row = QHBoxLayout()
+        title_row.setSpacing(8)
         title_row.addWidget(self.title_label)
         title_row.addStretch(1)
         title_row.addWidget(self.mode_label)
         layout.addLayout(title_row)
 
+        self.daw_control_strip = QFrame()
+        self.daw_control_strip.setObjectName("dawControlStrip")
         project_control_row = QHBoxLayout()
+        project_control_row.setContentsMargins(8, 5, 8, 5)
         project_control_row.setSpacing(8)
+        self.daw_control_strip.setLayout(project_control_row)
         self.project_mix_label = QLabel("Mix 100%")
+        self.project_mix_label.setObjectName("dawStripLabel")
         self.project_mix_input = QSlider(Qt.Horizontal)
         self.project_mix_input.setRange(0, 100)
         self.project_mix_input.setValue(100)
         self.project_mix_input.setMaximumWidth(150)
         self.playrate_label = QLabel("Rate 1.00")
+        self.playrate_label.setObjectName("dawStripLabel")
         self.playrate_input = QSlider(Qt.Horizontal)
         self.playrate_input.setRange(0, 200)
         self.playrate_input.setValue(100)
@@ -128,13 +135,20 @@ class WorkspacePanel(QWidget):
         project_control_row.addWidget(self.project_mix_input)
         project_control_row.addWidget(self.playrate_label)
         project_control_row.addWidget(self.playrate_input)
+        project_control_row.addWidget(QLabel("Snap: grid"))
+        project_control_row.addWidget(QLabel("Mode: trim/read"))
         project_control_row.addStretch(1)
-        layout.addLayout(project_control_row)
+        layout.addWidget(self.daw_control_strip)
 
+        self.view_mode_strip = QFrame()
+        self.view_mode_strip.setObjectName("viewModeStrip")
         mode_row = QHBoxLayout()
+        mode_row.setContentsMargins(6, 4, 6, 4)
         mode_row.setSpacing(4)
+        self.view_mode_strip.setLayout(mode_row)
+        mode_row.addWidget(QLabel("View"))
         self.mode_buttons: list[QPushButton] = []
-        for mode_name in ("Capture", "Create", "Arrange", "Sound Design", "Mix", "Collab", "Export"):
+        for mode_name in ("Arrange", "Record", "MIDI", "Sound Design", "Mix", "Export"):
             mode_button = QPushButton(mode_name)
             mode_button.setObjectName("modeButton")
             mode_button.setCheckable(True)
@@ -145,11 +159,15 @@ class WorkspacePanel(QWidget):
             self.mode_buttons.append(mode_button)
             mode_row.addWidget(mode_button)
         mode_row.addStretch(1)
-        layout.addLayout(mode_row)
+        layout.addWidget(self.view_mode_strip)
 
-        status_box = QGroupBox("Project Inspector")
-        status_box.setMaximumHeight(136)
+        status_box = QFrame()
+        status_box.setObjectName("projectStatusStrip")
+        status_box.setMaximumHeight(94)
         status_grid = QGridLayout(status_box)
+        status_grid.setContentsMargins(8, 6, 8, 6)
+        status_grid.setHorizontalSpacing(8)
+        status_grid.setVerticalSpacing(5)
         self.next_action_label = QLabel("Arrange: build clips on the timeline, then open Mixer or Piano Roll below.")
         self.next_action_label.setObjectName("operatorNext")
         self.next_action_label.setWordWrap(True)
@@ -168,9 +186,17 @@ class WorkspacePanel(QWidget):
         status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
         layout.addWidget(status_box)
 
-        canvas_box = QGroupBox("Arrangement")
+        canvas_box = QGroupBox("Arrange View")
+        canvas_box.setObjectName("arrangeView")
         canvas_layout = QVBoxLayout(canvas_box)
+        canvas_layout.setContentsMargins(8, 8, 8, 8)
+        canvas_layout.setSpacing(6)
         arrangement_actions = QHBoxLayout()
+        arrangement_actions.setSpacing(8)
+        self.track_panel_header_label = QLabel("Track Control Panel")
+        self.track_panel_header_label.setObjectName("trackPanelHeaderLabel")
+        self.timeline_header_label = QLabel("Timeline / Media Items")
+        self.timeline_header_label.setObjectName("timelineHeaderLabel")
         self.add_arrangement_track_button = QPushButton("Add Track")
         self.add_arrangement_track_button.setObjectName("addArrangementTrackButton")
         self.add_track_menu = QMenu(self)
@@ -184,9 +210,28 @@ class WorkspacePanel(QWidget):
         self.empty_arrangement_label = QLabel("Starter session loaded: Master, tracks, buses, and sends are ready.")
         self.empty_arrangement_label.setObjectName("emptyArrangementLabel")
         self.empty_arrangement_label.setWordWrap(True)
+        arrangement_actions.addWidget(self.track_panel_header_label)
         arrangement_actions.addWidget(self.add_arrangement_track_button)
+        arrangement_actions.addWidget(self.timeline_header_label)
         arrangement_actions.addWidget(self.empty_arrangement_label, 1)
         canvas_layout.addLayout(arrangement_actions)
+
+        self.arrange_ruler = QFrame()
+        self.arrange_ruler.setObjectName("arrangeRuler")
+        ruler_layout = QGridLayout(self.arrange_ruler)
+        ruler_layout.setContentsMargins(8, 5, 8, 5)
+        ruler_layout.setHorizontalSpacing(4)
+        ruler_track_label = QLabel("Tracks")
+        ruler_track_label.setObjectName("rulerTrackLabel")
+        ruler_layout.addWidget(ruler_track_label, 0, 0)
+        for column in range(1, 17):
+            marker = QLabel(f"{column}.1")
+            marker.setObjectName("rulerMarkerLabel")
+            marker.setAlignment(Qt.AlignCenter)
+            ruler_layout.addWidget(marker, 0, column)
+            ruler_layout.setColumnStretch(column, 1)
+        canvas_layout.addWidget(self.arrange_ruler)
+
         self.global_tracks_label = QLabel(
             "Global Tracks: Tempo | Signature | Key/Scale | Markers | Arrangement | Chords | Lyrics/Script"
         )
@@ -195,8 +240,8 @@ class WorkspacePanel(QWidget):
         canvas_layout.addWidget(self.global_tracks_label)
         self.beat_canvas = QFrame()
         self.beat_canvas.setObjectName("beatCanvas")
-        self.beat_canvas.setMinimumHeight(186)
-        self.beat_canvas.setMinimumWidth(1720)
+        self.beat_canvas.setMinimumHeight(520)
+        self.beat_canvas.setMinimumWidth(1840)
         self._beat_grid = QGridLayout(self.beat_canvas)
         self._beat_grid.setContentsMargins(8, 8, 8, 8)
         self._beat_grid.setHorizontalSpacing(4)
@@ -209,8 +254,11 @@ class WorkspacePanel(QWidget):
         self.arrangement_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.arrangement_scroll_area.setWidget(self.beat_canvas)
         canvas_layout.addWidget(self.arrangement_scroll_area)
-        editor_box = QGroupBox("Workspace View")
+        editor_box = QGroupBox("Arrange / Editors")
+        editor_box.setObjectName("workspaceEditorBox")
         editor_layout = QVBoxLayout(editor_box)
+        editor_layout.setContentsMargins(8, 8, 8, 8)
+        editor_layout.setSpacing(6)
         editor_header = QHBoxLayout()
         self.previous_editor_button = QPushButton("<")
         self.previous_editor_button.setObjectName("editorArrow")
@@ -316,11 +364,12 @@ class WorkspacePanel(QWidget):
         self._right_shortcut = QShortcut(QKeySequence(Qt.Key_Right), self)
         self._right_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self._right_shortcut.activated.connect(self.show_next_editor)
-        layout.addWidget(editor_box)
+        layout.addWidget(editor_box, 1)
 
         self.summary_tabs = QTabWidget()
         self.summary_tabs.setObjectName("workspaceSummaryTabs")
-        layout.addWidget(self.summary_tabs, 1)
+        self.summary_tabs.setMaximumHeight(238)
+        layout.addWidget(self.summary_tabs)
 
         overview_box = QGroupBox("Current Project")
         overview_form = QFormLayout(overview_box)
@@ -634,9 +683,15 @@ class WorkspacePanel(QWidget):
         self.mode_label.setText(f"{mode_name} Mode")
         if mode_name == "Arrange":
             self.show_arrangement()
-        elif mode_name == "Create":
+        elif mode_name == "Record":
+            self.show_drum_machine()
+        elif mode_name == "MIDI":
+            self.show_piano_roll()
+        elif mode_name == "Sound Design":
             self.show_drum_machine()
         elif mode_name == "Mix":
+            self.show_arrangement()
+        elif mode_name == "Export":
             self.show_arrangement()
 
     def _sync_midi_track_selector(self) -> None:
@@ -821,9 +876,9 @@ class WorkspacePanel(QWidget):
                 empty.setProperty("beatCell", True)
                 empty.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
                 empty.setStyleSheet(
-                    "background-color: rgba(37, 24, 57, 115);"
-                    "border: 1px solid rgba(104, 82, 148, 70);"
-                    "border-radius: 4px;"
+                    "background-color: rgba(31, 34, 40, 160);"
+                    "border: 1px solid rgba(75, 82, 96, 95);"
+                    "border-radius: 2px;"
                     "min-height: 26px;"
                 )
                 self._beat_grid.addWidget(empty, row, column)
@@ -920,9 +975,9 @@ class WorkspacePanel(QWidget):
             )
             return
         button.setStyleSheet(
-            "background-color: rgba(37, 24, 57, 165);"
-            "border: 1px solid rgba(104, 82, 148, 90);"
-            "border-radius: 4px;"
+            "background-color: rgba(35, 38, 45, 190);"
+            "border: 1px solid rgba(80, 88, 102, 115);"
+            "border-radius: 3px;"
             "min-height: 16px;"
             "padding: 0;"
         )
@@ -1036,9 +1091,9 @@ class WorkspacePanel(QWidget):
             )
             return
         button.setStyleSheet(
-            "background-color: rgba(37, 24, 57, 165);"
-            "border: 1px solid rgba(104, 82, 148, 90);"
-            "border-radius: 4px;"
+            "background-color: rgba(35, 38, 45, 190);"
+            "border: 1px solid rgba(80, 88, 102, 115);"
+            "border-radius: 3px;"
             "min-height: 26px;"
             "padding: 0;"
         )

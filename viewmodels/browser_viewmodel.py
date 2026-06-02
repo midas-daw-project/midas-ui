@@ -14,6 +14,7 @@ class BrowserViewModel:
     selected_vendor: str = ""
     selected_source: str = ""
     selected_available: bool = False
+    queued_plugin_ids: list[str] = field(default_factory=list)
     last_insert_status: str = ""
     last_refresh_status: str = ""
     last_error: str = ""

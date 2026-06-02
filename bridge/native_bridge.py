@@ -40,7 +40,7 @@ class NativeBridgeClient(BridgeClient):
         self._plugin_registry_cache: list[PluginRegistryEntry] = [
             PluginRegistryEntry(
                 plugin_id="midas.eq.basic",
-                name="MIDAS Basic EQ",
+                name="MIDAS Apollo Curve",
                 category="EQ",
                 vendor="MIDAS Labs",
                 available=True,
@@ -48,7 +48,7 @@ class NativeBridgeClient(BridgeClient):
             ),
             PluginRegistryEntry(
                 plugin_id="midas.comp.basic",
-                name="MIDAS Basic Compressor",
+                name="MIDAS Pactolus Press",
                 category="Dynamics",
                 vendor="MIDAS Labs",
                 available=True,

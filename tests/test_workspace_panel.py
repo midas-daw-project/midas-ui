@@ -67,6 +67,12 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
 
     assert panel.project_heading_label.text() == "mix-a"
     assert panel.beat_canvas.objectName() == "beatCanvas"
+    assert panel.daw_control_strip.objectName() == "dawControlStrip"
+    assert panel.view_mode_strip.objectName() == "viewModeStrip"
+    assert panel.arrange_ruler.objectName() == "arrangeRuler"
+    assert panel.track_panel_header_label.text() == "Track Control Panel"
+    assert panel.timeline_header_label.text() == "Timeline / Media Items"
+    assert panel.summary_tabs.maximumHeight() == 238
     assert panel.channel_rack.objectName() == "channelRack"
     assert panel.editor_stack.objectName() == "editorStack"
     assert panel.current_editor_name() == "Arrangement"
@@ -77,6 +83,12 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     panel.show_previous_editor()
     assert panel.current_editor_name() == "Drum Machine"
     panel.show_previous_editor()
+    assert panel.current_editor_name() == "Arrangement"
+    panel._select_mode("Record")
+    assert panel.current_editor_name() == "Drum Machine"
+    panel._select_mode("MIDI")
+    assert panel.current_editor_name() == "Piano Roll"
+    panel._select_mode("Arrange")
     assert panel.current_editor_name() == "Arrangement"
     assert panel.selected_mix_percent() == 100
     assert panel.selected_playrate() == 1.0

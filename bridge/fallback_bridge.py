@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Callable, Dict
 from typing import List
 from copy import deepcopy
+import os
+from pathlib import Path
 import time
 
 from bridge.protocol import (
@@ -22,10 +24,16 @@ from bridge.protocol import (
     SessionStatus,
     TransportStatus,
 )
+from bridge.plugin_catalog import LOCAL_SOURCE_DEFINITIONS, LOCAL_SOURCE_IDS as CATALOG_LOCAL_SOURCE_IDS
 
 
 class FallbackBridgeClient(BridgeClient):
     """Development fallback until native bridge bindings are available."""
+
+    SWS_EXTENSION_ID = "reaper.sws.extension"
+    SWS_ENV_PATH = "MIDAS_REAPER_SWS_PATH"
+    LOCAL_SOURCE_IDS = CATALOG_LOCAL_SOURCE_IDS
+    LOCAL_SOURCES = LOCAL_SOURCE_DEFINITIONS
 
     def __init__(self) -> None:
         self._status = AudioStatus()
@@ -49,7 +57,7 @@ class FallbackBridgeClient(BridgeClient):
         self._plugin_registry = [
             PluginRegistryEntry(
                 plugin_id="midas.eq.basic",
-                name="MIDAS Basic EQ",
+                name="MIDAS Apollo Curve",
                 category="EQ",
                 vendor="MIDAS Labs",
                 available=True,
@@ -57,7 +65,7 @@ class FallbackBridgeClient(BridgeClient):
             ),
             PluginRegistryEntry(
                 plugin_id="midas.comp.basic",
-                name="MIDAS Basic Compressor",
+                name="MIDAS Pactolus Press",
                 category="Dynamics",
                 vendor="MIDAS Labs",
                 available=True,
@@ -65,13 +73,14 @@ class FallbackBridgeClient(BridgeClient):
             ),
             PluginRegistryEntry(
                 plugin_id="thirdparty.reverb.demo",
-                name="ThirdParty Demo Reverb",
+                name="MIDAS Silenus Chamber",
                 category="Reverb",
                 vendor="ThirdParty Audio",
                 available=False,
                 source="registry",
             ),
         ]
+        self._sync_local_sources()
         self._insert_chains: Dict[int, List[InsertedPluginSlot]] = {}
         self._next_placeholder_sequence = 1
         self._next_managed_instance_sequence = 1
@@ -436,6 +445,7 @@ class FallbackBridgeClient(BridgeClient):
         )
 
     def get_plugin_registry(self) -> List[PluginRegistryEntry]:
+        self._sync_local_sources()
         return [
             PluginRegistryEntry(
                 plugin_id=entry.plugin_id,
@@ -449,6 +459,7 @@ class FallbackBridgeClient(BridgeClient):
         ]
 
     def refresh_plugin_registry(self) -> BridgeResult:
+        self._sync_local_sources()
         self._publish(
             BridgeEvent(
                 category="subsystem",
@@ -457,6 +468,39 @@ class FallbackBridgeClient(BridgeClient):
             )
         )
         return BridgeResult()
+
+    def _sync_local_sources(self) -> None:
+        self._plugin_registry = [
+            plugin for plugin in self._plugin_registry if plugin.plugin_id not in self.LOCAL_SOURCE_IDS
+        ]
+        for source in self.LOCAL_SOURCES:
+            detected_path = self._detect_local_path(source.env_names, source.candidates)
+            self._plugin_registry.append(
+                PluginRegistryEntry(
+                    plugin_id=source.plugin_id,
+                    name=source.name,
+                    category=source.category,
+                    vendor=source.vendor,
+                    available=False,
+                    source=f"detected: {detected_path}" if detected_path else "not detected",
+                )
+            )
+
+    def _detect_sws_extension_path(self) -> str | None:
+        sws_source = next(source for source in self.LOCAL_SOURCES if source.plugin_id == self.SWS_EXTENSION_ID)
+        return self._detect_local_path(sws_source.env_names, sws_source.candidates)
+
+    @staticmethod
+    def _detect_local_path(env_names: tuple[str, ...], fallback_candidates: tuple[str, ...]) -> str | None:
+        candidates = [os.environ.get(env_name, "") for env_name in env_names]
+        candidates.extend(fallback_candidates)
+        for candidate in candidates:
+            if not candidate:
+                continue
+            path = Path(candidate).expanduser()
+            if path.exists():
+                return str(path)
+        return None
 
     def get_insert_chain(self, channel_id: int) -> List[InsertedPluginSlot]:
         return [

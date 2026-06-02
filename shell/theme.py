@@ -1,6 +1,83 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PySide6.QtWidgets import QApplication
+
+
+@dataclass(frozen=True, slots=True)
+class MidasSkinPreset:
+    name: str
+    location: str
+    font_source: str
+    role: str
+    background: str
+    panel: str
+    accent: str
+    secondary_accent: str
+    text: str
+
+
+DEFAULT_MIDAS_SKIN = "Midas Night Forge"
+
+MIDAS_SKIN_PRESETS = (
+    MidasSkinPreset(
+        name="Midas Night Forge",
+        location="Mount Olympus Signal Forge",
+        font_source="Hack",
+        role="Default dark production skin for long DAW sessions.",
+        background="#080a12",
+        panel="#15121c",
+        accent="#8f63df",
+        secondary_accent="#35f071",
+        text="#f3eaff",
+    ),
+    MidasSkinPreset(
+        name="Poseidon Wave Harbor",
+        location="Poseidon Wave Harbor",
+        font_source="HunDIN1451",
+        role="Cool technical skin for audio engine, Waves, routing, and device views.",
+        background="#071015",
+        panel="#10202a",
+        accent="#36c8ff",
+        secondary_accent="#8f63df",
+        text="#edfaff",
+    ),
+    MidasSkinPreset(
+        name="Athena Type Foundry",
+        location="Athena Type Foundry",
+        font_source="Font Book",
+        role="Typography review skin for choosing and testing future MIDAS fonts.",
+        background="#111015",
+        panel="#1d1a24",
+        accent="#d8b45f",
+        secondary_accent="#b48cff",
+        text="#fff7e5",
+    ),
+    MidasSkinPreset(
+        name="Mnemosyne Idea Garden",
+        location="Mnemosyne Idea Garden",
+        font_source="Freeform",
+        role="Planning skin for moodboards, arrangement maps, notes, and creative direction.",
+        background="#0d1017",
+        panel="#161d24",
+        accent="#64d6b6",
+        secondary_accent="#d8b45f",
+        text="#f1fff9",
+    ),
+)
+
+
+def available_midas_skins() -> tuple[str, ...]:
+    return tuple(skin.name for skin in MIDAS_SKIN_PRESETS)
+
+
+def get_midas_skin(name: str = DEFAULT_MIDAS_SKIN) -> MidasSkinPreset:
+    normalized = name.strip().lower()
+    for skin in MIDAS_SKIN_PRESETS:
+        if skin.name.lower() == normalized:
+            return skin
+    return MIDAS_SKIN_PRESETS[0]
 
 
 MIDAS_THEME = """
@@ -28,16 +105,21 @@ QDockWidget::title {
 }
 
 QToolBar#midasHeader {
-    background-color: rgba(28, 24, 41, 242);
-    border-bottom: 1px solid #5d4984;
+    background-color: #080a12;
+    border-bottom: 1px solid #23293a;
     spacing: 8px;
 }
 
+QFrame#headerSeparator {
+    background-color: #1c2130;
+    max-height: 1px;
+}
+
 QLabel#headerHint {
-    background-color: rgba(20, 17, 29, 220);
-    border: 1px solid #403553;
+    background-color: rgba(10, 13, 24, 230);
+    border: 1px solid #202840;
     border-radius: 5px;
-    color: #dacdf2;
+    color: #aeb9d1;
     padding: 4px 8px;
 }
 
@@ -60,28 +142,114 @@ QLabel#headerProjectTitle {
     color: #ffffff;
     font-size: 16px;
     font-weight: 700;
-    min-width: 130px;
+    min-width: 190px;
 }
 
 QLineEdit#headerSearch {
-    background-color: #15111f;
-    border: 1px solid #6e57a3;
+    background-color: #0d101b;
+    border: 1px solid #263049;
     border-radius: 8px;
     padding: 7px 10px;
     color: #ffffff;
 }
 
 QLineEdit#headerSessionRef {
-    background-color: #15111f;
-    border: 1px solid #54416f;
+    background-color: #0d101b;
+    border: 1px solid #283047;
     border-radius: 6px;
     color: #ffffff;
     padding: 5px 8px;
 }
 
+QPushButton#transportPrimary, QPushButton#transportButton, QPushButton#transportRecordButton {
+    background-color: #101522;
+    border: 1px solid #28324a;
+    border-radius: 7px;
+    min-width: 58px;
+    padding: 7px 10px;
+}
+
+QPushButton#transportPrimary:hover, QPushButton#transportButton:hover {
+    background-color: #182033;
+    border-color: #8b5cff;
+}
+
+QPushButton#transportRecordButton {
+    background-color: #211016;
+    border-color: #5d2531;
+    color: #ff7a89;
+}
+
+QPushButton#transportRecordButton:hover {
+    background-color: #3a1520;
+    border-color: #ff4d62;
+}
+
+QPushButton#headerModeButton {
+    background-color: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: #d8deef;
+    font-size: 14px;
+    min-width: 86px;
+    padding: 9px 12px;
+}
+
+QPushButton#headerModeButton:checked {
+    border-bottom-color: #8f63df;
+    color: #ffffff;
+    background-color: rgba(143, 99, 223, 44);
+}
+
+QDoubleSpinBox#tempoInput, QComboBox#meterCombo, QComboBox#snapCombo, QPushButton#keyButton {
+    background-color: #0d101b;
+    border: 1px solid #2b3651;
+    border-radius: 7px;
+    color: #ffffff;
+    font-weight: 600;
+    min-height: 24px;
+    padding: 5px 8px;
+}
+
+QDoubleSpinBox#tempoInput {
+    min-width: 112px;
+}
+
+QPushButton#keyButton {
+    color: #f1ddff;
+    min-width: 92px;
+}
+
+QLabel#keyNotesLabel {
+    background-color: #0d101b;
+    border: 1px solid #202840;
+    border-radius: 6px;
+    color: #bfc8dc;
+    padding: 7px 10px;
+}
+
+QLabel#deviceStatusLabel, QLabel#runtimeStatusLabel, QLabel#statusChip {
+    color: #bfc8dc;
+    padding: 4px 7px;
+}
+
+QLabel#statusChip {
+    background-color: #25121a;
+    border: 1px solid #5b2231;
+    border-radius: 11px;
+    color: #ff7a89;
+}
+
+QLabel#statusChip[online="true"] {
+    background-color: #102316;
+    border-color: #2c7a40;
+    color: #35f071;
+}
+
 QGroupBox {
-    background-color: rgba(27, 23, 39, 232);
-    border: 1px solid #413558;
+    background-color: rgba(11, 14, 25, 238);
+    border: 1px solid #242b40;
     border-radius: 7px;
     margin-top: 10px;
     padding: 8px;
@@ -115,20 +283,20 @@ QTabBar::tab:selected {
 }
 
 QPushButton {
-    background-color: #2d2440;
-    border: 1px solid #6e57a3;
+    background-color: #111624;
+    border: 1px solid #2c3650;
     border-radius: 6px;
     color: #f6eaff;
     padding: 6px 10px;
 }
 
 QPushButton:hover {
-    background-color: #4b2a81;
-    border-color: #c37cff;
+    background-color: #182033;
+    border-color: #8f63df;
 }
 
 QPushButton:pressed {
-    background-color: #2b184d;
+    background-color: #231847;
 }
 
 QLineEdit, QSpinBox, QComboBox, QListWidget, QTextEdit {
@@ -192,7 +360,142 @@ QLabel#workspaceTitle {
 }
 
 QLabel#workspaceMode {
-    color: #cbb5ff;
+    color: #aeb9d1;
+}
+
+QFrame#dawControlStrip, QFrame#viewModeStrip, QFrame#projectStatusStrip {
+    background-color: #10131b;
+    border: 1px solid #2a3040;
+    border-radius: 4px;
+}
+
+QLabel#dawStripLabel, QLabel#trackPanelHeaderLabel, QLabel#timelineHeaderLabel {
+    color: #d8deef;
+    font-weight: 700;
+}
+
+QLabel#trackPanelHeaderLabel {
+    min-width: 154px;
+}
+
+QLabel#timelineHeaderLabel {
+    color: #d8b45f;
+}
+
+QGroupBox#arrangeView, QGroupBox#workspaceEditorBox {
+    background-color: #0f1118;
+    border: 1px solid #2b3140;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+QFrame#arrangeRuler {
+    background-color: #151922;
+    border: 1px solid #303745;
+    border-radius: 3px;
+}
+
+QLabel#rulerTrackLabel {
+    color: #c3c9d6;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 184px;
+}
+
+QLabel#rulerMarkerLabel {
+    color: #98a2b8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+QPushButton#modeButton {
+    background-color: #151922;
+    border: 1px solid #303745;
+    border-radius: 4px;
+    color: #cbd4e8;
+    font-weight: 600;
+    padding: 5px 10px;
+}
+
+QPushButton#modeButton:checked {
+    background-color: #222633;
+    border-color: #d8b45f;
+    color: #ffffff;
+}
+
+QLabel#keyWheelHeading {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QPushButton#keyWheelButton {
+    background-color: #0d101b;
+    border: 1px solid #2b3651;
+    border-radius: 6px;
+    color: #f2ecff;
+    font-weight: 700;
+}
+
+QPushButton#keyWheelButton:checked {
+    background-color: #6733c7;
+    border-color: #dcb8ff;
+    color: #ffffff;
+}
+
+QLabel#keyWheelSelected {
+    background-color: #101522;
+    border: 1px solid #8f63df;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 12px;
+}
+
+QLabel#keyWheelNotes {
+    color: #d9e2f8;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#keyWheelDetailKey {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QLabel#onboardingHeading {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+QLabel#onboardingIntro {
+    color: #c8d2ea;
+    font-size: 14px;
+}
+
+QLabel#onboardingFeatureName {
+    color: #ffffff;
+    font-weight: 700;
+    min-width: 88px;
+}
+
+QLabel#shortcutKey {
+    background-color: #0d101b;
+    border: 1px solid #2b3651;
+    border-radius: 5px;
+    color: #f1ddff;
+    font-weight: 700;
+    min-width: 92px;
+    padding: 5px 8px;
+}
+
+QLabel#shortcutAction {
+    color: #d9e2f8;
+    min-width: 130px;
+    padding-right: 18px;
 }
 
 QLabel#operatorNext {
@@ -218,6 +521,42 @@ QLabel#browserHint {
     color: #b9adce;
 }
 
+QLabel#pluginQueueLabel {
+    background-color: #10131b;
+    border: 1px solid #2a3040;
+    border-radius: 4px;
+    color: #d8b45f;
+    font-weight: 700;
+    padding: 6px;
+}
+
+QLabel#pluginExplanationBubble {
+    background-color: #151922;
+    border: 1px solid #3a4252;
+    border-radius: 8px;
+    color: #edf2ff;
+    font-weight: 600;
+    min-height: 92px;
+    padding: 10px;
+}
+
+QPushButton#pluginWheelButton {
+    background-color: #202632;
+    border: 1px solid #465064;
+    border-radius: 24px;
+    color: #eef2ff;
+    font-weight: 700;
+    min-height: 46px;
+    min-width: 76px;
+    padding: 6px;
+}
+
+QPushButton#pluginWheelButton:checked {
+    background-color: #5e4930;
+    border-color: #d8b45f;
+    color: #ffffff;
+}
+
 QLabel[sourceChip="true"] {
     background-color: rgba(41, 33, 58, 220);
     border: 1px solid #4a3a68;
@@ -237,15 +576,15 @@ QLabel[mixerStrip="true"] {
 }
 
 QFrame#beatCanvas {
-    background-color: rgba(18, 16, 25, 235);
-    border: 1px solid #44365f;
-    border-radius: 7px;
+    background-color: #181b22;
+    border: 1px solid #303745;
+    border-radius: 3px;
 }
 
 QScrollArea#arrangementScrollArea {
-    background-color: rgba(18, 16, 25, 235);
-    border: 1px solid #44365f;
-    border-radius: 7px;
+    background-color: #11141b;
+    border: 1px solid #303745;
+    border-radius: 3px;
 }
 
 QFrame#channelRack {
@@ -266,21 +605,26 @@ QLabel[beatLane="true"], QLabel[rackLane="true"] {
 }
 
 QFrame[arrangementTrackHeader="true"] {
-    background-color: rgba(74, 74, 78, 190);
-    border: 1px solid rgba(110, 110, 116, 190);
-    border-radius: 4px;
+    background-color: #333840;
+    border: 1px solid #555d6b;
+    border-radius: 3px;
+}
+
+QFrame[arrangementTrackHeader="true"][masterTrack="true"] {
+    background-color: #453d2c;
+    border-color: #8d7437;
 }
 
 QLineEdit#arrangementTrackName {
-    background-color: rgba(31, 31, 36, 170);
-    border: 1px solid rgba(100, 100, 108, 160);
-    border-radius: 4px;
+    background-color: #20242b;
+    border: 1px solid #555d6b;
+    border-radius: 3px;
     color: #f8f8ff;
     font-weight: 600;
     padding: 3px 5px;
 }
 
-QLabel#arrangementTrackKind, QLabel#trackNumberLabel {
+QLabel#arrangementTrackKind, QLabel#trackNumberLabel, QLabel#trackMeterLabel {
     color: #d5d2dc;
     font-size: 11px;
 }
@@ -402,5 +746,6 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 """
 
 
-def apply_midas_theme(app: QApplication) -> None:
+def apply_midas_theme(app: QApplication, skin_name: str = DEFAULT_MIDAS_SKIN) -> None:
+    get_midas_skin(skin_name)
     app.setStyleSheet(MIDAS_THEME)

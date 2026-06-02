@@ -4,8 +4,11 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QCompleter,
+    QComboBox,
     QDockWidget,
+    QDoubleSpinBox,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -33,6 +36,12 @@ from panels.mixer.plugin_insert_dialog import PluginInsertDialog
 from panels.session.session_panel import SessionPanel
 from panels.transport.transport_panel import TransportPanel
 from panels.workspace.open_existing_session_dialog import OpenExistingSessionDialog
+from panels.workspace.key_selection_dialog import (
+    MAJOR_SCALES,
+    KeySelectionWheelDialog,
+    normalize_project_key,
+)
+from panels.workspace.onboarding_dialog import DawOnboardingDialog
 from panels.workspace.workspace_panel import WorkspacePanel
 from shell.settings_store import ShellSettingsStore
 from viewmodels.audio_viewmodel import AudioViewModel
@@ -47,7 +56,7 @@ class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1180
     DEFAULT_HEIGHT = 720
     SCREEN_MARGIN = 48
-    LAYOUT_VERSION = 7
+    LAYOUT_VERSION = 8
 
     def __init__(self, bridge: BridgeClient) -> None:
         super().__init__()
@@ -118,6 +127,9 @@ class MainWindow(QMainWindow):
         )
         bridge_mode = "native" if self._bridge.__class__.__name__ == "NativeBridgeClient" else "fallback"
         self._workspace_controller.set_bridge_identity(mode=bridge_mode, version=self._bridge.bridge_version())
+        self._project_tempo_bpm = 120.0
+        self._project_key = "C Major"
+        self._project_key_notes = MAJOR_SCALES[self._project_key]
         self._debug_panel.set_bridge_info(
             mode=bridge_mode,
             version=self._bridge.bridge_version(),
@@ -165,6 +177,8 @@ class MainWindow(QMainWindow):
             fallback_polling=self._using_polling_fallback,
         )
         self._refresh_debug_summary()
+        self._onboarding_dialog: DawOnboardingDialog | None = None
+        QTimer.singleShot(0, self._show_onboarding_dialog)
 
     def _mount_header(self) -> None:
         self._header_toolbar = QToolBar("MIDAS Header", self)
@@ -173,33 +187,88 @@ class MainWindow(QMainWindow):
         self._header_toolbar.setFloatable(False)
         header = QWidget()
         header_layout = QVBoxLayout(header)
-        header_layout.setContentsMargins(8, 4, 8, 5)
-        header_layout.setSpacing(4)
+        header_layout.setContentsMargins(10, 7, 10, 7)
+        header_layout.setSpacing(6)
         cockpit_row = QHBoxLayout()
-        cockpit_row.setSpacing(8)
-        self._project_title_label = QLabel("Untitled Beat")
+        cockpit_row.setSpacing(10)
+        self._project_title_label = QLabel("MIDAS")
         self._project_title_label.setObjectName("headerProjectTitle")
         self._command_search_input = QLineEdit()
         self._command_search_input.setObjectName("headerSearch")
-        self._command_search_input.setPlaceholderText("Search or type a command")
+        self._command_search_input.setPlaceholderText("Search commands, add tracks, set BPM, change key")
         self._command_search_input.returnPressed.connect(self._execute_command_search)
         self._header_play_button = QPushButton("Play")
+        self._header_play_button.setObjectName("transportPrimary")
         self._header_stop_button = QPushButton("Stop")
-        self._tempo_label = QLabel("140 BPM")
-        self._key_label = QLabel("Key C Major")
-        self._device_status_label = QLabel("Fallback Bridge - 48kHz / 256")
+        self._header_stop_button.setObjectName("transportButton")
+        self._header_record_button = QPushButton("Record")
+        self._header_record_button.setObjectName("transportRecordButton")
+        self._header_loop_button = QPushButton("Loop")
+        self._header_loop_button.setObjectName("transportButton")
+        self._header_loop_button.setCheckable(True)
+        self._header_metronome_button = QPushButton("Metro")
+        self._header_metronome_button.setObjectName("transportButton")
+        self._header_metronome_button.setCheckable(True)
+        self._tempo_input = QDoubleSpinBox()
+        self._tempo_input.setObjectName("tempoInput")
+        self._tempo_input.setRange(20.0, 300.0)
+        self._tempo_input.setDecimals(2)
+        self._tempo_input.setSingleStep(1.0)
+        self._tempo_input.setSuffix(" BPM")
+        self._tempo_input.setValue(self._project_tempo_bpm)
+        self._tempo_input.valueChanged.connect(self._set_project_tempo)
+        self._key_button = QPushButton(self._project_key)
+        self._key_button.setObjectName("keyButton")
+        self._key_notes_label = QLabel(" ".join(self._project_key_notes))
+        self._key_notes_label.setObjectName("keyNotesLabel")
+        self._time_signature_input = QComboBox()
+        self._time_signature_input.setObjectName("meterCombo")
+        self._time_signature_input.addItems(["4 / 4", "3 / 4", "6 / 8", "12 / 8", "5 / 4", "7 / 8"])
+        self._snap_input = QComboBox()
+        self._snap_input.setObjectName("snapCombo")
+        self._snap_input.addItems(["Grid 1/4", "Grid 1/8", "Grid 1/16", "Grid 1/32"])
+        self._device_status_label = QLabel("48kHz / 256")
+        self._device_status_label.setObjectName("deviceStatusLabel")
         self._runtime_status_label = QLabel("Runtime: offline")
-        self._hint_status_label = QLabel("Hint: Use Browser, Arrangement, Editor, and Mixer like a familiar DAW workspace.")
+        self._runtime_status_label.setObjectName("runtimeStatusLabel")
+        self._hint_status_label = QLabel("Hint: Browser -> Arrangement/Editor -> Mixer")
         self._hint_status_label.setObjectName("headerHint")
+        self._status_chip = QLabel("Offline")
+        self._status_chip.setObjectName("statusChip")
         cockpit_row.addWidget(self._project_title_label)
         cockpit_row.addWidget(self._command_search_input, 1)
         cockpit_row.addWidget(self._header_play_button)
         cockpit_row.addWidget(self._header_stop_button)
-        cockpit_row.addWidget(self._tempo_label)
-        cockpit_row.addWidget(self._key_label)
+        cockpit_row.addWidget(self._header_record_button)
+        cockpit_row.addWidget(self._header_loop_button)
+        cockpit_row.addWidget(self._header_metronome_button)
+        cockpit_row.addWidget(self._tempo_input)
+        cockpit_row.addWidget(self._key_button)
+        cockpit_row.addWidget(self._time_signature_input)
+        cockpit_row.addWidget(self._snap_input)
+        cockpit_row.addWidget(self._status_chip)
         cockpit_row.addWidget(self._device_status_label)
         cockpit_row.addWidget(self._runtime_status_label)
         header_layout.addLayout(cockpit_row)
+        key_row = QHBoxLayout()
+        key_row.setSpacing(8)
+        self._header_mode_buttons: list[QPushButton] = []
+        for mode_name in ("Start", "Arrange", "Record", "Mix", "Browse"):
+            mode_button = QPushButton(mode_name)
+            mode_button.setObjectName("headerModeButton")
+            mode_button.setCheckable(True)
+            mode_button.setChecked(mode_name == "Arrange")
+            mode_button.clicked.connect(
+                lambda _checked=False, selected_mode=mode_name: self._select_header_mode(selected_mode)
+            )
+            self._header_mode_buttons.append(mode_button)
+            key_row.addWidget(mode_button)
+        key_row.addWidget(self._key_notes_label, 1)
+        header_layout.addLayout(key_row)
+        session_separator = QFrame()
+        session_separator.setObjectName("headerSeparator")
+        session_separator.setFrameShape(QFrame.HLine)
+        header_layout.addWidget(session_separator)
         session_row = QHBoxLayout()
         session_row.setSpacing(6)
         self._header_session_ref_input = QLineEdit("local-session")
@@ -227,6 +296,14 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self._hint_status_label)
         self._header_play_button.clicked.connect(self._play_transport)
         self._header_stop_button.clicked.connect(self._stop_transport)
+        self._header_record_button.clicked.connect(lambda: self._workspace_controller.mark_action("Record armed from header"))
+        self._header_loop_button.clicked.connect(
+            lambda checked: self._workspace_controller.mark_action("Loop on" if checked else "Loop off")
+        )
+        self._header_metronome_button.clicked.connect(
+            lambda checked: self._workspace_controller.mark_action("Metronome on" if checked else "Metronome off")
+        )
+        self._key_button.clicked.connect(self._open_key_selection_wheel)
         self._header_new_button.clicked.connect(lambda: self._new_session(self._header_session_ref_input.text()))
         self._header_open_button.clicked.connect(lambda: self._open_session(self._header_session_ref_input.text()))
         self._header_save_button.clicked.connect(self._save_session)
@@ -358,7 +435,7 @@ class MainWindow(QMainWindow):
         self._refresh_workspace()
 
     def _select_plugin(self, plugin_id: str) -> None:
-        self._browser_controller.select_plugin(plugin_id)
+        self._browser_controller.select_plugin(plugin_id, queue_if_insert=True)
         self._workspace_controller.mark_action(f"Selected plugin {plugin_id}")
         self._browser_panel.render(self._browser_vm)
         self._refresh_workspace()
@@ -521,24 +598,106 @@ class MainWindow(QMainWindow):
         self._workspace_panel.render(self._workspace_vm)
         self._refresh_header()
 
+    def _select_header_mode(self, mode_name: str) -> None:
+        for button in getattr(self, "_header_mode_buttons", []):
+            button.setChecked(button.text() == mode_name)
+        if mode_name == "Start":
+            self._workspace_controller.mark_action("Opened start workspace")
+        elif mode_name == "Arrange":
+            self._workspace_panel.show_arrangement()
+            self._workspace_controller.mark_action("Opened arrangement")
+        elif mode_name == "Record":
+            self._workspace_panel.show_drum_machine()
+            self._workspace_controller.mark_action("Opened record workspace")
+        elif mode_name == "Mix":
+            self._set_mixer_visible(True)
+            return
+        elif mode_name == "Browse":
+            self._browser_dock.setVisible(True)
+            self._workspace_controller.mark_action("Opened browser")
+        self._refresh_workspace()
+
+    def _focus_tempo_control(self) -> None:
+        self._tempo_input.setFocus()
+        self._tempo_input.selectAll()
+        self._workspace_controller.mark_action("Editing tempo")
+        self._refresh_header()
+
+    def _show_mix_workspace(self) -> None:
+        self._select_header_mode("Mix")
+
+    def _show_browse_workspace(self) -> None:
+        self._select_header_mode("Browse")
+
+    def _show_onboarding_dialog(self) -> None:
+        if self._onboarding_dialog is not None and self._onboarding_dialog.isVisible():
+            self._onboarding_dialog.raise_()
+            self._onboarding_dialog.activateWindow()
+            return
+        self._onboarding_dialog = DawOnboardingDialog(self)
+        self._onboarding_dialog.show()
+
+    def _set_project_tempo(self, tempo_bpm: float) -> None:
+        self._project_tempo_bpm = float(tempo_bpm)
+        self._workspace_controller.mark_action(f"Tempo set to {self._project_tempo_bpm:.2f} BPM")
+        self._refresh_header()
+
+    def _set_project_key(self, key_name: str) -> bool:
+        normalized = normalize_project_key(key_name)
+        if normalized is None:
+            return False
+        self._project_key = normalized
+        self._project_key_notes = MAJOR_SCALES[normalized]
+        self._workspace_controller.mark_action(
+            f"Key set to {normalized}: {' '.join(self._project_key_notes)}"
+        )
+        self._refresh_header()
+        return True
+
+    def _open_key_selection_wheel(self) -> None:
+        dialog = KeySelectionWheelDialog(self._project_key, self)
+        if dialog.exec() != dialog.Accepted:
+            self._workspace_controller.mark_action("Key selection cancelled")
+            self._refresh_workspace()
+            return
+        self._project_key = dialog.selected_key()
+        self._project_key_notes = dialog.selected_scale_notes()
+        self._workspace_controller.mark_action(
+            f"Key set to {self._project_key}: {' '.join(self._project_key_notes)}"
+        )
+        self._refresh_workspace()
+
     def _refresh_header(self) -> None:
         if not hasattr(self, "_runtime_status_label"):
             return
         session_ref = self._session_vm.session_ref or self._workspace_vm.session_ref or "Untitled Beat"
-        self._project_title_label.setText(session_ref if session_ref != "default-session" else "Untitled Beat")
+        project_title = session_ref if session_ref != "default-session" else "Untitled Beat"
+        self._project_title_label.setText(f"MIDAS  |  {project_title}")
         if hasattr(self, "_header_session_ref_input") and not self._header_session_ref_input.hasFocus():
             self._header_session_ref_input.setText(session_ref if session_ref != "Untitled Beat" else "")
         sample_rate = self._audio_vm.sample_rate or 48000
         buffer_size = self._audio_vm.buffer_size or 256
         self._device_status_label.setText(
-            f"{self._workspace_vm.bridge_mode.title()} Bridge - {sample_rate // 1000 if sample_rate else 48}kHz / {buffer_size}"
+            f"{sample_rate // 1000 if sample_rate else 48}kHz / {buffer_size}"
         )
         runtime = "active" if self._workspace_vm.runtime_active or self._transport_vm.runtime_active else "offline"
+        self._status_chip.setText("Online" if runtime == "active" else "Offline")
+        self._status_chip.setProperty("online", runtime == "active")
+        self._status_chip.style().unpolish(self._status_chip)
+        self._status_chip.style().polish(self._status_chip)
         self._runtime_status_label.setText(
-            f"Runtime: {runtime} | Transport: {self._transport_vm.play_state}"
+            f"{self._workspace_vm.bridge_mode.title()} Bridge | {self._transport_vm.play_state}"
         )
+        if hasattr(self, "_tempo_input") and not self._tempo_input.hasFocus():
+            self._tempo_input.blockSignals(True)
+            self._tempo_input.setValue(self._project_tempo_bpm)
+            self._tempo_input.blockSignals(False)
+        if hasattr(self, "_key_button"):
+            self._key_button.setText(self._project_key)
+        if hasattr(self, "_key_notes_label"):
+            self._key_notes_label.setText(f"Scale: {'  '.join(self._project_key_notes)}")
         self._hint_status_label.setText(
-            f"Hint: {self._workspace_vm.startup_hint} | "
+            f"{self._workspace_vm.startup_hint} | "
             f"Browser -> Arrangement/Editor -> Mixer | Last: {self._workspace_vm.last_action}"
         )
         if hasattr(self, "_header_mixer_button"):
@@ -581,6 +740,11 @@ class MainWindow(QMainWindow):
         register("Show Arrangement", self._workspace_panel.show_arrangement, "Ctrl+1")
         register("Show Drum Machine", self._workspace_panel.show_drum_machine, "Ctrl+2")
         register("Show Piano Roll", self._workspace_panel.show_piano_roll, "Ctrl+3")
+        register("Show Mix", self._show_mix_workspace, "Ctrl+4")
+        register("Show Browse", self._show_browse_workspace, "Ctrl+5")
+        register("Edit BPM", self._focus_tempo_control, "Ctrl+Shift+B")
+        register("Open Key Wheel", self._open_key_selection_wheel, "Ctrl+K")
+        register("Show Navigation Help", self._show_onboarding_dialog, "Ctrl+/")
         register("Toggle Browser", lambda: self._toggle_dock(self._browser_dock, "browser"), "Ctrl+B")
         register("Toggle Audio", lambda: self._toggle_dock(self._audio_dock, "audio"), "Ctrl+Shift+A")
         register("Toggle Mixer", lambda: self._set_mixer_visible(self._mixer_dock.isHidden()), "Ctrl+M")
@@ -597,6 +761,9 @@ class MainWindow(QMainWindow):
         query = self._command_search_input.text().strip()
         if not query:
             return
+        if self._execute_project_command(query):
+            self._command_search_input.clear()
+            return
         exact = {name.lower(): action for name, action in self._command_actions.items()}
         action = exact.get(query.lower())
         if action is None:
@@ -610,6 +777,34 @@ class MainWindow(QMainWindow):
             return
         self._command_search_input.clear()
         action.trigger()
+
+    def _execute_project_command(self, query: str) -> bool:
+        lowered = query.lower().strip()
+        tempo_prefixes = ("set bpm", "bpm", "tempo", "set tempo")
+        for prefix in tempo_prefixes:
+            if lowered.startswith(prefix):
+                value_text = lowered.removeprefix(prefix).replace("to", "").strip()
+                try:
+                    tempo = float(value_text)
+                except ValueError:
+                    self._workspace_controller.mark_action(f"Tempo command needs a number: {query}")
+                    self._refresh_workspace()
+                    return True
+                self._tempo_input.setValue(max(self._tempo_input.minimum(), min(self._tempo_input.maximum(), tempo)))
+                return True
+        key_prefixes = ("change key to", "set key to", "key")
+        for prefix in key_prefixes:
+            if lowered.startswith(prefix):
+                key_text = query[len(prefix):].strip() if query.lower().startswith(prefix) else ""
+                if not key_text:
+                    self._workspace_controller.mark_action("Key command needs a key name")
+                    self._refresh_workspace()
+                    return True
+                if not self._set_project_key(key_text):
+                    self._workspace_controller.mark_action(f"Unknown key: {key_text}")
+                    self._refresh_workspace()
+                return True
+        return False
 
     def _apply_mixer_mute(self) -> None:
         channel = self._mixer_panel.selected_channel()

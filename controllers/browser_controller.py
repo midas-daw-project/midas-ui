@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from bridge.protocol import BridgeClient, BridgeResult
+from bridge.plugin_catalog import NON_INSERT_CATEGORIES
 from viewmodels.browser_viewmodel import BrowserViewModel
 
 
@@ -33,7 +34,7 @@ class BrowserController:
             self._vm.selected_source = ""
             self._vm.selected_available = False
 
-    def select_plugin(self, plugin_id: str) -> None:
+    def select_plugin(self, plugin_id: str, *, queue_if_insert: bool = False) -> None:
         self._vm.selected_plugin_id = plugin_id
         for plugin in self._vm.plugins:
             if plugin.plugin_id != plugin_id:
@@ -43,7 +44,21 @@ class BrowserController:
             self._vm.selected_vendor = plugin.vendor
             self._vm.selected_source = plugin.source
             self._vm.selected_available = plugin.available
+            if queue_if_insert:
+                self.queue_selected_plugin()
             return
+
+    def queue_selected_plugin(self) -> bool:
+        if not self._vm.selected_plugin_id:
+            return False
+        if self._vm.selected_category in NON_INSERT_CATEGORIES or not self._vm.selected_available:
+            return False
+        if self._vm.selected_plugin_id not in self._vm.queued_plugin_ids:
+            self._vm.queued_plugin_ids.append(self._vm.selected_plugin_id)
+        return True
+
+    def clear_plugin_queue(self) -> None:
+        self._vm.queued_plugin_ids.clear()
 
     def mark_insert_result(self, result: BridgeResult) -> None:
         self._vm.last_insert_status = "ok" if result.ok else "error"

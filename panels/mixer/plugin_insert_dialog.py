@@ -15,6 +15,13 @@ from PySide6.QtWidgets import (
 )
 
 from bridge.protocol import PluginRegistryEntry
+from bridge.plugin_catalog import (
+    NON_INSERT_CATEGORIES,
+    PLUGIN_GROUP_ORDER,
+    plugin_function_label,
+    plugin_group,
+    plugin_purpose,
+)
 
 
 class PluginInsertDialog(QDialog):
@@ -26,7 +33,7 @@ class PluginInsertDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._plugins = list(plugins)
+        self._plugins = [plugin for plugin in plugins if plugin.category not in NON_INSERT_CATEGORIES]
         self._selected_plugin_id = selected_plugin_id
         self.setWindowTitle(f"Add FX to Track {channel_id}")
         self.resize(760, 480)
@@ -106,16 +113,45 @@ class PluginInsertDialog(QDialog):
         self.plugin_list.clear()
         first_available_row = -1
         preferred_row = -1
-        for plugin in self._plugins:
+        current_group = ""
+        group_rank = {group: index for index, group in enumerate(PLUGIN_GROUP_ORDER)}
+        plugins = sorted(
+            self._plugins,
+            key=lambda plugin: (
+                group_rank.get(plugin_group(plugin.plugin_id), len(group_rank)),
+                plugin.category,
+                plugin.name,
+            ),
+        )
+        for plugin in plugins:
+            function_label = plugin_function_label(plugin.plugin_id, plugin.category)
             searchable = " ".join(
-                [plugin.name, plugin.category, plugin.vendor, plugin.source, plugin.plugin_id]
+                [
+                    plugin.name,
+                    plugin.category,
+                    function_label,
+                    plugin.vendor,
+                    plugin.source,
+                    plugin.plugin_id,
+                    plugin_group(plugin.plugin_id),
+                    plugin_purpose(plugin.plugin_id),
+                ]
             ).lower()
             if category != "All Plugins" and (plugin.category or "Other") != category:
                 continue
             if query and query not in searchable:
                 continue
+            group = plugin_group(plugin.plugin_id)
+            if group != current_group:
+                current_group = group
+                header = QListWidgetItem(group)
+                header.setFlags(header.flags() & ~Qt.ItemIsEnabled & ~Qt.ItemIsSelectable)
+                self.plugin_list.addItem(header)
             status = "ready" if plugin.available else "not installed"
-            item = QListWidgetItem(f"{plugin.name}\n{plugin.category or 'Other'} | {plugin.vendor or 'Unknown'} | {status}")
+            item = QListWidgetItem(
+                f"{plugin.name}\n{function_label} | {plugin.vendor or 'Unknown'} | {status}\n"
+                f"{plugin_purpose(plugin.plugin_id)}"
+            )
             item.setData(Qt.UserRole, plugin.plugin_id)
             if not plugin.available:
                 item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
