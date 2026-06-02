@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -120,6 +121,13 @@ class BrowserPanel(QWidget):
         self.queue_label.setWordWrap(True)
         registry_layout.addWidget(self.queue_label)
 
+        self.plugin_browser_tabs = QTabWidget()
+        self.plugin_browser_tabs.setObjectName("pluginBrowserTabs")
+        list_tab = QWidget()
+        list_layout = QVBoxLayout(list_tab)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(6)
+
         self.plugin_wheel_box = QGroupBox("Selection Wheel")
         self.plugin_wheel_layout = QGridLayout(self.plugin_wheel_box)
         self.plugin_wheel_layout.setContentsMargins(8, 8, 8, 8)
@@ -130,13 +138,19 @@ class BrowserPanel(QWidget):
         self.plugin_explanation_bubble.setAlignment(Qt.AlignCenter)
         self.plugin_explanation_bubble.setWordWrap(True)
         self.plugin_wheel_buttons: list[QPushButton] = []
-        registry_layout.addWidget(self.plugin_wheel_box)
+        wheel_tab = QWidget()
+        wheel_layout = QVBoxLayout(wheel_tab)
+        wheel_layout.setContentsMargins(0, 0, 0, 0)
+        wheel_layout.addWidget(self.plugin_wheel_box)
 
         self.plugin_list = QListWidget()
         self.plugin_list.setWordWrap(True)
         self.plugin_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.plugin_list.setMinimumHeight(132)
-        registry_layout.addWidget(self.plugin_list)
+        list_layout.addWidget(self.plugin_list)
+        self.plugin_browser_tabs.addTab(list_tab, "List")
+        self.plugin_browser_tabs.addTab(wheel_tab, "Wheel")
+        registry_layout.addWidget(self.plugin_browser_tabs)
         layout.addWidget(registry_box)
 
         details_box = QGroupBox("Plugin Details")
@@ -150,6 +164,8 @@ class BrowserPanel(QWidget):
         self.purpose_label = QLabel("-")
         self.purpose_label.setWordWrap(True)
         self.available_label = QLabel("-")
+        self.works_label = QLabel("-")
+        self.works_label.setWordWrap(True)
         self.status_label = QLabel("Refresh: -")
         self.insert_status_label = QLabel("Insert: -")
         self.error_label = QLabel("Error: ")
@@ -161,6 +177,7 @@ class BrowserPanel(QWidget):
         details_form.addRow("Group", self.group_label)
         details_form.addRow("Purpose", self.purpose_label)
         details_form.addRow("Available", self.available_label)
+        details_form.addRow("Works in MIDAS", self.works_label)
         details_form.addRow(self.status_label)
         details_form.addRow(self.insert_status_label)
         details_form.addRow(self.error_label)
@@ -191,8 +208,13 @@ class BrowserPanel(QWidget):
         self.purpose_label.setText(plugin_purpose(vm.selected_plugin_id) if vm.selected_plugin_id else "-")
         if vm.selected_category in NON_INSERT_CATEGORIES:
             self.available_label.setText("detected source, not a mixer insert")
+            self.works_label.setText("No. This is used for setup, discovery, or reference, not audio processing inside MIDAS.")
+        elif vm.selected_available:
+            self.available_label.setText("yes")
+            self.works_label.setText("Yes. This can be selected and queued as a MIDAS insert effect.")
         else:
-            self.available_label.setText("yes" if vm.selected_available else "no")
+            self.available_label.setText("registered, not currently loadable")
+            self.works_label.setText("Not yet. It is listed as a planned/demo insert but cannot currently process audio.")
         self.status_label.setText(f"Refresh: {vm.last_refresh_status or '-'}")
         self.insert_status_label.setText(f"Insert: {vm.last_insert_status or '-'}")
         self.error_label.setText(f"Error: {vm.last_error}")

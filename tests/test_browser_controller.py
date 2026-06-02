@@ -192,6 +192,9 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert panel.browser_search_input.placeholderText() == "Search sounds, plugins, presets"
     assert panel.category_list.count() == 16
     assert panel.category_list.currentItem().text() == "All Sources"
+    assert panel.plugin_browser_tabs.count() == 2
+    assert panel.plugin_browser_tabs.tabText(0) == "List"
+    assert panel.plugin_browser_tabs.tabText(1) == "Wheel"
     assert panel.pack_list.count() == 3
     assert "Starter Kit" in panel.pack_list.item(0).text()
     assert panel.plugin_list.count() >= 1
@@ -201,6 +204,7 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert panel.category_label.text() == "Host Extension"
     assert panel.group_label.text() == "Gordium Action Forge"
     assert panel.available_label.text() == "detected source, not a mixer insert"
+    assert "setup, discovery, or reference" in panel.works_label.text()
 
     panel.browser_search_input.setText("head tracker")
     visible_text = "\n".join(panel.plugin_list.item(row).text() for row in range(panel.plugin_list.count()))
@@ -217,6 +221,7 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert "MIDAS Apollo Curve" in panel.queue_label.text()
     assert panel.plugin_wheel_buttons
     assert "MIDAS Apollo Curve" in panel.plugin_explanation_bubble.text()
+    assert "can be selected and queued" in panel.works_label.text()
 
     panel.browser_search_input.setText("scarlett")
     visible_text = "\n".join(panel.plugin_list.item(row).text() for row in range(panel.plugin_list.count()))
