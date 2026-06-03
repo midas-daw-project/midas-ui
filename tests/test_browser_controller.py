@@ -217,6 +217,11 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert panel.plugin_browser_tabs.count() == 2
     assert panel.plugin_browser_tabs.tabText(0) == "List"
     assert panel.plugin_browser_tabs.tabText(1) == "Wheel"
+    assert panel.minimumWidth() == 320
+    assert panel.plugin_browser_tabs.minimumHeight() == 340
+    assert panel.plugin_list.minimumHeight() == 260
+    assert panel.plugin_wheel_box.minimumHeight() == 300
+    assert panel.details_box.maximumHeight() == 260
     assert panel.pack_list.count() == 3
     assert "Starter Kit" in panel.pack_list.item(0).text()
     assert panel.plugin_list.count() >= 1

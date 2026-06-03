@@ -415,7 +415,7 @@ class MainWindow(QMainWindow):
 
         self._browser_dock = QDockWidget("Browser", self)
         self._browser_dock.setObjectName("dock.browser")
-        self._browser_dock.setMinimumWidth(210)
+        self._browser_dock.setMinimumWidth(340)
         self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
         self.addDockWidget(Qt.RightDockWidgetArea, self._browser_dock)
         self._mount_view_menu()
@@ -1511,7 +1511,7 @@ class MainWindow(QMainWindow):
         self._transport_dock.hide()
         self._debug_dock.hide()
         available = self._available_screen_geometry()
-        browser_width = 230 if available is None else max(210, min(260, int(available.width() * 0.22)))
+        browser_width = 360 if available is None else max(340, min(420, int(available.width() * 0.28)))
         mixer_height = 280 if available is None else max(240, min(320, int(available.height() * 0.34)))
         self.resizeDocks([self._browser_dock], [browser_width], Qt.Horizontal)
         self.resizeDocks([self._mixer_dock], [mixer_height], Qt.Vertical)

@@ -28,6 +28,7 @@ def test_main_window_default_layout_prioritizes_workspace():
 
     assert not window._browser_dock.isHidden()
     assert window.dockWidgetArea(window._browser_dock) == Qt.RightDockWidgetArea
+    assert window._browser_dock.minimumWidth() == 340
     assert window._audio_dock.isHidden()
     assert window._mixer_dock.isHidden()
     assert window.dockWidgetArea(window._mixer_dock) == Qt.BottomDockWidgetArea

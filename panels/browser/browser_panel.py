@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QSizePolicy,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -73,10 +74,11 @@ class BrowserPanel(QWidget):
         self._on_select_plugin = on_select_plugin
         self._on_insert_plugin = on_insert_plugin
         self._last_vm: BrowserViewModel | None = None
+        self.setMinimumWidth(320)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
 
         library_box = QGroupBox("Library")
         library_layout = QVBoxLayout(library_box)
@@ -94,7 +96,7 @@ class BrowserPanel(QWidget):
         for category in CATEGORY_FILTERS:
             self.category_list.addItem(category)
         self.category_list.setCurrentRow(0)
-        self.category_list.setMaximumHeight(130)
+        self.category_list.setMaximumHeight(106)
         library_layout.addWidget(self.category_list)
         layout.addWidget(library_box)
 
@@ -111,7 +113,7 @@ class BrowserPanel(QWidget):
             item = QListWidgetItem(f"{title}\n{subtitle}")
             self.pack_list.addItem(item)
         self.pack_list.setCurrentRow(0)
-        self.pack_list.setMaximumHeight(132)
+        self.pack_list.setMaximumHeight(82)
         marketplace_layout.addWidget(self.pack_list)
         pack_actions = QHBoxLayout()
         self.preview_pack_button = QPushButton("Preview")
@@ -121,7 +123,8 @@ class BrowserPanel(QWidget):
         marketplace_layout.addLayout(pack_actions)
         layout.addWidget(marketplace_box)
 
-        registry_box = QGroupBox("Plugin Registry")
+        registry_box = QGroupBox("Plugins / Sources")
+        registry_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         registry_layout = QVBoxLayout(registry_box)
         registry_actions = QHBoxLayout()
         self.refresh_button = QPushButton("Refresh")
@@ -136,20 +139,24 @@ class BrowserPanel(QWidget):
 
         self.plugin_browser_tabs = QTabWidget()
         self.plugin_browser_tabs.setObjectName("pluginBrowserTabs")
+        self.plugin_browser_tabs.setMinimumHeight(340)
+        self.plugin_browser_tabs.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         list_tab = QWidget()
         list_layout = QVBoxLayout(list_tab)
         list_layout.setContentsMargins(0, 0, 0, 0)
         list_layout.setSpacing(6)
 
         self.plugin_wheel_box = QGroupBox("Selection Wheel")
+        self.plugin_wheel_box.setMinimumHeight(300)
         self.plugin_wheel_layout = QGridLayout(self.plugin_wheel_box)
-        self.plugin_wheel_layout.setContentsMargins(8, 8, 8, 8)
-        self.plugin_wheel_layout.setHorizontalSpacing(6)
-        self.plugin_wheel_layout.setVerticalSpacing(6)
+        self.plugin_wheel_layout.setContentsMargins(10, 10, 10, 10)
+        self.plugin_wheel_layout.setHorizontalSpacing(8)
+        self.plugin_wheel_layout.setVerticalSpacing(8)
         self.plugin_explanation_bubble = QLabel("Select a plugin or source to see what it does.")
         self.plugin_explanation_bubble.setObjectName("pluginExplanationBubble")
         self.plugin_explanation_bubble.setAlignment(Qt.AlignCenter)
         self.plugin_explanation_bubble.setWordWrap(True)
+        self.plugin_explanation_bubble.setMinimumSize(140, 112)
         self.plugin_wheel_buttons: list[QPushButton] = []
         wheel_tab = QWidget()
         wheel_layout = QVBoxLayout(wheel_tab)
@@ -159,15 +166,16 @@ class BrowserPanel(QWidget):
         self.plugin_list = QListWidget()
         self.plugin_list.setWordWrap(True)
         self.plugin_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.plugin_list.setMinimumHeight(132)
+        self.plugin_list.setMinimumHeight(260)
         list_layout.addWidget(self.plugin_list)
         self.plugin_browser_tabs.addTab(list_tab, "List")
         self.plugin_browser_tabs.addTab(wheel_tab, "Wheel")
         registry_layout.addWidget(self.plugin_browser_tabs)
         layout.addWidget(registry_box)
 
-        details_box = QGroupBox("Plugin Details")
-        details_form = QFormLayout(details_box)
+        self.details_box = QGroupBox("Selected Source")
+        self.details_box.setMaximumHeight(260)
+        details_form = QFormLayout(self.details_box)
         self.id_label = QLabel("-")
         self.name_label = QLabel("-")
         self.category_label = QLabel("-")
@@ -196,8 +204,7 @@ class BrowserPanel(QWidget):
         details_form.addRow(self.status_label)
         details_form.addRow(self.insert_status_label)
         details_form.addRow(self.error_label)
-        layout.addWidget(details_box)
-        layout.addStretch(1)
+        layout.addWidget(self.details_box)
 
         self.refresh_button.clicked.connect(self._on_refresh_registry)
         self.insert_button.clicked.connect(self._on_insert_plugin)
@@ -292,12 +299,16 @@ class BrowserPanel(QWidget):
                 widget.deleteLater()
         self.plugin_wheel_buttons.clear()
         positions = [(0, 1), (0, 2), (1, 3), (2, 3), (3, 2), (3, 1), (2, 0), (1, 0)]
+        for index in range(4):
+            self.plugin_wheel_layout.setRowStretch(index, 1)
+            self.plugin_wheel_layout.setColumnStretch(index, 1)
         self.plugin_wheel_layout.addWidget(self.plugin_explanation_bubble, 1, 1, 2, 2)
         for index, plugin in enumerate(plugins):
             button = QPushButton(plugin_function_label(plugin.plugin_id, plugin.category))
             button.setObjectName("pluginWheelButton")
             button.setCheckable(True)
             button.setChecked(plugin.plugin_id == vm.selected_plugin_id)
+            button.setMinimumSize(62, 42)
             button.setToolTip(f"{plugin.name}\n{plugin_purpose(plugin.plugin_id)}")
             button.clicked.connect(lambda _checked=False, selected_id=plugin.plugin_id: self._on_select_plugin(selected_id))
             row, column = positions[index]
