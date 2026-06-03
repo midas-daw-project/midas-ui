@@ -37,3 +37,28 @@ class ShellSettingsStore:
 
     def save_debug_filter(self, value: str) -> None:
         self._settings.setValue("debug/event_filter", value)
+
+    def load_startup_sound_enabled(self) -> bool:
+        value = self._settings.value("startup_sound/enabled", True)
+        return str(value).lower() not in {"0", "false", "no"}
+
+    def save_startup_sound_enabled(self, enabled: bool) -> None:
+        self._settings.setValue("startup_sound/enabled", bool(enabled))
+
+    def load_startup_sound_volume(self) -> float:
+        value = float(self._settings.value("startup_sound/volume", 0.12))
+        return max(0.0, min(1.0, value))
+
+    def save_startup_sound_volume(self, volume: float) -> None:
+        self._settings.setValue("startup_sound/volume", max(0.0, min(1.0, float(volume))))
+
+    def load_startup_sound_path(self) -> str:
+        return str(
+            self._settings.value(
+                "startup_sound/path",
+                "/Users/matthewperalta/Documents/REAPER Media/MIDAS DAW Start Up Rumble.wav",
+            )
+        )
+
+    def save_startup_sound_path(self, path: str) -> None:
+        self._settings.setValue("startup_sound/path", path)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import (
     QCompleter,
@@ -52,6 +52,12 @@ from viewmodels.session_viewmodel import SessionViewModel
 from viewmodels.transport_viewmodel import TransportViewModel
 from viewmodels.workspace_viewmodel import WorkspaceViewModel
 
+try:
+    from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+except Exception:  # pragma: no cover - optional Qt module on some systems.
+    QAudioOutput = None
+    QMediaPlayer = None
+
 
 class MainWindow(QMainWindow):
     DEFAULT_WIDTH = 1060
@@ -75,6 +81,8 @@ class MainWindow(QMainWindow):
         self._transport_vm = TransportViewModel()
         self._browser_vm = BrowserViewModel()
         self._workspace_vm = WorkspaceViewModel()
+        self._startup_sound_player = None
+        self._startup_sound_audio_output = None
         self._audio_controller = AudioController(bridge, self._audio_vm)
         self._browser_controller = BrowserController(bridge, self._browser_vm)
         self._mixer_controller = MixerController(bridge, self._mixer_vm)
@@ -151,6 +159,12 @@ class MainWindow(QMainWindow):
             on_stop=self._stop_audio,
             on_close=self._close_audio,
             on_refresh=self._refresh_audio,
+            on_test_startup_sound=self._test_startup_sound,
+            on_startup_sound_changed=self._set_startup_sound_config,
+        )
+        self._audio_panel.set_startup_sound_config(
+            self._settings.load_startup_sound_enabled(),
+            self._settings.load_startup_sound_volume(),
         )
 
         self._mount_header()
@@ -184,6 +198,7 @@ class MainWindow(QMainWindow):
         self._refresh_debug_summary()
         self._onboarding_dialog: DawOnboardingDialog | None = None
         QTimer.singleShot(0, self._show_onboarding_dialog)
+        QTimer.singleShot(350, self._play_startup_sound)
 
     def _mount_header(self) -> None:
         self._header_toolbar = QToolBar("MIDAS Header", self)
@@ -786,6 +801,46 @@ class MainWindow(QMainWindow):
         self._workspace_panel.show_arrangement()
         self._workspace_controller.mark_action("Reset layout")
         self._refresh_workspace()
+
+    def _set_startup_sound_config(self, enabled: bool, volume: float) -> None:
+        self._settings.save_startup_sound_enabled(enabled)
+        self._settings.save_startup_sound_volume(min(0.20, max(0.0, float(volume))))
+        self._workspace_controller.mark_action(
+            f"Startup sound {'on' if enabled else 'off'} at {min(0.20, max(0.0, float(volume))):.2f}"
+        )
+        self._refresh_header()
+
+    def _test_startup_sound(self) -> None:
+        self._settings.save_startup_sound_enabled(self._audio_panel.startup_sound_enabled())
+        self._settings.save_startup_sound_volume(self._audio_panel.startup_sound_volume())
+        if self._play_startup_sound(force=True):
+            self._workspace_controller.mark_action("Tested startup sound")
+        else:
+            self._workspace_controller.mark_action("Startup sound unavailable")
+        self._refresh_header()
+
+    def _play_startup_sound(self, *, force: bool = False) -> bool:
+        if QMediaPlayer is None or QAudioOutput is None:
+            return False
+        if QGuiApplication.platformName().lower() == "offscreen":
+            return False
+        if not force and not self._settings.load_startup_sound_enabled():
+            return False
+        sound_path = Path(self._settings.load_startup_sound_path()).expanduser()
+        if not sound_path.exists():
+            return False
+        volume = min(0.20, max(0.0, self._settings.load_startup_sound_volume()))
+        if volume <= 0.0:
+            return False
+        if self._startup_sound_player is not None:
+            self._startup_sound_player.stop()
+        self._startup_sound_audio_output = QAudioOutput(self)
+        self._startup_sound_audio_output.setVolume(volume)
+        self._startup_sound_player = QMediaPlayer(self)
+        self._startup_sound_player.setAudioOutput(self._startup_sound_audio_output)
+        self._startup_sound_player.setSource(QUrl.fromLocalFile(str(sound_path)))
+        self._startup_sound_player.play()
+        return True
 
     def _focus_tempo_control(self) -> None:
         self._tempo_input.setFocus()

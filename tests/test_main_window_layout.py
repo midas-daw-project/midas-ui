@@ -200,3 +200,21 @@ def test_main_window_header_audio_controls_update_sample_rate_and_block_size():
     assert "96kHz / 512" in window._device_status_label.text()
 
     window.close()
+
+
+def test_main_window_startup_sound_is_quiet_configurable_and_safe_offscreen():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    assert window._audio_panel.startup_sound_enabled()
+    assert window._audio_panel.startup_sound_volume() == 0.12
+    assert not window._play_startup_sound(force=True)
+
+    window._audio_panel.startup_sound_enabled_input.setChecked(False)
+    window._audio_panel.startup_sound_volume_input.setValue(0.19)
+    assert not window._settings.load_startup_sound_enabled()
+    assert window._settings.load_startup_sound_volume() == 0.19
+
+    window.close()

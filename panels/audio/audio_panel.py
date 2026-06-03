@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
     QFormLayout,
     QGridLayout,
     QGroupBox,
@@ -28,6 +30,8 @@ class AudioPanel(QWidget):
         on_stop: Callable[[], None],
         on_close: Callable[[], None],
         on_refresh: Callable[[], None],
+        on_test_startup_sound: Callable[[], None],
+        on_startup_sound_changed: Callable[[bool, float], None],
     ) -> None:
         super().__init__()
         self._on_start_runtime = on_start_runtime
@@ -38,6 +42,8 @@ class AudioPanel(QWidget):
         self._on_stop = on_stop
         self._on_close = on_close
         self._on_refresh = on_refresh
+        self._on_test_startup_sound = on_test_startup_sound
+        self._on_startup_sound_changed = on_startup_sound_changed
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -80,6 +86,25 @@ class AudioPanel(QWidget):
         grid.addWidget(self.refresh_button, 3, 1)
         root.addWidget(buttons_box)
 
+        startup_sound_box = QGroupBox("Startup Sound")
+        startup_sound_layout = QFormLayout(startup_sound_box)
+        self.startup_sound_enabled_input = QCheckBox("Play quietly when MIDAS opens")
+        self.startup_sound_enabled_input.setChecked(True)
+        self.startup_sound_volume_input = QDoubleSpinBox()
+        self.startup_sound_volume_input.setRange(0.0, 0.20)
+        self.startup_sound_volume_input.setDecimals(2)
+        self.startup_sound_volume_input.setSingleStep(0.01)
+        self.startup_sound_volume_input.setValue(0.12)
+        self.startup_sound_volume_input.setSuffix(" volume")
+        self.test_startup_sound_button = QPushButton("Test Startup Sound")
+        self.startup_sound_note_label = QLabel("Default is 0.12 volume, capped at 0.20, to keep the rendered rumble comfortably quiet.")
+        self.startup_sound_note_label.setWordWrap(True)
+        startup_sound_layout.addRow(self.startup_sound_enabled_input)
+        startup_sound_layout.addRow("Volume", self.startup_sound_volume_input)
+        startup_sound_layout.addRow(self.test_startup_sound_button)
+        startup_sound_layout.addRow(self.startup_sound_note_label)
+        root.addWidget(startup_sound_box)
+
         status_box = QGroupBox("Status")
         status_layout = QVBoxLayout(status_box)
         self.state_label = QLabel("State: idle")
@@ -104,6 +129,9 @@ class AudioPanel(QWidget):
         self.stop_button.clicked.connect(self._on_stop)
         self.close_button.clicked.connect(self._on_close)
         self.refresh_button.clicked.connect(self._on_refresh)
+        self.test_startup_sound_button.clicked.connect(self._on_test_startup_sound)
+        self.startup_sound_enabled_input.toggled.connect(self._emit_startup_sound_changed)
+        self.startup_sound_volume_input.valueChanged.connect(lambda _value: self._emit_startup_sound_changed())
 
     def read_config_into(self, vm: AudioViewModel) -> None:
         vm.device_id = self.device_input.text().strip()
@@ -130,3 +158,20 @@ class AudioPanel(QWidget):
         else:
             self.tracked_channel_label.setText("Tracked Channel: -")
         self.error_label.setText(f"Error: {vm.last_error}")
+
+    def set_startup_sound_config(self, enabled: bool, volume: float) -> None:
+        self.startup_sound_enabled_input.blockSignals(True)
+        self.startup_sound_volume_input.blockSignals(True)
+        self.startup_sound_enabled_input.setChecked(enabled)
+        self.startup_sound_volume_input.setValue(max(0.0, min(0.20, float(volume))))
+        self.startup_sound_enabled_input.blockSignals(False)
+        self.startup_sound_volume_input.blockSignals(False)
+
+    def startup_sound_enabled(self) -> bool:
+        return self.startup_sound_enabled_input.isChecked()
+
+    def startup_sound_volume(self) -> float:
+        return float(self.startup_sound_volume_input.value())
+
+    def _emit_startup_sound_changed(self) -> None:
+        self._on_startup_sound_changed(self.startup_sound_enabled(), self.startup_sound_volume())
