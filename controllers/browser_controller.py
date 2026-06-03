@@ -57,6 +57,17 @@ class BrowserController:
             self._vm.queued_plugin_ids.append(self._vm.selected_plugin_id)
         return True
 
+    def queue_demo_chain(self, plugin_ids: tuple[str, ...]) -> list[str]:
+        self._vm.queued_plugin_ids.clear()
+        queued_plugin_ids: list[str] = []
+        for plugin_id in plugin_ids:
+            self.select_plugin(plugin_id, queue_if_insert=True)
+            if plugin_id in self._vm.queued_plugin_ids:
+                queued_plugin_ids.append(plugin_id)
+        if queued_plugin_ids:
+            self.select_plugin(queued_plugin_ids[0])
+        return queued_plugin_ids
+
     def clear_plugin_queue(self) -> None:
         self._vm.queued_plugin_ids.clear()
 

@@ -6,6 +6,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QFrame,
@@ -80,6 +81,7 @@ class WorkspacePanel(QWidget):
         super().__init__()
         self._on_midi_notes_changed = on_midi_notes_changed or (lambda _track, _count: None)
         self._midi_notes: dict[str, list[tuple[int, str, int]]] = {}
+        self._selected_midi_note_index: dict[str, int] = {}
         self._arrangement_tracks: list[dict[str, object]] = []
         self._arrangement_clips: dict[str, set[int]] = {}
         self._arrangement_colors: dict[str, str] = {}
@@ -89,6 +91,7 @@ class WorkspacePanel(QWidget):
         self._next_drum_track_id = 1
         self._arrangement_buttons: dict[tuple[str, int], QPushButton] = {}
         self._drum_step_buttons: dict[tuple[str, int], QPushButton] = {}
+        self._midi_grid_buttons: dict[tuple[int, str], QPushButton] = {}
         self.arrangement_track_name_inputs: list[QLineEdit] = []
         self.drum_track_name_inputs: list[QLineEdit] = []
         self._seed_default_arrangement()
@@ -113,31 +116,38 @@ class WorkspacePanel(QWidget):
         project_control_row.setContentsMargins(8, 5, 8, 5)
         project_control_row.setSpacing(8)
         self.daw_control_strip.setLayout(project_control_row)
-        self.project_mix_label = QLabel("Mix 100%")
+        self.project_mix_label = QLabel("Blend 100%")
         self.project_mix_label.setObjectName("dawStripLabel")
+        self.project_mix_label.setToolTip(
+            "Assistant/generated-material blend. The full channel mixer is in the Mixer panel."
+        )
         self.project_mix_input = QSlider(Qt.Horizontal)
         self.project_mix_input.setRange(0, 100)
         self.project_mix_input.setValue(100)
-        self.project_mix_input.setMaximumWidth(150)
+        self.project_mix_input.setMaximumWidth(96)
+        self.project_mix_input.setToolTip(
+            "Adjust how much MIDAS helper material is blended into the current idea."
+        )
         self.playrate_label = QLabel("Rate 1.00")
         self.playrate_label.setObjectName("dawStripLabel")
+        self.playrate_label.setToolTip("Playback speed for auditioning the project.")
         self.playrate_input = QSlider(Qt.Horizontal)
         self.playrate_input.setRange(0, 200)
         self.playrate_input.setValue(100)
         self.playrate_input.setMaximumWidth(170)
         self.project_mix_input.valueChanged.connect(
-            lambda value: self.project_mix_label.setText(f"Mix {value}%")
+            lambda value: self.project_mix_label.setText(f"Blend {value}%")
         )
         self.playrate_input.valueChanged.connect(
             lambda value: self.playrate_label.setText(f"Rate {value / 100:.2f}")
         )
-        project_control_row.addWidget(self.project_mix_label)
-        project_control_row.addWidget(self.project_mix_input)
         project_control_row.addWidget(self.playrate_label)
         project_control_row.addWidget(self.playrate_input)
         project_control_row.addWidget(QLabel("Snap: grid"))
         project_control_row.addWidget(QLabel("Mode: trim/read"))
         project_control_row.addStretch(1)
+        project_control_row.addWidget(self.project_mix_label)
+        project_control_row.addWidget(self.project_mix_input)
         layout.addWidget(self.daw_control_strip)
 
         self.view_mode_strip = QFrame()
@@ -163,7 +173,7 @@ class WorkspacePanel(QWidget):
 
         self.status_box = QFrame()
         self.status_box.setObjectName("projectStatusStrip")
-        self.status_box.setMaximumHeight(108)
+        self.status_box.setMaximumHeight(74)
         status_grid = QGridLayout(self.status_box)
         status_grid.setContentsMargins(8, 6, 8, 6)
         status_grid.setHorizontalSpacing(8)
@@ -174,6 +184,7 @@ class WorkspacePanel(QWidget):
         self.bridge_runtime_label = QLabel("Bridge: unknown v0 | Runtime: offline")
         self.bridge_runtime_label.setObjectName("operatorBridge")
         self.bridge_runtime_label.setWordWrap(False)
+        self.bridge_runtime_label.setVisible(False)
         self.session_flow_label = QLabel("Session: none | Phase: none | clean")
         self.session_flow_label.setObjectName("operatorSession")
         self.session_flow_label.setWordWrap(False)
@@ -181,9 +192,8 @@ class WorkspacePanel(QWidget):
         self.reconcile_flow_label.setObjectName("operatorReconcile")
         self.reconcile_flow_label.setWordWrap(False)
         status_grid.addWidget(self.next_action_label, 0, 0, 1, 2)
-        status_grid.addWidget(self.bridge_runtime_label, 1, 0)
-        status_grid.addWidget(self.session_flow_label, 1, 1)
-        status_grid.addWidget(self.reconcile_flow_label, 2, 0, 1, 2)
+        status_grid.addWidget(self.session_flow_label, 1, 0)
+        status_grid.addWidget(self.reconcile_flow_label, 1, 1)
         status_grid.setColumnStretch(0, 1)
         status_grid.setColumnStretch(1, 1)
         layout.addWidget(self.status_box)
@@ -296,6 +306,8 @@ class WorkspacePanel(QWidget):
         drum_layout.addLayout(drum_actions)
         self.channel_rack = QFrame()
         self.channel_rack.setObjectName("channelRack")
+        self.channel_rack.setMaximumHeight(168)
+        self.channel_rack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self._rack_grid = QGridLayout(self.channel_rack)
         self._rack_grid.setHorizontalSpacing(5)
         self._rack_grid.setVerticalSpacing(5)
@@ -305,6 +317,7 @@ class WorkspacePanel(QWidget):
         self.assistant_prompt_label.setWordWrap(True)
         drum_layout.addWidget(self.channel_rack)
         drum_layout.addWidget(self.assistant_prompt_label)
+        drum_layout.addStretch(1)
         self.editor_stack.addWidget(drum_page)
         self.add_drum_track_button.clicked.connect(self._add_drum_track)
 
@@ -326,7 +339,13 @@ class WorkspacePanel(QWidget):
         self.midi_length_input.setValue(2)
         self.midi_length_value_label = QLabel("2")
         self.add_midi_note_button = QPushButton("Add Note")
+        self.delete_midi_note_button = QPushButton("Delete Note")
         self.clear_midi_notes_button = QPushButton("Clear Track")
+        self.ghost_notes_toggle = QCheckBox("Ghost Notes")
+        self.ghost_notes_toggle.setObjectName("ghostNotesToggle")
+        self.ghost_notes_toggle.setChecked(True)
+        self.selected_midi_note_label = QLabel("Selected: none")
+        self.selected_midi_note_label.setObjectName("selectedMidiNoteLabel")
         self.midi_step_input.valueChanged.connect(lambda value: self.midi_step_value_label.setText(str(value)))
         self.midi_length_input.valueChanged.connect(lambda value: self.midi_length_value_label.setText(str(value)))
         midi_controls.addWidget(QLabel("Track"))
@@ -340,7 +359,9 @@ class WorkspacePanel(QWidget):
         midi_controls.addWidget(self.midi_length_input, 1)
         midi_controls.addWidget(self.midi_length_value_label)
         midi_controls.addWidget(self.add_midi_note_button)
+        midi_controls.addWidget(self.delete_midi_note_button)
         midi_controls.addWidget(self.clear_midi_notes_button)
+        midi_controls.addWidget(self.ghost_notes_toggle)
         midi_layout.addLayout(midi_controls)
         self.midi_note_grid = QFrame()
         self.midi_note_grid.setObjectName("midiNoteGrid")
@@ -351,10 +372,13 @@ class WorkspacePanel(QWidget):
         midi_layout.addWidget(self.midi_note_grid)
         self.midi_note_summary_label = QLabel("")
         self.midi_note_summary_label.setWordWrap(True)
+        midi_layout.addWidget(self.selected_midi_note_label)
         midi_layout.addWidget(self.midi_note_summary_label)
         self.midi_track_selector.currentTextChanged.connect(lambda _value: self._render_midi_grid())
         self.add_midi_note_button.clicked.connect(self._add_selected_midi_note)
+        self.delete_midi_note_button.clicked.connect(self._delete_selected_midi_note)
         self.clear_midi_notes_button.clicked.connect(self._clear_selected_midi_notes)
+        self.ghost_notes_toggle.toggled.connect(lambda _checked: self._render_midi_grid())
         self._render_midi_grid()
         self.editor_stack.addWidget(midi_page)
         editor_layout.addWidget(self.editor_stack)
@@ -512,14 +536,15 @@ class WorkspacePanel(QWidget):
             f"Bridge: {vm.bridge_mode} v{vm.bridge_version} | "
             f"Runtime: {runtime_text} | Audio: {vm.audio_state} | Transport: {vm.transport_state}"
         )
-        self.session_flow_label.setText(
-            f"Session: {vm.session_ref or '-'} | Status: {vm.session_status} | "
-            f"Phase: {vm.session_phase} | {dirty_text}"
-        )
-        self.reconcile_flow_label.setText(
-            f"Reconcile: {pending_text} | "
-            f"a={vm.reconcile_attempted} r={vm.reconcile_resolved} f={vm.reconcile_failed} | "
-            f"Plugins: {vm.available_plugin_count} available / {vm.inserted_plugin_count} inserted"
+        session_summary = f"Session: {vm.session_ref or '-'} | {dirty_text}"
+        reconcile_summary = f"Plugins: {vm.available_plugin_count} available / {vm.inserted_plugin_count} inserted"
+        self.session_flow_label.setText(session_summary)
+        self.reconcile_flow_label.setText(reconcile_summary)
+        self.status_box.setToolTip(
+            f"{self.bridge_runtime_label.text()}\n"
+            f"Session status: {vm.session_status}; phase: {vm.session_phase}; {dirty_text}\n"
+            f"Reconcile: {pending_text}; attempted={vm.reconcile_attempted}; "
+            f"resolved={vm.reconcile_resolved}; failed={vm.reconcile_failed}"
         )
         self.project_heading_label.setText(vm.session_ref or "No active session")
         self.session_status_label.setText(vm.session_status)
@@ -633,6 +658,25 @@ class WorkspacePanel(QWidget):
         selected = track_name or self.selected_midi_track()
         return [pitch for _step, pitch, _length in self._midi_notes.get(selected, [])]
 
+    def midi_notes_for_track(self, track_name: str = "") -> list[tuple[int, str, int]]:
+        selected = track_name or self.selected_midi_track()
+        return list(self._midi_notes.get(selected, []))
+
+    def selected_midi_note(self, track_name: str = "") -> tuple[int, str, int] | None:
+        selected = track_name or self.selected_midi_track()
+        index = self._selected_midi_note_index.get(selected, -1)
+        notes = self._midi_notes.get(selected, [])
+        if 0 <= index < len(notes):
+            return notes[index]
+        return None
+
+    def ghost_notes_visible(self) -> bool:
+        return self.ghost_notes_toggle.isChecked()
+
+    def move_selected_midi_note(self, step: int, pitch: str, track_name: str = "") -> None:
+        selected = track_name or self.selected_midi_track()
+        self._move_selected_midi_note_to(selected, step, pitch)
+
     def arrangement_clip_active(self, track_name: str, beat: int) -> bool:
         return beat in self._arrangement_clips.get(track_name, set())
 
@@ -660,6 +704,7 @@ class WorkspacePanel(QWidget):
 
     def _create_arrangement_track(self, kind: str, name: str | None = None) -> str:
         track_name, color = TRACK_KIND_CONFIG.get(kind, TRACK_KIND_CONFIG["Audio"])
+        display_name = self._unique_arrangement_track_name(name or track_name)
         if kind == "Master" and not any(str(track["kind"]) == "Master" for track in self._arrangement_tracks):
             track_id = "master-track"
         else:
@@ -668,7 +713,7 @@ class WorkspacePanel(QWidget):
         self._arrangement_tracks.append(
             {
                 "id": track_id,
-                "name": name or track_name,
+                "name": display_name,
                 "kind": kind,
                 "color": color,
                 "clips": [],
@@ -677,6 +722,20 @@ class WorkspacePanel(QWidget):
         self._arrangement_clips[track_id] = set()
         self._arrangement_colors[track_id] = color
         return track_id
+
+    def _unique_arrangement_track_name(self, base_name: str, *, exclude_track_id: str = "") -> str:
+        cleaned = base_name.strip() or "New Track"
+        existing_names = {
+            str(track["name"])
+            for track in self._arrangement_tracks
+            if not exclude_track_id or str(track["id"]) != exclude_track_id
+        }
+        if cleaned not in existing_names:
+            return cleaned
+        suffix = 2
+        while f"{cleaned} {suffix}" in existing_names:
+            suffix += 1
+        return f"{cleaned} {suffix}"
 
     def _add_arrangement_track(self, kind: str = "Audio") -> None:
         self._create_arrangement_track(kind)
@@ -721,7 +780,7 @@ class WorkspacePanel(QWidget):
             self._render_midi_grid()
 
     def _commit_arrangement_track_name(self, track_id: str, name: str) -> None:
-        cleaned = name.strip() or "New Track"
+        cleaned = self._unique_arrangement_track_name(name, exclude_track_id=track_id)
         for track in self._arrangement_tracks:
             if str(track["id"]) == track_id:
                 track["name"] = cleaned
@@ -784,6 +843,7 @@ class WorkspacePanel(QWidget):
             marker = QLabel(str(column))
             marker.setObjectName("midiStepMarker")
             marker.setAlignment(Qt.AlignCenter)
+            marker.setFixedHeight(18)
             self._rack_grid.addWidget(marker, 0, column)
             self._rack_grid.setColumnStretch(column, 1)
         if not self._drum_tracks:
@@ -797,6 +857,7 @@ class WorkspacePanel(QWidget):
         for row, track in enumerate(self._drum_tracks, start=1):
             track_id = str(track["id"])
             rack_header = self._build_drum_track_header(track_id, str(track["name"]))
+            rack_header.setFixedHeight(30)
             self._rack_grid.addWidget(rack_header, row, 0)
             for step_index in range(16):
                 active = step_index in self._drum_steps.get(track_id, set())
@@ -805,6 +866,7 @@ class WorkspacePanel(QWidget):
                 step.setCheckable(True)
                 step.setChecked(active)
                 step.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+                step.setFixedHeight(20)
                 step.setToolTip(f"Step {step_index + 1}")
                 step.clicked.connect(
                     lambda checked, name=track_id, step_number=step_index: self._set_drum_step(
@@ -918,14 +980,77 @@ class WorkspacePanel(QWidget):
         if note not in notes:
             notes.append(note)
             notes.sort(key=lambda item: (item[0], item[1], item[2]))
+        self._selected_midi_note_index[track] = notes.index(note)
         self._render_midi_grid()
         self._on_midi_notes_changed(track, len(notes))
+
+    def _delete_selected_midi_note(self) -> None:
+        track = self.selected_midi_track()
+        index = self._selected_midi_note_index.get(track, -1)
+        notes = self._midi_notes.setdefault(track, [])
+        if 0 <= index < len(notes):
+            notes.pop(index)
+            if notes:
+                self._selected_midi_note_index[track] = min(index, len(notes) - 1)
+            else:
+                self._selected_midi_note_index.pop(track, None)
+            self._render_midi_grid()
+            self._on_midi_notes_changed(track, len(notes))
 
     def _clear_selected_midi_notes(self) -> None:
         track = self.selected_midi_track()
         self._midi_notes[track] = []
+        self._selected_midi_note_index.pop(track, None)
         self._render_midi_grid()
         self._on_midi_notes_changed(track, 0)
+
+    def _midi_note_index_at(self, track: str, pitch: str, step: int) -> int:
+        for index, (note_step, note_pitch, note_length) in enumerate(self._midi_notes.get(track, [])):
+            if note_pitch == pitch and note_step <= step < note_step + note_length:
+                return index
+        return -1
+
+    def _handle_midi_cell_click(self, pitch: str, step: int) -> None:
+        track = self.selected_midi_track()
+        active_index = self._midi_note_index_at(track, pitch, step)
+        if active_index >= 0:
+            self._select_midi_note(track, active_index)
+            return
+        if self.selected_midi_note(track) is not None:
+            self._move_selected_midi_note_to(track, step, pitch)
+            return
+        self.midi_pitch_selector.setCurrentText(pitch)
+        self.midi_step_input.setValue(step)
+        self._add_selected_midi_note()
+
+    def _select_midi_note(self, track: str, index: int) -> None:
+        notes = self._midi_notes.get(track, [])
+        if not 0 <= index < len(notes):
+            return
+        self._selected_midi_note_index[track] = index
+        step, pitch, length = notes[index]
+        self.midi_pitch_selector.setCurrentText(pitch)
+        self.midi_step_input.setValue(step)
+        self.midi_length_input.setValue(length)
+        self._render_midi_grid()
+
+    def _move_selected_midi_note_to(self, track: str, step: int, pitch: str) -> None:
+        notes = self._midi_notes.setdefault(track, [])
+        index = self._selected_midi_note_index.get(track, -1)
+        if not 0 <= index < len(notes):
+            return
+        _old_step, _old_pitch, length = notes[index]
+        clamped_step = max(1, min(16, int(step)))
+        clamped_length = max(1, min(int(length), 17 - clamped_step))
+        moved_note = (clamped_step, pitch, clamped_length)
+        notes[index] = moved_note
+        notes.sort(key=lambda item: (item[0], item[1], item[2]))
+        self._selected_midi_note_index[track] = notes.index(moved_note)
+        self.midi_pitch_selector.setCurrentText(pitch)
+        self.midi_step_input.setValue(clamped_step)
+        self.midi_length_input.setValue(clamped_length)
+        self._render_midi_grid()
+        self._on_midi_notes_changed(track, len(notes))
 
     def _render_midi_grid(self) -> None:
         while self._midi_grid_layout.count():
@@ -933,9 +1058,27 @@ class WorkspacePanel(QWidget):
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+        self._midi_grid_buttons.clear()
         track = self.selected_midi_track() or "New Track"
         notes = self._midi_notes.get(track, [])
-        note_cells = {(step + offset, pitch) for step, pitch, length in notes for offset in range(length) if step + offset <= 16}
+        selected_index = self._selected_midi_note_index.get(track, -1)
+        note_cells = {
+            (step + offset, pitch): index
+            for index, (step, pitch, length) in enumerate(notes)
+            for offset in range(length)
+            if step + offset <= 16
+        }
+        ghost_cells: set[tuple[int, str]] = set()
+        if self.ghost_notes_visible():
+            for other_track, other_notes in self._midi_notes.items():
+                if other_track == track:
+                    continue
+                ghost_cells.update(
+                    (step + offset, pitch)
+                    for step, pitch, length in other_notes
+                    for offset in range(length)
+                    if step + offset <= 16
+                )
         for column in range(1, 17):
             marker = QLabel(str(column))
             marker.setObjectName("midiStepMarker")
@@ -948,17 +1091,40 @@ class WorkspacePanel(QWidget):
             pitch_label.setFixedWidth(42)
             self._midi_grid_layout.addWidget(pitch_label, row, 0)
             for column in range(1, 17):
-                cell = QLabel("")
+                cell = QPushButton("")
                 cell.setProperty("midiCell", True)
                 cell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-                active = (column, pitch) in note_cells
+                note_index = note_cells.get((column, pitch), -1)
+                active = note_index >= 0
+                selected = active and note_index == selected_index
+                ghost = not active and (column, pitch) in ghost_cells
                 color = "#804df2"
-                cell.setStyleSheet(
-                    f"background-color: {color};"
-                    if active
-                    else "background-color: rgba(31, 22, 47, 175);"
-                )
+                border = "2px solid #f8d84a;" if selected else "1px solid rgba(117, 129, 160, 105);"
+                if active:
+                    cell.setStyleSheet(
+                        f"background-color: {color}; border: {border}; min-height: 22px; border-radius: 3px;"
+                    )
+                elif ghost:
+                    cell.setStyleSheet(
+                        "background-color: rgba(154, 53, 255, 58); "
+                        "border: 1px dashed rgba(248, 216, 74, 165); min-height: 22px; border-radius: 3px;"
+                    )
+                else:
+                    cell.setStyleSheet(
+                        "background-color: rgba(31, 22, 47, 175); "
+                        "border: 1px solid rgba(65, 75, 98, 90); min-height: 22px; border-radius: 3px;"
+                    )
+                cell.setToolTip(f"{pitch} step {column}: click to select or move the selected note here")
+                cell.clicked.connect(lambda _checked=False, selected_pitch=pitch, selected_step=column: self._handle_midi_cell_click(selected_pitch, selected_step))
+                self._midi_grid_buttons[(column, pitch)] = cell
                 self._midi_grid_layout.addWidget(cell, row, column)
+        selected_note = self.selected_midi_note(track)
+        if hasattr(self, "selected_midi_note_label"):
+            if selected_note is None:
+                self.selected_midi_note_label.setText("Selected: none")
+            else:
+                step, pitch, length = selected_note
+                self.selected_midi_note_label.setText(f"Selected: {pitch} at step {step}, length {length}")
         if hasattr(self, "midi_note_summary_label"):
             summary = ", ".join(f"{pitch}@{step}x{length}" for step, pitch, length in notes) or "No MIDI notes on this track yet."
             self.midi_note_summary_label.setText(f"{track}: {summary}")

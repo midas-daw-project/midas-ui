@@ -59,9 +59,9 @@ class WorkspaceController:
             else "No active session"
         )
         self._vm.startup_hint = (
-            "Resume a recent session or open an existing .session file."
+            "Resume a recent session or open a project."
             if recents or discoverable
-            else "Create a new session or save one to start building a recent list."
+            else "Create or open a session, then add tracks."
         )
         self._vm.session_error_summary = session.last_error_message
         self._vm.transport_state = transport.play_state

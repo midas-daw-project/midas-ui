@@ -68,13 +68,15 @@ class BrowserPanel(QWidget):
         on_refresh_registry: Callable[[], None],
         on_select_plugin: Callable[[str], None],
         on_insert_plugin: Callable[[], None],
+        on_program_demo_chain: Callable[[], None],
     ) -> None:
         super().__init__()
         self._on_refresh_registry = on_refresh_registry
         self._on_select_plugin = on_select_plugin
         self._on_insert_plugin = on_insert_plugin
+        self._on_program_demo_chain = on_program_demo_chain
         self._last_vm: BrowserViewModel | None = None
-        self.setMinimumWidth(320)
+        self.setMinimumWidth(300)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
@@ -96,12 +98,12 @@ class BrowserPanel(QWidget):
         for category in CATEGORY_FILTERS:
             self.category_list.addItem(category)
         self.category_list.setCurrentRow(0)
-        self.category_list.setMaximumHeight(106)
+        self.category_list.setMaximumHeight(96)
         library_layout.addWidget(self.category_list)
         layout.addWidget(library_box)
 
         marketplace_box = QGroupBox("Packs / Sounds")
-        marketplace_box.setMaximumHeight(138)
+        marketplace_box.setMaximumHeight(126)
         marketplace_layout = QVBoxLayout(marketplace_box)
         self.pack_list = QListWidget()
         self.pack_list.setWordWrap(True)
@@ -114,7 +116,7 @@ class BrowserPanel(QWidget):
             item = QListWidgetItem(f"{title}\n{subtitle}")
             self.pack_list.addItem(item)
         self.pack_list.setCurrentRow(0)
-        self.pack_list.setMaximumHeight(82)
+        self.pack_list.setMaximumHeight(72)
         marketplace_layout.addWidget(self.pack_list)
         pack_actions = QHBoxLayout()
         self.preview_pack_button = QPushButton("Preview")
@@ -140,7 +142,7 @@ class BrowserPanel(QWidget):
 
         self.plugin_browser_tabs = QTabWidget()
         self.plugin_browser_tabs.setObjectName("pluginBrowserTabs")
-        self.plugin_browser_tabs.setMinimumHeight(300)
+        self.plugin_browser_tabs.setMinimumHeight(260)
         self.plugin_browser_tabs.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         list_tab = QWidget()
         list_layout = QVBoxLayout(list_tab)
@@ -148,7 +150,7 @@ class BrowserPanel(QWidget):
         list_layout.setSpacing(6)
 
         self.plugin_wheel_box = QGroupBox("Selection Wheel")
-        self.plugin_wheel_box.setMinimumHeight(260)
+        self.plugin_wheel_box.setMinimumHeight(220)
         self.plugin_wheel_layout = QGridLayout(self.plugin_wheel_box)
         self.plugin_wheel_layout.setContentsMargins(10, 10, 10, 10)
         self.plugin_wheel_layout.setHorizontalSpacing(8)
@@ -167,15 +169,28 @@ class BrowserPanel(QWidget):
         self.plugin_list = QListWidget()
         self.plugin_list.setWordWrap(True)
         self.plugin_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.plugin_list.setMinimumHeight(220)
+        self.plugin_list.setMinimumHeight(190)
         list_layout.addWidget(self.plugin_list)
         self.plugin_browser_tabs.addTab(list_tab, "List")
         self.plugin_browser_tabs.addTab(wheel_tab, "Wheel")
+        help_tab = QWidget()
+        help_layout = QVBoxLayout(help_tab)
+        help_layout.setContentsMargins(0, 0, 0, 0)
+        help_layout.setSpacing(8)
+        self.plugin_help_label = QLabel("Select a plugin, then open Help to learn what it does and how to use it.")
+        self.plugin_help_label.setObjectName("pluginHelpLabel")
+        self.plugin_help_label.setWordWrap(True)
+        self.program_demo_chain_button = QPushButton("Program Demo Chain")
+        self.program_demo_chain_button.setToolTip("Build a simple MIDAS demo chain with EQ, compression, and reverb.")
+        help_layout.addWidget(self.plugin_help_label)
+        help_layout.addWidget(self.program_demo_chain_button)
+        help_layout.addStretch(1)
+        self.plugin_browser_tabs.addTab(help_tab, "Help")
         registry_layout.addWidget(self.plugin_browser_tabs)
         layout.addWidget(registry_box)
 
         self.details_box = QGroupBox("Selected Source")
-        self.details_box.setMaximumHeight(224)
+        self.details_box.setMaximumHeight(202)
         details_form = QFormLayout(self.details_box)
         self.id_label = QLabel("-")
         self.name_label = QLabel("-")
@@ -209,6 +224,7 @@ class BrowserPanel(QWidget):
 
         self.refresh_button.clicked.connect(self._on_refresh_registry)
         self.insert_button.clicked.connect(self._on_insert_plugin)
+        self.program_demo_chain_button.clicked.connect(self._on_program_demo_chain)
         self.browser_search_input.textChanged.connect(self._rerender_from_current_vm)
         self.category_list.currentItemChanged.connect(lambda _current, _previous: self._rerender_from_current_vm())
         self.plugin_list.currentItemChanged.connect(self._emit_selection)
@@ -247,6 +263,7 @@ class BrowserPanel(QWidget):
         self.insert_status_label.setText(f"Insert: {vm.last_insert_status or '-'}")
         self.error_label.setText(f"Error: {vm.last_error}")
         self.plugin_explanation_bubble.setText(self._selected_explanation(vm))
+        self.plugin_help_label.setText(self._selected_help(vm))
         self.queue_label.setText(self._queue_summary(vm))
 
     def _rerender_from_current_vm(self) -> None:
@@ -272,11 +289,10 @@ class BrowserPanel(QWidget):
             feature_status = plugin_feature_status(plugin.plugin_id, plugin.category, plugin.available)
             function_label = plugin_function_label(plugin.plugin_id, plugin.category)
             item = QListWidgetItem(
-                f"{plugin.name}\n{function_label} | {feature_status} | {plugin.vendor or 'Unknown'} | {status}\n"
-                f"{plugin_purpose(plugin.plugin_id)}"
+                f"{plugin.name}\n{function_label} | {feature_status} | {plugin.vendor or 'Unknown'} | {status}"
             )
             item.setData(Qt.UserRole, plugin.plugin_id)
-            item.setToolTip(f"{plugin.plugin_id}\n{plugin.source}")
+            item.setToolTip(f"{plugin.plugin_id}\n{plugin.source}\n{plugin_purpose(plugin.plugin_id)}")
             self.plugin_list.addItem(item)
         if self.plugin_list.count() == 0:
             item = QListWidgetItem("No matching plugins or sources")
@@ -335,6 +351,23 @@ class BrowserPanel(QWidget):
             f"{plugin_feature_status(vm.selected_plugin_id, vm.selected_category, vm.selected_available)} | "
             f"{plugin_group(vm.selected_plugin_id)}\n"
             f"{role}: {plugin_purpose(vm.selected_plugin_id)}"
+        )
+
+    def _selected_help(self, vm: BrowserViewModel) -> str:
+        if not vm.selected_plugin_id:
+            return "Select a plugin to see its purpose, status, and a quick way to try a safe demo chain."
+        if vm.selected_category in NON_INSERT_CATEGORIES:
+            usage = "Use this as a setup, reference, library, or workflow source. It is not inserted on mixer tracks."
+        elif vm.selected_available:
+            usage = "Use Insert to add it to the selected mixer slot, or Program Demo Chain for a safe starter stack."
+        else:
+            usage = "This is visible for planning, but it is not currently loadable in the MIDAS demo runtime."
+        return (
+            f"{vm.selected_name}\n\n"
+            f"What it does: {plugin_purpose(vm.selected_plugin_id)}\n\n"
+            f"How to use it: {usage}\n\n"
+            f"Group: {plugin_group(vm.selected_plugin_id)}\n"
+            f"Status: {plugin_feature_status(vm.selected_plugin_id, vm.selected_category, vm.selected_available)}"
         )
 
     def _queue_summary(self, vm: BrowserViewModel) -> str:

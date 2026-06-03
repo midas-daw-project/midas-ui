@@ -203,6 +203,7 @@ def test_browser_panel_renders_library_marketplace_and_registry():
         on_refresh_registry=lambda: None,
         on_select_plugin=lambda _plugin_id: None,
         on_insert_plugin=lambda: None,
+        on_program_demo_chain=lambda: None,
     )
     bridge = FallbackBridgeClient()
     vm = BrowserViewModel(plugins=bridge.get_plugin_registry())
@@ -214,14 +215,15 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert panel.browser_search_input.placeholderText() == "Search sounds, plugins, presets"
     assert panel.category_list.count() == 16
     assert panel.category_list.currentItem().text() == "All Sources"
-    assert panel.plugin_browser_tabs.count() == 2
+    assert panel.plugin_browser_tabs.count() == 3
     assert panel.plugin_browser_tabs.tabText(0) == "List"
     assert panel.plugin_browser_tabs.tabText(1) == "Wheel"
-    assert panel.minimumWidth() == 320
-    assert panel.plugin_browser_tabs.minimumHeight() == 300
-    assert panel.plugin_list.minimumHeight() == 220
-    assert panel.plugin_wheel_box.minimumHeight() == 260
-    assert panel.details_box.maximumHeight() == 224
+    assert panel.plugin_browser_tabs.tabText(2) == "Help"
+    assert panel.minimumWidth() == 300
+    assert panel.plugin_browser_tabs.minimumHeight() == 260
+    assert panel.plugin_list.minimumHeight() == 190
+    assert panel.plugin_wheel_box.minimumHeight() == 220
+    assert panel.details_box.maximumHeight() == 202
     assert panel.pack_list.count() == 3
     assert "Starter Kit" in panel.pack_list.item(0).text()
     assert panel.plugin_list.count() >= 1
@@ -248,9 +250,18 @@ def test_browser_panel_renders_library_marketplace_and_registry():
     assert "MIDAS Apollo Curve" in panel.queue_label.text()
     assert panel.plugin_wheel_buttons
     assert "MIDAS Apollo Curve" in panel.plugin_explanation_bubble.text()
+    assert "What it does" in panel.plugin_help_label.text()
+    assert "How to use it" in panel.plugin_help_label.text()
     assert "can be selected and queued" in panel.works_label.text()
 
     panel.browser_search_input.setText("scarlett")
     visible_text = "\n".join(panel.plugin_list.item(row).text() for row in range(panel.plugin_list.count()))
     assert "MIDAS Scarlett Hearth" in visible_text
     assert "Hephaestus Interface Forge" in visible_text
+
+    queued_demo = controller.queue_demo_chain(("midas.eq.basic", "midas.comp.basic", "midas.reverb.silenus"))
+    panel.render(vm)
+    assert queued_demo == ["midas.eq.basic", "midas.comp.basic", "midas.reverb.silenus"]
+    assert "MIDAS Apollo Curve" in panel.queue_label.text()
+    assert "MIDAS Pactolus Press" in panel.queue_label.text()
+    assert "MIDAS Silenus Chamber" in panel.queue_label.text()

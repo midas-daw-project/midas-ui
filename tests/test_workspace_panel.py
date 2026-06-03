@@ -73,7 +73,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.track_panel_header_label.text() == "Track Control Panel"
     assert panel.timeline_header_label.text() == "Timeline"
     assert panel.summary_tabs.maximumHeight() == 188
-    assert panel.status_box.maximumHeight() == 108
+    assert panel.status_box.maximumHeight() == 74
     assert panel.beat_canvas.minimumWidth() == 1200
     assert panel.beat_canvas.minimumHeight() == 440
     assert panel.channel_rack.objectName() == "channelRack"
@@ -106,7 +106,7 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.empty_arrangement_label.isVisibleTo(panel) is False or panel.empty_arrangement_label.text().startswith("No tracks")
     panel.add_arrangement_track_button.click()
     assert panel.arrangement_track_count() == 12
-    assert panel.arrangement_track_names()[-1] == "Audio Track"
+    assert panel.arrangement_track_names()[-1] == "Audio Track 2"
     panel.arrangement_track_name_inputs[-1].setText("Hook idea")
     panel.arrangement_track_name_inputs[-1].editingFinished.emit()
     assert panel.arrangement_track_names()[-1] == "Hook idea"
@@ -133,12 +133,29 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.midi_note_count(selected_midi_track) == starting_notes + 1
     assert panel.midi_pitches_for_track(selected_midi_track) == ["C4"]
     assert "C4@2x2" in panel.midi_note_summary_label.text()
+    assert panel.selected_midi_note(selected_midi_track) == (2, "C4", 2)
+    panel.move_selected_midi_note(4, "E4", selected_midi_track)
+    assert panel.midi_notes_for_track(selected_midi_track) == [(4, "E4", 2)]
+    assert "E4@4x2" in panel.midi_note_summary_label.text()
+    panel.add_arrangement_track_button.click()
+    panel.midi_track_selector.setCurrentText("Audio Track 2")
+    panel.midi_pitch_selector.setCurrentText("G4")
+    panel.midi_step_input.setValue(4)
+    panel.midi_length_input.setValue(1)
+    panel.add_midi_note_button.click()
+    panel.midi_track_selector.setCurrentText(selected_midi_track)
+    assert panel.ghost_notes_visible()
+    assert (4, "G4") in panel._midi_grid_buttons
+    assert "dashed" in panel._midi_grid_buttons[(4, "G4")].styleSheet()
+    panel.ghost_notes_toggle.setChecked(False)
+    assert not panel.ghost_notes_visible()
+    assert "dashed" not in panel._midi_grid_buttons[(4, "G4")].styleSheet()
     assert "drum pattern" in panel.assistant_prompt_label.text()
     assert "sampled MIDI" in panel.assistant_prompt_label.text()
     assert "Next:" in panel.next_action_label.text()
     assert "Bridge: unknown v0" in panel.bridge_runtime_label.text()
     assert "Session: mix-a" in panel.session_flow_label.text()
-    assert "Phase: modified" in panel.session_flow_label.text()
+    assert "phase: modified" in panel.status_box.toolTip()
     assert "Plugins: 0 available / 0 inserted" in panel.reconcile_flow_label.text()
     assert "Dirty: dirty" in panel.session_identity_label.text()
     assert "Recent: 2" in panel.recent_summary_card_label.text()

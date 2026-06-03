@@ -26,9 +26,9 @@ def test_main_window_default_layout_prioritizes_workspace():
     window.show()
     QApplication.processEvents()
 
-    assert not window._browser_dock.isHidden()
+    assert window._browser_dock.isHidden()
     assert window.dockWidgetArea(window._browser_dock) == Qt.RightDockWidgetArea
-    assert window._browser_dock.minimumWidth() == 320
+    assert window._browser_dock.minimumWidth() == 300
     assert window._audio_dock.isHidden()
     assert window._mixer_dock.isHidden()
     assert window.dockWidgetArea(window._mixer_dock) == Qt.BottomDockWidgetArea
@@ -44,9 +44,9 @@ def test_main_window_default_layout_prioritizes_workspace():
     assert window._header_save_button.text() == "Save"
     assert window._header_load_button.text() == "Load"
     assert not window._header_mixer_button.isChecked()
-    assert window._workspace_preset_input.currentText() == "Beginner"
+    assert window._workspace_preset_input.currentText() == "Guided Creator - Muse Starter"
     assert not window._left_panel_button.isChecked()
-    assert window._right_panel_button.isChecked()
+    assert not window._right_panel_button.isChecked()
     assert not window._bottom_panel_button.isChecked()
     window._header_mixer_button.click()
     assert not window._mixer_dock.isHidden()
@@ -56,7 +56,7 @@ def test_main_window_default_layout_prioritizes_workspace():
     assert window._mixer_dock.isHidden()
     assert not window._bottom_panel_button.isChecked()
     assert window.centralWidget() is not None
-    assert "Browser -> Arrangement/Editor -> Mixer" in window._hint_status_label.text()
+    assert "Last:" in window._hint_status_label.text()
 
     window.close()
 
@@ -102,7 +102,7 @@ def test_main_window_workspace_presets_focus_and_reset_layout():
     window.show()
     QApplication.processEvents()
 
-    window._workspace_preset_input.setCurrentText("Engineer")
+    window._workspace_preset_input.setCurrentText("Recording Engineer - Athena Edit Bay")
     assert window._mixer_dock.isVisible()
     assert window._bottom_panel_button.isChecked()
     assert window._browser_dock.isHidden()
@@ -116,12 +116,69 @@ def test_main_window_workspace_presets_focus_and_reset_layout():
     assert not window._bottom_panel_button.isChecked()
 
     window._reset_layout_button.click()
-    assert window._workspace_preset_input.currentText() == "Beginner"
+    assert window._workspace_preset_input.currentText() == "Guided Creator - Muse Starter"
     assert not window._focus_mode_button.isChecked()
-    assert window._browser_dock.isVisible()
+    assert window._browser_dock.isHidden()
     assert window._audio_dock.isHidden()
     assert window._mixer_dock.isHidden()
-    assert window._right_panel_button.isChecked()
+    assert not window._right_panel_button.isChecked()
+
+    window.close()
+
+
+def test_main_window_daw_transfer_presets_use_familiar_layouts():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    expected_presets = [
+        "Guided Creator - Muse Starter",
+        "Songwriter/Artist - Apollo Studio",
+        "Beatmaker - Hephaestus Rack",
+        "Clips/Performance - Hermes Loops",
+        "Power Arrange - Daedalus Forge",
+        "Recording Engineer - Athena Edit Bay",
+        "Production Studio - Orpheus Workshop",
+        "Modular Sound Design - Prometheus Grid",
+        "Collaboration - Cloud Choir",
+    ]
+    assert [window._workspace_preset_input.itemText(index) for index in range(window._workspace_preset_input.count())] == expected_presets
+
+    window._workspace_preset_input.setCurrentText("Beatmaker - Hephaestus Rack")
+    assert window._workspace_panel.current_editor_name() == "Drum Machine"
+    assert window._browser_dock.isVisible()
+    assert window._mixer_dock.isHidden()
+
+    window._workspace_preset_input.setCurrentText("Clips/Performance - Hermes Loops")
+    assert window._workspace_panel.current_editor_name() == "Drum Machine"
+    assert window._transport_dock.isVisible()
+
+    window._workspace_preset_input.setCurrentText("Power Arrange - Daedalus Forge")
+    assert window._audio_dock.isVisible()
+    assert window._browser_dock.isVisible()
+    assert window._mixer_dock.isVisible()
+
+    window._workspace_preset_input.setCurrentText("Modular Sound Design - Prometheus Grid")
+    assert window._session_dock.isVisible()
+    assert window._transport_dock.isVisible()
+
+    window.close()
+
+
+def test_main_window_programs_demo_plugin_chain_from_browser_help():
+    _app()
+    window = MainWindow(FallbackBridgeClient())
+    window.show()
+    QApplication.processEvents()
+
+    window._program_demo_chain()
+    plugin_ids = [slot.plugin_id for slot in window._mixer_vm.insert_chain[:3]]
+    assert plugin_ids == ["midas.eq.basic", "midas.comp.basic", "midas.reverb.silenus"]
+    assert "MIDAS Apollo Curve" in window._browser_panel.queue_label.text()
+    assert "MIDAS Pactolus Press" in window._browser_panel.queue_label.text()
+    assert "MIDAS Silenus Chamber" in window._browser_panel.queue_label.text()
+    assert "Programmed demo chain" in window._hint_status_label.text()
 
     window.close()
 
@@ -146,7 +203,7 @@ def test_main_window_project_controls_update_tempo_and_key():
     window._execute_command_search()
     assert window._key_button.text() == "A Major"
     assert window._project_key_notes == ["A", "B", "C#", "D", "E", "F#", "G#", "A"]
-    assert "A  B  C#  D  E  F#  G#  A" in window._key_notes_label.text()
+    assert "A B C# D E F# G# A" in window._key_notes_label.text()
 
     window.close()
 
@@ -166,8 +223,8 @@ def test_main_window_detects_project_key_from_midi_notes():
 
     assert window._project_key == "A Major"
     assert window._key_button.text() == "A Major"
-    assert "Source: MIDI: " in window._key_notes_label.text()
-    assert track in window._key_notes_label.text()
+    assert "source: MIDI: " in window._key_notes_label.toolTip()
+    assert track in window._key_notes_label.toolTip()
 
     window.close()
 
