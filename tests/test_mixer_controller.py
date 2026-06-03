@@ -133,6 +133,10 @@ def test_mixer_panel_renders_channel_strips_and_plugin_stack():
     assert "volume=+0.0 dB" in panel.selected_strip_label.text()
     assert "Plugin Stack: 1 insert" in panel.plugin_stack_label.text()
     assert panel.chain_list.count() == 1
+    assert panel.chain_list.minimumHeight() == 126
+    assert panel.chain_list.maximumHeight() == 178
+    assert panel.strip_scroll.minimumHeight() == 218
+    assert panel.effect_macro_box.title() == "Smart Controls"
     assert "Intent:" in panel.chain_list.item(0).text()
     assert "Runtime:" in panel.chain_list.item(0).text()
     assert panel.selected_gain() == 1.0

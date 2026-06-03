@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication
 
 
@@ -26,11 +27,11 @@ MIDAS_SKIN_PRESETS = (
         location="Mount Olympus Signal Forge",
         font_source="Hack",
         role="Default dark production skin for long DAW sessions.",
-        background="#080a12",
-        panel="#15121c",
-        accent="#8f63df",
-        secondary_accent="#35f071",
-        text="#f3eaff",
+        background="#090b10",
+        panel="#121722",
+        accent="#9a35ff",
+        secondary_accent="#36c8ff",
+        text="#eef3ff",
     ),
     MidasSkinPreset(
         name="Poseidon Wave Harbor",
@@ -82,26 +83,26 @@ def get_midas_skin(name: str = DEFAULT_MIDAS_SKIN) -> MidasSkinPreset:
 
 MIDAS_THEME = """
 QMainWindow, QWidget {
-    background-color: #15121c;
-    color: #f3eaff;
+    background-color: #0b0d12;
+    color: #eef3ff;
     font-size: 13px;
 }
 
 QMainWindow {
-    border: 1px solid #3d3157;
+    border: 1px solid #222936;
 }
 
 QDockWidget {
     titlebar-close-icon: none;
     titlebar-normal-icon: none;
-    background-color: #181522;
-    color: #f7edff;
+    background-color: #10141d;
+    color: #eef3ff;
 }
 
 QDockWidget::title {
-    background-color: #211b31;
+    background-color: #151b27;
     padding: 6px;
-    border: 1px solid #3e315a;
+    border: 1px solid #283244;
 }
 
 QToolBar#midasHeader {
@@ -124,18 +125,18 @@ QLabel#headerHint {
 }
 
 QMenuBar {
-    background-color: #181522;
-    color: #f7edff;
+    background-color: #111722;
+    color: #eef3ff;
 }
 
 QMenuBar::item:selected, QMenu::item:selected {
-    background-color: #533094;
+    background-color: #26344d;
 }
 
 QMenu {
-    background-color: #181522;
-    border: 1px solid #4c3a72;
-    color: #f7edff;
+    background-color: #111722;
+    border: 1px solid #2b3651;
+    color: #eef3ff;
 }
 
 QLabel#headerProjectTitle {
@@ -171,7 +172,7 @@ QPushButton#transportPrimary, QPushButton#transportButton, QPushButton#transport
 
 QPushButton#transportPrimary:hover, QPushButton#transportButton:hover {
     background-color: #182033;
-    border-color: #8b5cff;
+    border-color: #36c8ff;
 }
 
 QPushButton#transportRecordButton {
@@ -197,9 +198,9 @@ QPushButton#headerModeButton {
 }
 
 QPushButton#headerModeButton:checked {
-    border-bottom-color: #8f63df;
+    border-bottom-color: #9a35ff;
     color: #ffffff;
-    background-color: rgba(143, 99, 223, 44);
+    background-color: rgba(154, 53, 255, 38);
 }
 
 QDoubleSpinBox#tempoInput,
@@ -231,7 +232,7 @@ QSpinBox#bufferSizeInput {
 }
 
 QPushButton#keyButton {
-    color: #f1ddff;
+    color: #efe4ff;
     min-width: 92px;
 }
 
@@ -248,12 +249,12 @@ QPushButton#panelToggleButton {
 }
 
 QPushButton#panelToggleButton:hover {
-    border-color: #8f63df;
+    border-color: #36c8ff;
 }
 
 QPushButton#panelToggleButton:checked {
-    background-color: rgba(143, 99, 223, 54);
-    border-color: #8f63df;
+    background-color: rgba(154, 53, 255, 42);
+    border-color: #9a35ff;
     color: #ffffff;
 }
 
@@ -284,9 +285,9 @@ QLabel#statusChip[online="true"] {
 }
 
 QGroupBox {
-    background-color: rgba(11, 14, 25, 238);
-    border: 1px solid #242b40;
-    border-radius: 7px;
+    background-color: rgba(13, 17, 25, 240);
+    border: 1px solid #252d3d;
+    border-radius: 5px;
     margin-top: 10px;
     padding: 8px;
 }
@@ -295,88 +296,88 @@ QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
     padding: 0 7px;
-    color: #f3e7ff;
+    color: #d8e0f2;
 }
 
 QTabWidget::pane {
-    border: 1px solid #413558;
-    border-radius: 6px;
-    background-color: rgba(23, 20, 33, 210);
+    border: 1px solid #273245;
+    border-radius: 5px;
+    background-color: rgba(12, 16, 24, 220);
     top: -1px;
 }
 
 QTabBar::tab {
-    background-color: #1e1a2c;
-    border: 1px solid #3c3155;
-    color: #d8c9ef;
+    background-color: #141a25;
+    border: 1px solid #2b3447;
+    color: #c8d2e8;
     padding: 7px 12px;
     min-width: 76px;
 }
 
 QTabBar::tab:selected {
-    background-color: #533094;
+    background-color: #26344d;
     color: #ffffff;
 }
 
 QPushButton {
     background-color: #111624;
     border: 1px solid #2c3650;
-    border-radius: 6px;
-    color: #f6eaff;
+    border-radius: 5px;
+    color: #eef3ff;
     padding: 6px 10px;
 }
 
 QPushButton:hover {
     background-color: #182033;
-    border-color: #8f63df;
+    border-color: #36c8ff;
 }
 
 QPushButton:pressed {
-    background-color: #231847;
+    background-color: #1e2b40;
 }
 
 QLineEdit, QSpinBox, QComboBox, QListWidget, QTextEdit {
-    background-color: #14111f;
-    border: 1px solid #3d3154;
-    border-radius: 6px;
-    color: #f6eaff;
-    selection-background-color: #824ee6;
+    background-color: #0d1119;
+    border: 1px solid #293449;
+    border-radius: 5px;
+    color: #eef3ff;
+    selection-background-color: #2f5f85;
 }
 
 QDoubleSpinBox {
-    background-color: #14111f;
-    border: 1px solid #3d3154;
-    border-radius: 6px;
-    color: #f6eaff;
+    background-color: #0d1119;
+    border: 1px solid #293449;
+    border-radius: 5px;
+    color: #eef3ff;
 }
 
 QSlider::groove:horizontal {
-    background-color: #211a31;
-    border: 1px solid #3d3154;
+    background-color: #171d29;
+    border: 1px solid #30394c;
     border-radius: 4px;
     height: 8px;
 }
 
 QSlider::handle:horizontal {
-    background-color: #8f63df;
-    border: 1px solid #d8c9ef;
+    background-color: #9a35ff;
+    border: 1px solid #d8c2ff;
     border-radius: 7px;
     margin: -4px 0;
     width: 14px;
 }
 
 QSlider::sub-page:horizontal {
-    background-color: #5d38a0;
+    background-color: #44306c;
     border-radius: 4px;
 }
 
 QDial#effectMacroDial {
-    background-color: #181522;
-    color: #f6eaff;
+    background-color: #111722;
+    color: #eef3ff;
 }
 
 QLabel#effectMacroLabel {
-    color: #d8c9ef;
+    color: #c8d2e8;
     font-size: 11px;
 }
 
@@ -386,7 +387,7 @@ QListWidget::item {
 }
 
 QListWidget::item:selected {
-    background-color: #533094;
+    background-color: #26344d;
 }
 
 QLabel#workspaceTitle {
@@ -400,7 +401,7 @@ QLabel#workspaceMode {
 }
 
 QFrame#dawControlStrip, QFrame#viewModeStrip, QFrame#projectStatusStrip {
-    background-color: #10131b;
+    background-color: #0f141d;
     border: 1px solid #2a3040;
     border-radius: 4px;
 }
@@ -454,8 +455,8 @@ QPushButton#modeButton {
 }
 
 QPushButton#modeButton:checked {
-    background-color: #222633;
-    border-color: #d8b45f;
+    background-color: #252b36;
+    border-color: #9a35ff;
     color: #ffffff;
 }
 
@@ -522,7 +523,7 @@ QLabel#shortcutKey {
     background-color: #0d101b;
     border: 1px solid #2b3651;
     border-radius: 5px;
-    color: #f1ddff;
+    color: #fff0c2;
     font-weight: 700;
     min-width: 92px;
     padding: 5px 8px;
@@ -541,10 +542,10 @@ QLabel#operatorNext {
 }
 
 QLabel#operatorBridge, QLabel#operatorSession, QLabel#operatorReconcile {
-    background-color: rgba(20, 17, 29, 220);
-    border: 1px solid #3d3154;
+    background-color: rgba(15, 20, 29, 225);
+    border: 1px solid #2b3447;
     border-radius: 6px;
-    padding: 7px;
+    padding: 5px 7px;
 }
 
 QLabel#browserHeading {
@@ -554,20 +555,20 @@ QLabel#browserHeading {
 }
 
 QLabel#browserHint {
-    color: #b9adce;
+    color: #aeb9d1;
 }
 
 QLabel#pluginQueueLabel {
     background-color: #10131b;
     border: 1px solid #2a3040;
     border-radius: 4px;
-    color: #d8b45f;
+    color: #d8c2ff;
     font-weight: 700;
     padding: 6px;
 }
 
 QLabel#pluginExplanationBubble {
-    background-color: #151922;
+    background-color: #101722;
     border: 1px solid #3a4252;
     border-radius: 8px;
     color: #edf2ff;
@@ -577,8 +578,8 @@ QLabel#pluginExplanationBubble {
 }
 
 QPushButton#pluginWheelButton {
-    background-color: #202632;
-    border: 1px solid #465064;
+    background-color: #171f2d;
+    border: 1px solid #3d485c;
     border-radius: 24px;
     color: #eef2ff;
     font-weight: 700;
@@ -588,31 +589,31 @@ QPushButton#pluginWheelButton {
 }
 
 QPushButton#pluginWheelButton:checked {
-    background-color: #5e4930;
-    border-color: #d8b45f;
+    background-color: #3a245e;
+    border-color: #9a35ff;
     color: #ffffff;
 }
 
 QLabel[sourceChip="true"] {
-    background-color: rgba(41, 33, 58, 220);
-    border: 1px solid #4a3a68;
+    background-color: rgba(22, 29, 42, 225);
+    border: 1px solid #344057;
     border-radius: 5px;
-    color: #d8c9ef;
+    color: #c8d2e8;
     padding: 5px;
 }
 
 QLabel[mixerStrip="true"] {
-    background-color: rgba(22, 19, 31, 235);
-    border: 1px solid #4d3b70;
+    background-color: rgba(20, 25, 34, 238);
+    border: 1px solid #354050;
     border-radius: 6px;
-    color: #f7edff;
+    color: #eef3ff;
     font-weight: 600;
     min-width: 54px;
     padding: 8px;
 }
 
 QFrame#beatCanvas {
-    background-color: #181b22;
+    background-color: #141922;
     border: 1px solid #303745;
     border-radius: 3px;
 }
@@ -624,36 +625,36 @@ QScrollArea#arrangementScrollArea {
 }
 
 QFrame#channelRack {
-    background-color: rgba(18, 16, 25, 235);
-    border: 1px solid #44365f;
+    background-color: rgba(15, 20, 29, 238);
+    border: 1px solid #303a4e;
     border-radius: 7px;
 }
 
 QFrame#midiNoteGrid {
-    background-color: rgba(18, 16, 25, 235);
-    border: 1px solid #44365f;
+    background-color: rgba(15, 20, 29, 238);
+    border: 1px solid #303a4e;
     border-radius: 7px;
 }
 
 QLabel[beatLane="true"], QLabel[rackLane="true"] {
-    color: #d9c7ff;
+    color: #d8e0f2;
     font-weight: 600;
 }
 
 QFrame[arrangementTrackHeader="true"] {
-    background-color: #333840;
-    border: 1px solid #555d6b;
+    background-color: #252b34;
+    border: 1px solid #465064;
     border-radius: 3px;
 }
 
 QFrame[arrangementTrackHeader="true"][masterTrack="true"] {
-    background-color: #453d2c;
+    background-color: #393321;
     border-color: #8d7437;
 }
 
 QLineEdit#arrangementTrackName {
-    background-color: #20242b;
-    border: 1px solid #555d6b;
+    background-color: #181e28;
+    border: 1px solid #465064;
     border-radius: 3px;
     color: #f8f8ff;
     font-weight: 600;
@@ -666,20 +667,20 @@ QLabel#arrangementTrackKind, QLabel#trackNumberLabel, QLabel#trackMeterLabel {
 }
 
 QPushButton#trackControlButton {
-    background-color: #3d3d42;
-    border: 1px solid #6c6c75;
+    background-color: #2d333d;
+    border: 1px solid #4b5463;
     border-radius: 4px;
     color: #f2f2f5;
     padding: 2px 0;
 }
 
 QPushButton#trackControlButton:checked {
-    background-color: #7d55d8;
+    background-color: #386f8f;
 }
 
 QPushButton#trackRemoveButton {
-    background-color: #3d3d42;
-    border: 1px solid #6c6c75;
+    background-color: #2d333d;
+    border: 1px solid #4b5463;
     border-radius: 4px;
     color: #f2f2f5;
     padding: 2px 0;
@@ -709,22 +710,22 @@ QLabel[stepCell="true"] {
 }
 
 QFrame[mixerChannelStrip="true"] {
-    background-color: #505055;
-    border: 1px solid #303036;
+    background-color: #252b34;
+    border: 1px solid #1b2028;
     border-radius: 3px;
 }
 
 QPushButton#mixerInsertButton, QPushButton#mixerRouteButton, QPushButton#mixerReadButton {
-    background-color: #5b5b60;
-    border: 1px solid #3b3b40;
+    background-color: #313946;
+    border: 1px solid #202733;
     border-radius: 4px;
     color: #f1f1f1;
     padding: 4px 2px;
 }
 
 QPushButton#mixerSmallButton {
-    background-color: #444449;
-    border: 1px solid #2c2c31;
+    background-color: #303741;
+    border: 1px solid #202733;
     border-radius: 4px;
     color: #f1f1f1;
     padding: 3px 0;
@@ -735,8 +736,8 @@ QPushButton#mixerSmallButton:checked {
 }
 
 QLabel#mixerStripName {
-    background-color: #3f3f44;
-    border-top: 1px solid #303036;
+    background-color: #1b2028;
+    border-top: 1px solid #303946;
     color: #ffffff;
     font-weight: 700;
     padding: 5px;
@@ -756,7 +757,7 @@ QLabel#mixerScaleLabel {
 }
 
 QDial#mixerPanDial {
-    background-color: #4d4d53;
+    background-color: #252b34;
 }
 
 QLabel[midiCell="true"] {
@@ -766,12 +767,12 @@ QLabel[midiCell="true"] {
 }
 
 QScrollBar:vertical {
-    background-color: #120821;
+    background-color: #0b0f16;
     width: 10px;
 }
 
 QScrollBar::handle:vertical {
-    background-color: #5b2e93;
+    background-color: #3a465a;
     border-radius: 4px;
     min-height: 24px;
 }
@@ -784,4 +785,5 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 
 def apply_midas_theme(app: QApplication, skin_name: str = DEFAULT_MIDAS_SKIN) -> None:
     get_midas_skin(skin_name)
+    app.setFont(QFont("Helvetica Neue", 13))
     app.setStyleSheet(MIDAS_THEME)

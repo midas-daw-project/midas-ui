@@ -19,8 +19,8 @@ class DawOnboardingDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Welcome to MIDAS")
         self.setModal(False)
-        self.setMinimumWidth(620)
-        self.resize(720, 680)
+        self.setMinimumWidth(580)
+        self.resize(700, 620)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
@@ -35,12 +35,12 @@ class DawOnboardingDialog(QDialog):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(10)
 
-        heading = QLabel("MIDAS DAW Navigation")
+        heading = QLabel("MIDAS Navigation")
         heading.setObjectName("onboardingHeading")
         content_layout.addWidget(heading)
 
         intro = QLabel(
-            "Start with the top bar: choose a workspace, set tempo, choose key, then build tracks in the arrangement."
+            "Modular Interactive Digital Audio Suite. Start with the top bar: choose a workspace, set tempo, choose key, then build tracks in the arrangement."
         )
         intro.setWordWrap(True)
         intro.setObjectName("onboardingIntro")

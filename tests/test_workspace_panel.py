@@ -71,8 +71,11 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.view_mode_strip.objectName() == "viewModeStrip"
     assert panel.arrange_ruler.objectName() == "arrangeRuler"
     assert panel.track_panel_header_label.text() == "Track Control Panel"
-    assert panel.timeline_header_label.text() == "Timeline / Media Items"
-    assert panel.summary_tabs.maximumHeight() == 238
+    assert panel.timeline_header_label.text() == "Timeline"
+    assert panel.summary_tabs.maximumHeight() == 188
+    assert panel.status_box.maximumHeight() == 108
+    assert panel.beat_canvas.minimumWidth() == 1200
+    assert panel.beat_canvas.minimumHeight() == 440
     assert panel.channel_rack.objectName() == "channelRack"
     assert panel.editor_stack.objectName() == "editorStack"
     assert panel.current_editor_name() == "Arrangement"
@@ -130,8 +133,8 @@ def test_workspace_panel_renders_current_project_and_recent_sections():
     assert panel.midi_note_count(selected_midi_track) == starting_notes + 1
     assert panel.midi_pitches_for_track(selected_midi_track) == ["C4"]
     assert "C4@2x2" in panel.midi_note_summary_label.text()
-    assert "Generate drum pattern" in panel.assistant_prompt_label.text()
-    assert "sampled MIDI notes" in panel.assistant_prompt_label.text()
+    assert "drum pattern" in panel.assistant_prompt_label.text()
+    assert "sampled MIDI" in panel.assistant_prompt_label.text()
     assert "Next:" in panel.next_action_label.text()
     assert "Bridge: unknown v0" in panel.bridge_runtime_label.text()
     assert "Session: mix-a" in panel.session_flow_label.text()

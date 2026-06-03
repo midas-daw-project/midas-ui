@@ -7,8 +7,8 @@ from bridge.protocol import DiscoverableSessionEntry, RecentSessionEntry
 
 @dataclass(slots=True)
 class WorkspaceViewModel:
-    workspace_title: str = "MIDAS Workspace"
-    workspace_mode: str = "Shell / Runtime Overview"
+    workspace_title: str = "MIDAS Arrange"
+    workspace_mode: str = "Modular Interactive Digital Audio Suite"
     bridge_mode: str = "unknown"
     bridge_version: int = 0
     session_ref: str = "default-session"

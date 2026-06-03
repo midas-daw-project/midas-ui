@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._bridge = bridge
         self._settings = ShellSettingsStore()
-        self.setWindowTitle("MIDAS - Phase 1 Shell")
+        self.setWindowTitle("MIDAS - Modular Interactive Digital Audio Suite")
         self.setMinimumSize(self.MIN_WIDTH, self.MIN_HEIGHT)
         self.resize(*self._default_window_size())
 
@@ -263,7 +263,7 @@ class MainWindow(QMainWindow):
         self._buffer_size_input.setSuffix(" spls")
         self._buffer_size_input.setValue(self._audio_vm.buffer_size or 256)
         self._buffer_size_input.setToolTip("Audio block size / buffer size")
-        self._runtime_status_label = QLabel("Runtime: offline")
+        self._runtime_status_label = QLabel("Run")
         self._runtime_status_label.setObjectName("runtimeStatusLabel")
         self._hint_status_label = QLabel("Hint: Browser -> Arrangement/Editor -> Mixer")
         self._hint_status_label.setObjectName("headerHint")
@@ -280,11 +280,6 @@ class MainWindow(QMainWindow):
         cockpit_row.addWidget(self._key_button)
         cockpit_row.addWidget(self._time_signature_input)
         cockpit_row.addWidget(self._snap_input)
-        cockpit_row.addWidget(self._status_chip)
-        cockpit_row.addWidget(self._device_status_label)
-        cockpit_row.addWidget(self._sample_rate_input)
-        cockpit_row.addWidget(self._buffer_size_input)
-        cockpit_row.addWidget(self._runtime_status_label)
         header_layout.addLayout(cockpit_row)
         key_row = QHBoxLayout()
         key_row.setSpacing(8)
@@ -300,6 +295,11 @@ class MainWindow(QMainWindow):
             self._header_mode_buttons.append(mode_button)
             key_row.addWidget(mode_button)
         key_row.addWidget(self._key_notes_label, 1)
+        key_row.addWidget(self._status_chip)
+        key_row.addWidget(self._device_status_label)
+        key_row.addWidget(self._sample_rate_input)
+        key_row.addWidget(self._buffer_size_input)
+        key_row.addWidget(self._runtime_status_label)
         header_layout.addLayout(key_row)
         session_separator = QFrame()
         session_separator.setObjectName("headerSeparator")
@@ -415,7 +415,7 @@ class MainWindow(QMainWindow):
 
         self._browser_dock = QDockWidget("Browser", self)
         self._browser_dock.setObjectName("dock.browser")
-        self._browser_dock.setMinimumWidth(340)
+        self._browser_dock.setMinimumWidth(320)
         self._browser_dock.setWidget(self._scrollable_panel(self._browser_panel))
         self.addDockWidget(Qt.RightDockWidgetArea, self._browser_dock)
         self._mount_view_menu()
@@ -954,8 +954,10 @@ class MainWindow(QMainWindow):
         self._status_chip.setProperty("online", runtime == "active")
         self._status_chip.style().unpolish(self._status_chip)
         self._status_chip.style().polish(self._status_chip)
-        self._runtime_status_label.setText(
-            f"{self._workspace_vm.bridge_mode.title()} Bridge | {self._transport_vm.play_state}"
+        bridge_label = "Native" if self._workspace_vm.bridge_mode == "native" else "Local"
+        self._runtime_status_label.setText(bridge_label)
+        self._runtime_status_label.setToolTip(
+            f"Bridge mode: {self._workspace_vm.bridge_mode}; transport: {self._transport_vm.play_state}"
         )
         if hasattr(self, "_tempo_input") and not self._tempo_input.hasFocus():
             self._tempo_input.blockSignals(True)
@@ -1511,7 +1513,7 @@ class MainWindow(QMainWindow):
         self._transport_dock.hide()
         self._debug_dock.hide()
         available = self._available_screen_geometry()
-        browser_width = 360 if available is None else max(340, min(420, int(available.width() * 0.28)))
+        browser_width = 330 if available is None else max(320, min(360, int(available.width() * 0.24)))
         mixer_height = 280 if available is None else max(240, min(320, int(available.height() * 0.34)))
         self.resizeDocks([self._browser_dock], [browser_width], Qt.Horizontal)
         self.resizeDocks([self._mixer_dock], [mixer_height], Qt.Vertical)
